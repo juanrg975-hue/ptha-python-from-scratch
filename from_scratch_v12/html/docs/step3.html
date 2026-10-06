@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3. Plate convergence | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Rates</div>
+  <h1>3. Plate convergence</h1>
+  <p class="lead">How fast the two plates move towards each other decides how many earthquakes the zone can have. Step 3 reads that speed from Bird's (2003) global plate model, under every column of cells of the mesh, exactly the way PTHA18 did, and hands three things to the engine: one number for the whole zone and two profiles along the zone.</p>
+
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">99.36</div><div class="lbl">mm/yr, kermadectonga2's convergence (horizontal, area-weighted)</div></div>
+    <div class="card kpi"><div class="num">73</div><div class="lbl">columns, each matched to its own Bird segment</div></div>
+    <div class="card kpi"><div class="num">1.0373</div><div class="lbl">the 1/cos(dip) factor, applied once, by the engine</div></div>
+    <div class="card kpi"><div class="num">&le; 2e-15</div><div class="lbl">relative difference from PTHA18's convergence on PTHA18's own meshes, with PTHA18's Bird table (step 8)</div></div>
+  </div>
+  <div class="io">
+    <div><b>Reads</b><code>data/slab2/unit_source_grid.npy</code> (step 2's mesh) and one of two plate-boundary tables, chosen by <code>generate.py --convergence</code>: <code>bird</code> (default), Bird's public catalogue, or <code>bird-griffin</code>, the table PTHA18 used; both in <code>from_scratch_v12/data/bird/</code> (<a href="#tables">the two tables</a>, <a href="convergence_sources.html">which zones differ</a>; nothing is downloaded)</div>
+    <div><b>Writes</b><code>data/convergence.txt</code>, <code>data/convergence_per_cell.npy</code>, <code>data/convergence_per_column.json</code> (all described <a href="#files">below</a>)</div>
+  </div>
+  <p class="where">Where in the code: <code>templates/step3_convergence.py.tmpl</code> (the step), <code>lib/bird_convergence.py</code> <code>column_convergence()</code> (the method, shared with step 8), <code>python_logic_tree_v12/run_logic_tree.py</code> (how the engine uses the result).</p>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <p>Bird's model gives the plate speed along short pieces of plate boundary. Step 3 finds, for every column of cells, the nearest piece, turns its speeds into a "convergent slip" rate, and passes three results to the engine. Each result has one job.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 350" role="img" aria-label="Bird segments are matched to each column; the per-column speeds become one zone number and two profiles used by the engine">
+      <defs>
+        <marker id="s3g-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+      </defs>
+      <text x="20" y="22" font-size="12" font-weight="700" fill="#5b6475">INPUTS</text>
+      <text x="265" y="22" font-size="12" font-weight="700" fill="#5b6475">STEP 3 (lib/bird_convergence.py)</text>
+      <text x="655" y="22" font-size="12" font-weight="700" fill="#5b6475">WHAT THE ENGINE DOES WITH IT</text>
+
+      <rect x="20" y="40" width="200" height="70" rx="9" fill="#fcf0e2" stroke="#d9822b"/>
+      <text x="32" y="63" font-size="13" font-weight="700">Bird (2003) segments</text>
+      <text x="32" y="82" font-size="11.5" fill="#5b6475">1869 convergent boundary steps with</text>
+      <text x="32" y="98" font-size="11.5" fill="#5b6475">Div_vel and RL_vel in mm/yr</text>
+      <rect x="20" y="130" width="200" height="70" rx="9" fill="#e4f5ec" stroke="#2e9e6b"/>
+      <text x="32" y="153" font-size="13" font-weight="700">The mesh (step 2)</text>
+      <text x="32" y="172" font-size="11.5" fill="#5b6475">kermadectonga2: 73 columns</text>
+      <text x="32" y="188" font-size="11.5" fill="#5b6475">x 3 rows = 219 cells</text>
+
+      <rect x="265" y="40" width="340" height="56" rx="9" fill="#fff" stroke="#d9822b" stroke-width="1.5"/>
+      <text x="277" y="62" font-size="13" font-weight="700">1. Match each column's top edge</text>
+      <text x="277" y="81" font-size="11.5" fill="#5b6475">to the nearest Bird segment (haversine distance)</text>
+      <rect x="265" y="112" width="340" height="56" rx="9" fill="#fff" stroke="#d9822b" stroke-width="1.5"/>
+      <text x="277" y="134" font-size="13" font-weight="700">2. Split into convergent and sideways parts</text>
+      <text x="277" y="153" font-size="11.5" fill="#5b6475">div = max(0, -Div_vel); sideways capped at div x tan 50</text>
+      <rect x="265" y="184" width="340" height="56" rx="9" fill="#fff" stroke="#d9822b" stroke-width="1.5"/>
+      <text x="277" y="206" font-size="13" font-weight="700">3. Convergent slip per column</text>
+      <text x="277" y="225" font-size="11.5" fill="#5b6475">slip = sqrt(div&#178; + rl&#178;); every cell takes its column's value</text>
+
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#s3g-ar)">
+        <path d="M220,75 L263,70"/>
+        <path d="M220,165 C245,165 240,80 263,76"/>
+        <path d="M435,96 L435,110"/>
+        <path d="M435,168 L435,182"/>
+        <path d="M605,212 C630,212 630,72 653,70"/>
+        <path d="M605,212 L653,178"/>
+        <path d="M605,212 C630,212 630,280 653,284"/>
+      </g>
+
+      <rect x="655" y="40" width="290" height="70" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="667" y="61" font-size="13" font-weight="700">One number: convergence.txt</text>
+      <text x="667" y="80" font-size="11.5" fill="#5b6475">area-weighted mean, horizontal. LEVELs 1-2:</text>
+      <text x="667" y="96" font-size="11.5" fill="#5b6475">slip rate = it x coupling / cos(mean dip)</text>
+      <rect x="655" y="144" width="290" height="70" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="667" y="165" font-size="13" font-weight="700">Profile 1: convergent slip</text>
+      <text x="667" y="184" font-size="11.5" fill="#5b6475">where along the zone ruptures are more</text>
+      <text x="667" y="200" font-size="11.5" fill="#5b6475">likely (scenario probabilities)</text>
+      <rect x="655" y="250" width="290" height="70" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="667" y="271" font-size="13" font-weight="700">Profile 2: div, convergent part only</text>
+      <text x="667" y="290" font-size="11.5" fill="#5b6475">the along-strike shape the LEVEL 4</text>
+      <text x="667" y="306" font-size="11.5" fill="#5b6475">edge correction aims for</text>
+
+      <rect x="20" y="262" width="585" height="58" rx="9" fill="#fdf6e3" stroke="#b7791f" stroke-dasharray="5 4"/>
+      <text x="32" y="284" font-size="12.5" font-weight="700">The dip correction 1/cos(dip) is NOT in step 3.</text>
+      <text x="32" y="303" font-size="11.5" fill="#5b6475">Step 3 writes the horizontal speed; only the engine divides by cos(dip), once.</text>
+    </svg>
+    <figcaption><b>Step 3 in one picture.</b> Orange boxes are step 3 itself; blue boxes are the engine (<a href="engine.html">steps 6-7</a>). The two profiles are passed only when the zone uses Bird's model (every PTHA18 zone except puysegur, see <a href="#puysegur">below</a>).</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="why">Why the plate speed matters</h2>
+  <p>At a subduction zone one tectonic plate slides under another (see <a href="concepts.html#subduction">PTHA in plain words</a>). The <a href="glossary.html#term-convergence">convergence rate</a> is how fast the two plates approach each other, in millimetres per year. Where the plates are stuck together at the fault, the motion is not free: the fault "falls behind" by that much every year, and an earthquake later makes up for it by slipping several metres at once.</p>
+  <p>This is the idea behind the <a href="glossary.html#term-moment-balance">moment balance</a> (<a href="engine.html#level2">LEVEL 2</a> of the engine): over a long time, the total slip of all earthquakes must equal the slip the plates have accumulated. So the faster the convergence, the more (or the larger) earthquakes the zone must have. Only part of the motion is released by earthquakes; that fraction is the <a href="glossary.html#term-coupling">seismic coupling</a>, which is uncertain and is a branch of the <a href="glossary.html#term-logic-tree">logic tree</a> (<a href="engine.html#level1">LEVEL 1</a>). The convergence itself is taken as known: it comes from a plate model.</p>
+  <figure class="fig narrow">
+    <svg viewBox="0 0 640 250" role="img" aria-label="Two plates converge; the locked fault accumulates a slip deficit that earthquakes release">
+      <defs>
+        <marker id="s3w-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d9822b"/></marker>
+      </defs>
+      <path d="M20,80 L330,80 L60,210 L20,210 Z" fill="#f0f2f5" stroke="#8a93a3"/>
+      <text x="30" y="100" font-size="12" fill="#5b6475">overriding plate</text>
+      <path d="M620,80 L330,80 L60,210 L60,240 L335,112 L620,112 Z" fill="#e4f5ec" stroke="#2e9e6b"/>
+      <text x="470" y="101" font-size="12" fill="#1d2433">sinking plate</text>
+      <path d="M330,80 L205,140" stroke="#c43d3d" stroke-width="5"/>
+      <text x="120" y="176" font-size="12" fill="#c43d3d" font-weight="700" text-anchor="end">locked fault</text>
+      <path d="M125,172 L200,146" stroke="#c43d3d" stroke-width="1"/>
+      <path d="M600,60 L500,60" stroke="#d9822b" stroke-width="3" marker-end="url(#s3w-ar)"/>
+      <text x="440" y="46" font-size="12.5" fill="#1d2433">convergence v (mm/yr)</text>
+      <text x="310" y="72" font-size="11.5" fill="#5b6475">trench</text>
+      <text x="330" y="150" font-size="12.5" fill="#1d2433">every year the fault falls behind by</text>
+      <text x="330" y="169" font-size="12.5" fill="#1d2433" font-weight="700">v x coupling / cos(dip)</text>
+      <text x="330" y="196" font-size="12.5" fill="#1d2433">earthquakes pay this back: faster</text>
+      <text x="330" y="215" font-size="12.5" fill="#1d2433">plates, more earthquakes (LEVEL 2)</text>
+    </svg>
+    <figcaption><b>The slip budget.</b> The convergence sets how much slip the fault must release per year. Coupling (LEVEL 1) says how much of it goes into earthquakes; the dip term turns the horizontal plate speed into slip along the sloping fault (<a href="#double-dip">see below</a>).</figcaption>
+  </figure>
+  <p>Convergence also varies along a zone. At Tonga the plates converge at more than 200 mm/yr, near New Zealand at less than 20 mm/yr (figures below). PTHA18 uses that variation twice: to make ruptures more likely where the plates move faster, and to check that the modelled earthquakes release slip in the same along-zone pattern (<a href="#per-column">per column</a>).</p>
+</section>
+
+<section>
+  <h2 id="bird">Bird's plate model</h2>
+  <p><a href="glossary.html#term-bird">Bird (2003)</a>, "An updated digital model of plate boundaries" (the PB2002 model), divides every plate boundary on Earth into short straight <b>steps</b> (segments of a few tens of km) and gives, for each, the velocity of one plate relative to the other, split in two parts:</p>
+  <ul class="tight">
+    <li><b>Div_vel</b>, the <i>divergent</i> part, across the boundary, in mm/yr. Negative means the plates approach (convergence), positive means they separate.</li>
+    <li><b>RL_vel</b>, the <i>right-lateral</i> part, along the boundary, in mm/yr: the sideways sliding. Its sign says the direction.</li>
+  </ul>
+  <figure class="fig narrow">
+    <svg viewBox="0 0 640 230" role="img" aria-label="A Bird segment and the relative plate velocity split into a part across the boundary and a part along it">
+      <defs>
+        <marker id="s3b-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1d2433"/></marker>
+        <marker id="s3b-ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d9822b"/></marker>
+      </defs>
+      <line x1="230" y1="20" x2="230" y2="210" stroke="#d9822b" stroke-width="5"/>
+      <circle cx="230" cy="115" r="6" fill="#fff" stroke="#1d2433" stroke-width="2"/>
+      <text x="220" y="30" font-size="12" fill="#5b6475" text-anchor="end">(Long1, Lat1)</text>
+      <text x="220" y="208" font-size="12" fill="#5b6475" text-anchor="end">(Long2, Lat2)</text>
+      <text x="218" y="112" font-size="12" fill="#1d2433" text-anchor="end">midpoint (used</text>
+      <text x="218" y="128" font-size="12" fill="#1d2433" text-anchor="end">for matching)</text>
+      <path d="M470,50 L338,160" stroke="#1d2433" stroke-width="2.5" marker-end="url(#s3b-ar)"/>
+      <text x="386" y="86" font-size="12.5" fill="#1d2433" font-weight="700" text-anchor="end">relative velocity</text>
+      <path d="M470,50 L470,156" stroke="#d9822b" stroke-width="2.5" stroke-dasharray="5 3" marker-end="url(#s3b-ao)"/>
+      <text x="480" y="100" font-size="12.5" fill="#1d2433">along the boundary: RL_vel</text>
+      <path d="M470,165 L342,165" stroke="#d9822b" stroke-width="2.5" marker-end="url(#s3b-ao)"/>
+      <text x="340" y="190" font-size="12.5" fill="#1d2433">across: Div_vel (&lt; 0 = converging)</text>
+      <text x="250" y="24" font-size="12" fill="#5b6475">one Bird step (segment), plan view</text>
+    </svg>
+    <figcaption><b>One Bird segment.</b> The relative motion of the plates is split into a part across the boundary (Div_vel) and a part along it (RL_vel). Only the across part squeezes the fault; the along part is limited as explained in <a href="#formula">the formula</a>.</figcaption>
+  </figure>
+
+  <h3 id="tables">Which Bird table: --convergence bird or bird-griffin</h3>
+  <p>The package holds two versions of Bird's model, both in <code>from_scratch_v12/data/bird/</code>, and <code>generate.py --convergence</code> picks one (all 8 examples: <code>bird</code>, the default). Nothing is read from <code>rptha/</code>. Where PTHA18 took each zone's convergence from, and how much the two tables differ there, zone by zone: <a href="convergence_sources.html">Bird or Bird + Griffin, per zone</a>.</p>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:18%"><col style="width:41%"><col style="width:41%"></colgroup>
+    <tr><th></th><th><code>--convergence bird</code> (default): Bird's public catalogue</th><th><code>--convergence bird-griffin</code> (and always step 8): PTHA18's table</th></tr>
+    <tr><td>File</td><td><code>from_scratch_v12/data/bird/PB2002_steps.dat.txt.zip</code>, Bird's own supplementary data, unchanged</td><td><code>from_scratch_v12/data/bird/bird_griffin_traces_table.csv.zip</code>, a copy of rptha's <code>DATA/BIRD_PLATE_BOUNDARIES/sourcezone_traces_table_merged.csv.zip</code></td></tr>
+    <tr><td>Rows used</td><td>every step of a <b>convergent</b> boundary type, 1869: SUB (subduction zone) 1127, CCB (continental convergent) 401, OCB (oceanic convergent) 341. Transforms, ridges and rifts are left out</td><td>3805 rows: 1060 of Bird's steps that PTHA18 kept, 2645 source-zone traces by Jonathan Griffin (JG) and 100 by Gareth Davies (GD). Rows of class Normal (1870) are skipped for a thrust zone</td></tr>
+    <tr><td>Where it came from</td><td>Bird (2003), public</td><td>PTHA18's own work (Davies and Griffin 2018), published with rptha</td></tr>
+  </table></div>
+  <p><b>Why the three convergent types.</b> A subduction interface is a convergent boundary, but Bird does not always call it SUB. PTHA18 itself kept OCB steps where they carry the interface: the 12 Bird rows of its table near Makran are all OCB. Keeping only SUB would leave Makran with no match at all.</p>
+  <p><b>Class Normal rows of PTHA18's table</b> are outer-rise traces: the bending of the plate before it sinks, where the sea floor is stretched, not squeezed. Around kermadectonga2 its search box holds 553 rows, 439 of them class Normal; they carry a small positive Div_vel, so a column matched to one would get zero convergence. R skips them for a thrust zone by adding 1e12 m to their distance; the Python drops them. The public catalogue has no such rows.</p>
+  <p><b>What the choice changes.</b> On PTHA18's own meshes the public catalogue gives exactly PTHA18's convergence on cascadia, philippine, kurilsjapan, southamerica and izumariana (the test <code>test_bird_public_table_matches_ptha18_where_ptha18_used_bird</code>), and differs on two zones: kermadectonga2 +0.30%, makran2 -1.35%. The reason is the same on both: PTHA18's table also kept a few Bird steps of other types, and at the end of the zone a column's nearest step is one of them. At kermadectonga2's southern end, near New Zealand, that step diverges and gives the last three columns 0 mm/yr in PTHA18's table; the public rule matches the nearest convergent step instead, 34 to 107 km away, at 4 to 6 mm/yr. On the examples' own meshes the difference is +0.23% (kermadectonga2), -0.11% (makran2) and 0 on southamerica, kurilsjapan, puysegur2 and antilles2. Where PTHA18 used Griffin's traces instead of Bird (eastern Indonesia and New Guinea) the two tables differ far more: newguinea2 38 mm/yr with <code>bird</code>, 96 with <code>bird-griffin</code> (<a href="convergence_sources.html">all zones</a>).</p>
+  <p class="where">Where in the code: <code>lib/bird_convergence.py</code> <code>load_bird_segments(..., table=)</code>, <code>load_bird_raw_segments()</code>, <code>BIRD_CONVERGENT_TYPES</code>; step 3 passes <code>table="bird"</code> or <code>"bird-griffin"</code> from <code>BIRD_TABLE</code>, which <code>generate.py --convergence</code> writes.</p>
+
+  <details class="deep">
+    <summary>The search box, and zones PTHA18 never modelled <span class="tag">calabria2, caribbean2, antilles2</span></summary>
+    <div class="body">
+      <p><b>Search box.</b> Only Bird rows whose midpoint lies within 3 degrees of the mesh's cell centres are searched (<code>bounding_box(..., margin_deg=3.0)</code>). R searches the whole table; the box changes nothing for a zone PTHA18 modelled (the nearest segment to a trench is always well inside 3 degrees) but stops a zone from being matched to a segment of another zone thousands of km away. The box handles longitudes in either convention (0 to 360 or -180 to 180), because step 1 may unwrap a zone that crosses 180 degrees, as Kermadec (about 172 to 190 degrees east) does.</p>
+      <p><b>No speed filter.</b> Like R, no row is removed for having an odd speed. An earlier version filtered out rows with implausible speeds, which removed northern Tonga's real segments (their Vel_L2R is about 260 mm/yr) and sent the search about 1700 km away (comment in <code>load_bird_segments()</code>).</p>
+      <p><b>Zones PTHA18 never modelled</b> work the same way, since the public catalogue covers the whole Earth:</p>
+      <div class="tbl"><table>
+        <tr><th>folder</th><th class="n">convergent Bird steps in box</th><th class="n">farthest match (km)</th><th class="n">convergence (mm/yr)</th></tr>
+        <tr><td>calabria2_v9</td><td class="n">34</td><td class="n">188.2</td><td class="n">7.93</td></tr>
+        <tr><td>caribbean2_v9</td><td class="n">50</td><td class="n">361.0</td><td class="n">15.65</td></tr>
+        <tr><td>antilles2_v9</td><td class="n">29</td><td class="n">124.4</td><td class="n">18.50</td></tr>
+      </table></div>
+      <p class="where">Numbers from each folder's <code>run_final.log</code>, step 3.</p>
+      <div class="callout warn"><span class="lbl">Caveat</span>On caribbean2 some columns are matched to a Bird step up to 361 km away: Bird's model has no convergent step along that part of the Caribbean plate boundary, so those columns borrow the speed of a distant one. Treat caribbean2's convergence (15.65 mm/yr) as indicative. On the PTHA18 zones the farthest match is 11.3 to 107.1 km.</div>
+    </div>
+  </details>
+</section>
+
+<section>
+  <h2 id="matching">Matching each column to Bird</h2>
+  <p>The mesh is a grid of cells (<a href="glossary.html#term-unit-source">unit sources</a>): <b>columns</b> side by side <a href="glossary.html#term-along-strike">along strike</a>, each with a few <b>rows</b> <a href="glossary.html#term-down-dip">down dip</a> (row 1 touches the trench). Bird's boundary is drawn at the trench, so step 3 matches each column through its row-1 cell, exactly as PTHA18's R code does (<code>event_conditional_probability_bird2003_factory()</code> in <code>make_spatially_variable_source_zone_convergence_rates.R</code>).</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 360" role="img" aria-label="Plan view: the top cell's centroid is moved up-dip to the top edge, then matched to the nearest Bird segment midpoint">
+      <defs>
+        <marker id="s3m-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1d2433"/></marker>
+      </defs>
+      <text x="20" y="22" font-size="12" font-weight="700" fill="#5b6475">SEEN FROM ABOVE: ONE COLUMN OF THE MESH AND THE TRENCH</text>
+      <rect x="90" y="120" width="160" height="110" fill="#fdf1ea" stroke="#eb6834"/>
+      <rect x="250" y="120" width="160" height="110" fill="#fdf1ea" stroke="#eb6834"/>
+      <rect x="410" y="120" width="160" height="110" fill="#fde6d8" stroke="#eb6834" stroke-width="2"/>
+      <text x="100" y="250" font-size="12" fill="#5b6475">row 3 (deepest)</text>
+      <text x="260" y="250" font-size="12" fill="#5b6475">row 2</text>
+      <text x="420" y="250" font-size="12" fill="#1d2433" font-weight="700">row 1 (top edge)</text>
+      <text x="92" y="290" font-size="12" fill="#1d2433">every cell of the column takes the values found for row 1</text>
+      <path d="M570,40 L570,340" stroke="#eb6834" stroke-width="1.5" stroke-dasharray="3 3"/>
+      <text x="540" y="60" font-size="12" fill="#5b6475" text-anchor="end">top edge of the mesh (trench)</text>
+      <circle cx="490" cy="175" r="6" fill="#1d2433"/>
+      <text x="445" y="163" font-size="12" fill="#1d2433">centroid</text>
+      <path d="M496,175 L562,175" stroke="#1d2433" stroke-width="2" marker-end="url(#s3m-ar)"/>
+      <circle cx="570" cy="175" r="6" fill="#1d2433" stroke="#fff" stroke-width="1.5"/>
+      <text x="416" y="200" font-size="11" fill="#1d2433">up dip: bearing strike - 90,</text>
+      <text x="416" y="215" font-size="11" fill="#1d2433">distance width/2 x cos(dip)</text>
+
+      <g stroke="#d9822b" stroke-width="5" stroke-linecap="round">
+        <path d="M600,40 L606,118"/>
+        <path d="M606,118 L598,196"/>
+        <path d="M598,196 L612,276"/>
+        <path d="M612,276 L608,340"/>
+      </g>
+      <g fill="#fff" stroke="#1d2433" stroke-width="1.5">
+        <rect x="598" y="74" width="10" height="10" transform="rotate(45 603 79)"/>
+        <rect x="597" y="152" width="10" height="10" transform="rotate(45 602 157)"/>
+        <rect x="600" y="231" width="10" height="10" transform="rotate(45 605 236)"/>
+        <rect x="605" y="303" width="10" height="10" transform="rotate(45 610 308)"/>
+      </g>
+      <path d="M576,172 L596,160" stroke="#1d2433" stroke-width="2.5"/>
+      <path d="M576,178 L599,231" stroke="#8a93a3" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <path d="M574,170 L598,85" stroke="#8a93a3" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <path d="M660,40 L664,340" stroke="#b9c0cc" stroke-width="3" stroke-dasharray="8 5"/>
+
+      <text x="690" y="72" font-size="12.5" fill="#1d2433" font-weight="700">Bird segments (orange)</text>
+      <text x="690" y="90" font-size="11.5" fill="#5b6475">diamond = great-circle midpoint</text>
+      <text x="690" y="150" font-size="12.5" fill="#1d2433" font-weight="700">nearest midpoint wins (solid line)</text>
+      <text x="690" y="168" font-size="11.5" fill="#5b6475">distance: haversine, sphere of</text>
+      <text x="690" y="184" font-size="11.5" fill="#5b6475">radius 6378137 m; ties: the first one</text>
+      <text x="690" y="244" font-size="12.5" fill="#1d2433" font-weight="700">grey dashed: class 'Normal' rows</text>
+      <text x="690" y="262" font-size="11.5" fill="#5b6475">outer rise; never matched for a thrust</text>
+      <text x="690" y="278" font-size="11.5" fill="#5b6475">zone (drawn apart here for clarity;</text>
+      <text x="690" y="294" font-size="11.5" fill="#5b6475">at Tonga they lie on the trench line)</text>
+    </svg>
+    <figcaption><b>The matching, schematically.</b> Only row 1 is matched. Its centre is first moved up dip to the top edge, because that is where Bird's boundary (the trench) is; then the nearest Bird midpoint is found. Distances are measured to segment <i>midpoints</i>, not to the nearest point of the line.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li><b>Cell properties.</b> Step 3 loads step 2's mesh and computes each cell's centre (centroid), <a href="glossary.html#term-strike">strike</a>, <a href="glossary.html#term-dip">dip</a>, length and width with <code>unit_sources.discretized_source_approximate_summary_statistics()</code>, the same table every later step uses.</li>
+    <li><b>Keep row 1.</b> Only the cells with <code>downdip_number == 1</code> are matched, one per column. The code checks there is exactly one per column.</li>
+    <li><b>Move to the top edge.</b> The centroid is moved up dip by half the cell's width, projected on the map: <code>destPoint(centroid, strike - 90, width/2 x 1000 x cos(dip))</code> on the WGS84 ellipsoid (geosphere's default in R, <code>pyproj.Geod(ellps="WGS84")</code> here). rptha's dip direction is strike + 90, so strike - 90 points up dip. <span class="where">(<code>top_edge_point()</code>)</span></li>
+    <li><b>Bird midpoints.</b> Each Bird segment is represented by its great-circle midpoint, R's <code>midPoint(p1, p2, f = 0)</code> (a sphere). <span class="where">(<code>spherical_midpoint()</code>)</span></li>
+    <li><b>Nearest segment.</b> The distance from the top-edge point to every midpoint is computed with the haversine formula on a sphere of radius 6378137 m (R's <code>distHaversine</code>), and the smallest wins; with a tie, the first in table order (R's <code>which.min</code>). <span class="where">(<code>dist_haversine()</code>)</span></li>
+    <li><b>Copy down the column.</b> The segment's Div_vel and RL_vel become the column's; every cell of that column gets the same values.</li>
+  </ol>
+  <p><b>Why these exact geodesy choices?</b> To give PTHA18's numbers exactly. A plain average of the two ends' longitudes and latitudes, or another distance formula, picks a different segment on a few columns. With the choices above, the area-weighted result equals PTHA18's to about 1e-15 (<a href="#results">results</a>).</p>
+
+  <h3>Worked example: kermadectonga2, column 5</h3>
+  <div class="tbl"><table>
+    <tr><th>quantity</th><th>value</th></tr>
+    <tr><td>row-1 cell centroid</td><td>187.479 E, -16.273</td></tr>
+    <tr><td>strike, dip, width</td><td>178.4 deg, 5.03 deg, 51.09 km</td></tr>
+    <tr><td>move up dip (bearing 88.4 deg, roughly east)</td><td>51.09 / 2 x cos(5.03 deg) = 25.45 km</td></tr>
+    <tr><td>top-edge point</td><td>187.717 E, -16.267</td></tr>
+    <tr><td>nearest Bird segment</td><td>(187.693, -16.332) to (187.700, -16.041), midpoint 187.697 E, -16.187</td></tr>
+    <tr><td>distance</td><td>9.18 km</td></tr>
+    <tr><td>its speeds</td><td>Div_vel = -229.0 mm/yr (converging), RL_vel = -80.5 mm/yr</td></tr>
+  </table></div>
+  <p class="where">Recomputed with <code>lib/bird_convergence.py</code> on <code>kermadectonga2_v9/data/slab2/unit_source_grid.npy</code>. The same numbers are in the zoom of the figure below.</p>
+
+  <figure class="fig">
+    <img src="img/step3_kermadectonga2_matching.png" alt="Map of kermadectonga2_v9's mesh with Bird segments coloured by convergence, the top-edge point of each column and a line to its matched segment midpoint; a zoom on the northern end labels columns 1 to 8 with their values">
+    <figcaption><b>The real matching on kermadectonga2_v9.</b> Left: the whole zone; every black dot is a column's top-edge point, joined to its matched Bird midpoint (white diamond). Right: the northern end, where the trench bends. Look at columns 1 to 3: their Bird segments slide sideways much more than they converge (see the next section), and column 1's match is the farthest at this end (31.5 km) because the mesh's corner cell sticks out past the last segments. Near the south end (bottom left), close to New Zealand, the nearest convergent Bird steps are farther away: column 73's is the farthest match of the zone (107.1 km), at 5.8 mm/yr. Made by <code>figures_src/make_step3.py</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="formula">From Bird's speeds to convergent slip</h2>
+  <p>PTHA18's earthquakes are all pure thrusts (<a href="glossary.html#term-rake">rake</a> 90 degrees: the upper plate moves straight up the dip). The plates, however, rarely meet head-on. R's rule (<code>compute_rates_all_sources.R</code>, lines 371 to 415 per the comments in <code>lib/bird_convergence.py</code>) keeps the part that pushes across the trench and allows some of the sideways part, but not more than a slip direction 50 degrees away from pure thrust (<code>rake_deviation = 50</code> in PTHA18's <code>config.R</code>):</p>
+  <div class="formula">
+    div = max(0, -Div_vel)<br>
+    rl = sign(RL_vel) x min( |RL_vel| , div x tan(50&deg;) )<br>
+    convergent slip = &radic;( div&sup2; + rl&sup2; )
+    <span class="where"><b>div</b>: the convergent part in mm/yr; a diverging segment (Div_vel &gt; 0) gives 0. <b>rl</b>: the sideways part, capped; tan(50&deg;) = 1.1918. For a normal-faulting source (rake -90) the first line is div = max(0, Div_vel). Any other rake is refused (<code>convergence_components()</code>).</span>
+  </div>
+  <figure class="fig narrow">
+    <svg viewBox="0 0 640 430" role="img" aria-label="The sideways part of the plate velocity is capped at 50 degrees from pure thrust">
+      <defs>
+        <marker id="s3f-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1d2433"/></marker>
+        <marker id="s3f-ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d9822b"/></marker>
+        <marker id="s3f-ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+      </defs>
+      <path d="M60,390 L300,390 L300,104 Z" fill="#fcf0e2"/>
+      <path d="M60,390 L300,104" stroke="#b7791f" stroke-width="1.2" stroke-dasharray="5 4"/>
+      <text x="306" y="104" font-size="12" fill="#b7791f">50&deg; from pure thrust</text>
+      <text x="200" y="370" font-size="12" fill="#b7791f">allowed</text>
+      <path d="M60,400 L60,20" stroke="#8a93a3" stroke-width="1"/>
+      <text x="68" y="26" font-size="12" fill="#5b6475">sideways part (mm/yr)</text>
+      <path d="M230,37 L230,390" stroke="#dde1e8" stroke-width="1"/>
+      <path d="M60,390 L228,390" stroke="#1d2433" stroke-width="2.5" marker-end="url(#s3f-ar)"/>
+      <text x="80" y="412" font-size="12.5" fill="#1d2433">div = 114 (column 1), across the trench</text>
+      <path d="M60,390 L229,40" stroke="#8a93a3" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#s3f-ag)"/>
+      <text x="240" y="44" font-size="12" fill="#5b6475">Bird: div 114, sideways 237.1</text>
+      <path d="M60,390 L228,189" stroke="#d9822b" stroke-width="3" marker-end="url(#s3f-ao)"/>
+      <circle cx="230" cy="187" r="4" fill="#d9822b"/>
+      <text x="320" y="200" font-size="12.5" fill="#1d2433">sideways part capped at</text>
+      <text x="320" y="218" font-size="12.5" fill="#1d2433">114 x tan(50&deg;) = 114 x 1.1918 = 135.9</text>
+      <text x="320" y="252" font-size="12.5" fill="#1d2433" font-weight="700">convergent slip (orange arrow)</text>
+      <text x="320" y="270" font-size="12.5" fill="#1d2433" font-weight="700">&radic;(114&sup2; + 135.9&sup2;) = 177.4 mm/yr</text>
+      <text x="320" y="302" font-size="12" fill="#5b6475">without the cap it would be</text>
+      <text x="320" y="318" font-size="12" fill="#5b6475">&radic;(114&sup2; + 237.1&sup2;) = 263.1 mm/yr</text>
+    </svg>
+    <figcaption><b>The 50-degree cap on kermadectonga2's column 1.</b> Bird says the plates there slide sideways at 237.1 mm/yr and converge at only 114. The sideways part is cut back to the edge of the allowed wedge, so the column's convergent slip is 177.4 mm/yr instead of 263.1. (Drawn to scale.)</figcaption>
+  </figure>
+
+  <h3>Four real columns of kermadectonga2_v9</h3>
+  <div class="tbl"><table>
+    <tr><th>column</th><th class="n">Div_vel</th><th class="n">RL_vel</th><th class="n">div</th><th class="n">cap div x 1.1918</th><th class="n">rl used</th><th class="n">convergent slip</th><th>what happens</th></tr>
+    <tr><td>1 (north end)</td><td class="n">-114.0</td><td class="n">-237.1</td><td class="n">114.0</td><td class="n">135.9</td><td class="n">-135.9</td><td class="n">177.4</td><td>sideways part capped</td></tr>
+    <tr class="hl"><td>5</td><td class="n">-229.0</td><td class="n">-80.5</td><td class="n">229.0</td><td class="n">272.9</td><td class="n">-80.5</td><td class="n">242.7</td><td>below the cap, kept whole</td></tr>
+    <tr><td>43</td><td class="n">-70.4</td><td class="n">52.9</td><td class="n">70.4</td><td class="n">83.9</td><td class="n">52.9</td><td class="n">88.1</td><td>large sideways part, still below the cap</td></tr>
+    <tr><td>71 (south end)</td><td class="n">-4.4</td><td class="n">-5.0</td><td class="n">4.4</td><td class="n">5.2</td><td class="n">-5.0</td><td class="n">6.7</td><td>slow, below the cap, kept whole</td></tr>
+  </table></div>
+  <p class="where">All in mm/yr. Recomputed with <code>bird_convergence.convergence_components()</code>; the div and slip columns equal those stored in <code>kermadectonga2_v9/data/convergence_per_column.json</code>. Checked by the test <code>test_convergence_components_follow_compute_rates_all_sources</code> (<code>pyptha_v12/tests/test_v8_fidelity.py</code>).</p>
+</section>
+
+<section>
+  <h2 id="per-column">Per column values and the zone's number</h2>
+  <p>After the matching every column has two numbers: <b>div</b>, the convergent part only, and the <b>convergent slip</b> &radic;(div&sup2; + rl&sup2;). Step 3 then computes one number for the whole zone, the <b>area-weighted mean</b> of the convergent slip over all cells:</p>
+  <div class="formula">
+    convergence = &Sigma; A<sub>i</sub> s<sub>i</sub> / &Sigma; A<sub>i</sub>
+    <span class="where"><b>A<sub>i</sub></b>: area (length x width) of cell i; <b>s<sub>i</sub></b>: the convergent slip of cell i's column. Big cells count more. For kermadectonga2_v9: 99.3560 mm/yr over 542,559 km&sup2; (<code>data/convergence.txt</code> holds 99.3560146156).</span>
+  </div>
+  <figure class="fig">
+    <img src="img/step3_kermadectonga2_per_column.png" alt="Bar chart of the 73 columns of kermadectonga2_v9: dark bars are div, light bars on top are the extra from the sideways part, a dashed line marks the area-weighted mean 99.36 mm/yr">
+    <figcaption><b>The two profiles of kermadectonga2_v9, column by column.</b> Dark orange: div, the convergent part (profile 2, the LEVEL 4 target). Light orange on top: the extra from the capped sideways part; the full bar is the convergent slip (profile 1, the scenario weights). Convergence falls from about 250 mm/yr at Tonga (columns 4 to 8) to about 6 mm/yr at the New Zealand end. The dashed line is the one number, 99.36 mm/yr. Values from <code>kermadectonga2_v9/data/convergence_per_column.json</code>.</figcaption>
+  </figure>
+  <figure class="fig narrow">
+    <img src="img/step3_kermadectonga2_scratch_mesh_map_convergence.png" alt="Map of kermadectonga2_v9's 219 cells coloured by their convergent slip">
+    <figcaption><b>The same values on the map</b> (<code>data/convergence_per_cell.npy</code>, drawn by step 9 as <code>figures/scratch_mesh_map_convergence.png</code>). Every cell of a column has its column's colour: the three rows down dip share one value.</figcaption>
+  </figure>
+
+  <h3>The two ways the engine uses the profiles</h3>
+  <div class="grid g2">
+    <div class="card">
+      <h4>Profile 1, convergent slip: which scenarios are likely</h4>
+      <p>Many earthquake scenarios share one magnitude, at different places along the zone. The engine splits each magnitude's rate among them (the <a href="glossary.html#term-conditional-probability">conditional probability</a>). With Bird's model a scenario's share is proportional to</p>
+      <p style="text-align:center"><b>its area x the area-weighted mean convergent slip of its cells</b></p>
+      <p>so ruptures on fast parts of the zone are more likely. In <code>kermadectonga2</code> a Tonga rupture (about 200 mm/yr) gets about four times the share of a same-size rupture near 50 mm/yr.</p>
+      <p class="where"><code>run_logic_tree.py</code>, branch <code>cp_model == "convergent_slip_weighted"</code>; R: <code>make_conditional_probability_function_uniform_slip</code>. Details: <a href="engine.html#conditional-probability">engine</a>.</p>
+    </div>
+    <div class="card">
+      <h4>Profile 2, div: the LEVEL 4 target shape</h4>
+      <p>LEVEL 4 (the <a href="glossary.html#term-edge-correction">edge correction</a>) adds up, per column, the slip released by all scenarios and compares its <i>shape</i> along the zone with the shape of the plate motion. The target is div, not the convergent slip, and it is not weighted by area: R compares the two normalised shapes directly.</p>
+      <p>Without a profile (constant-convergence zones) the target is flat: the same value in every column.</p>
+      <p class="where"><code>run_logic_tree.py</code>, <code>target_profile = rc.get("convergence_profile")</code>; R: <code>compute_rates_all_sources.R</code> (div_vec). Details: <a href="engine.html#level4">LEVEL 4</a>.</p>
+    </div>
+  </div>
+  <p>Step 6 writes both profiles into the input file's <code>rates</code> block through <code>bird_convergence.rates_entries()</code>:</p>
+  <div class="code"><pre>"conditional_probability_model": "convergent_slip_weighted",
+"convergent_slip_profile": [177.35..., 116.7..., ...],   <span class="cm"># one value per column</span>
+"convergence_profile":     [114.0, 75.0, 77.9, ...],     <span class="cm"># div per column</span></pre></div>
+  <p>The engine spreads each list to every cell of its column and stops with an error if the list does not have one value per column (for example, if the mesh was rebuilt after step 3). <span class="where">(<code>column_profile()</code> in <code>run_logic_tree.py</code>.)</span></p>
+  <div class="callout"><span class="lbl">Why it matters</span>The profiles do not change how many earthquakes of each magnitude happen; they change <b>where</b> the rate goes, so which tsunamis carry it. With these profiles every scenario's mean rate matches PTHA18's published rate within 1e-10 (relative) on the 4 unsegmented zones checked (<a href="validation.html#events">validation</a>). With a flat target and "1/slip" weights instead, the per-scenario rates would be off by a median 4 to 26% on the Bird zones.</div>
+</section>
+
+<section>
+  <h2 id="double-dip">The dip correction: once, in the engine</h2>
+  <p>Bird's speeds are <b>horizontal</b>: how fast the plates approach on the map. An earthquake slips <b>along the fault</b>, which slopes down at the dip angle. To keep up with a horizontal approach v, the fault must slip v / cos(dip) along its slope (the long side of the triangle below).</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 330" role="img" aria-label="Horizontal convergence v versus slip along the fault v over cos dip, divided once by the engine">
+      <defs>
+        <marker id="s3d-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1d2433"/></marker>
+        <marker id="s3d-ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d9822b"/></marker>
+      </defs>
+      <text x="20" y="24" font-size="12" font-weight="700" fill="#5b6475">THE GEOMETRY</text>
+      <path d="M40,80 L320,80" stroke="#8a93a3" stroke-width="1.5"/>
+      <text x="44" y="70" font-size="12" fill="#5b6475">sea floor</text>
+      <path d="M60,80 L300,200" stroke="#c43d3d" stroke-width="3"/>
+      <text x="306" y="206" font-size="12" fill="#c43d3d">fault</text>
+      <path d="M60,240 L292,240" stroke="#d9822b" stroke-width="2.5" marker-end="url(#s3d-ao)"/>
+      <text x="80" y="262" font-size="12.5" fill="#1d2433">convergence (horizontal): v</text>
+      <path d="M75,105 L285,210" stroke="#1d2433" stroke-width="2.5" marker-end="url(#s3d-ar)"/>
+      <text x="96" y="160" font-size="12.5" fill="#1d2433" transform="rotate(26.6 96 160)">slip along the fault: v / cos(dip)</text>
+      <path d="M110,80 A50,50 0 0 1 104.7,102.4" fill="none" stroke="#1d2433"/>
+      <text x="118" y="100" font-size="12" fill="#1d2433">dip</text>
+
+      <text x="380" y="24" font-size="12" font-weight="700" fill="#5b6475">WHO DIVIDES BY cos(dip)</text>
+      <rect x="380" y="40" width="560" height="72" rx="9" fill="#e4f5ec" stroke="#2e9e6b"/>
+      <text x="394" y="62" font-size="13" font-weight="700" fill="#2e9e6b">As PTHA18 (R): divided once, by the engine</text>
+      <text x="394" y="81" font-size="12" fill="#1d2433">step 3 writes v (horizontal) to convergence.txt and the input JSON;</text>
+      <text x="394" y="100" font-size="12" fill="#1d2433">the engine computes slip rate = v x coupling / cos(mean dip)</text>
+      <rect x="380" y="126" width="560" height="72" rx="9" fill="#fdf6e3" stroke="#b7791f"/>
+      <text x="394" y="148" font-size="13" font-weight="700" fill="#b7791f">If you enter a convergence by hand</text>
+      <text x="394" y="167" font-size="12" fill="#1d2433">give the horizontal plate rate, never v / cos(dip): the engine</text>
+      <text x="394" y="186" font-size="12" fill="#1d2433">would divide it again, and the correction would be applied twice</text>
+      <rect x="380" y="212" width="560" height="96" rx="9" fill="#f0f2f5" stroke="#8a93a3" stroke-dasharray="5 4"/>
+      <text x="394" y="234" font-size="12.5" font-weight="700" fill="#1d2433">kermadectonga2_v9, mean dip 15.418 deg</text>
+      <text x="394" y="254" font-size="12" fill="#1d2433">1/cos(15.418 deg) = 1.0373. Once: 99.36 x 1.0373 = 103.1 mm/yr along the fault.</text>
+      <text x="394" y="273" font-size="12" fill="#1d2433">Twice by mistake: 99.36 x 1.0373 x 1.0373 = 106.9 mm/yr,</text>
+      <text x="394" y="292" font-size="12" fill="#1d2433">3.7% too much slip, so 3.7% too many earthquakes before LEVEL 3.</text>
+    </svg>
+    <figcaption><b>Horizontal rate in, slip on the fault out.</b> The correction is right once. The engine applies it in <code>build_parameter_axes()</code>; step 3 only reports the factor ("the engine applies 1/cos(dip) = 1.0373 once" in the log).</figcaption>
+  </figure>
+  <p><b>How the engine does it.</b> <code>build_parameter_axes()</code> in <code>run_logic_tree.py</code> builds one slip rate per coupling value:</p>
+  <div class="formula">
+    slip rate (m/yr) = convergence / 1000 x coupling x 1 / cos(mean dip)
+    <span class="where"><b>convergence</b>: <code>tectonic_convergence_mm_per_yr</code> from the input file, i.e. <code>convergence.txt</code>. <b>mean dip</b>: the angle mean of all cells' dips (average of the unit vectors, rptha's <code>mean_angle</code>), <code>moment_balance.mean_dip_cos_factor()</code>; 15.4180 deg on kermadectonga2_v9 (the plain average is 15.434). R: <code>compute_rates_all_sources.R</code>, <code>sourcepar$slip = sourcepar$slip/cos_dip * 1/1000</code>.</span>
+  </div>
+  <p>For example, with an illustrative coupling of 0.5 on kermadectonga2_v9: 99.3560 / 1000 x 0.5 x 1.0373 = 0.0515 m/yr of slip on the fault.</p>
+  <p><b>How big the correction is, per zone.</b> The moment balance makes the earthquake rates proportional to the slip rate, so the correction raises every rate before the update with observed earthquakes (<a href="engine.html#level3">LEVEL 3</a>) by 1/cos(mean dip); applied twice by mistake it would raise them by that factor again. Mean dips and factors from each folder's <code>run_final.log</code>, step 3:</p>
+  <div class="tbl"><table>
+    <tr><th>folder</th><th class="n">mean dip (deg)</th><th class="n">1/cos(mean dip)</th><th class="n">extra, if applied twice by mistake</th></tr>
+    <tr><td>makran2_v9</td><td class="n">6.06</td><td class="n">1.0056</td><td class="n">+0.6%</td></tr>
+    <tr><td>antilles2_v9</td><td class="n">9.31</td><td class="n">1.0134</td><td class="n">+1.3%</td></tr>
+    <tr><td>calabria2_v9</td><td class="n">14.95</td><td class="n">1.0350</td><td class="n">+3.5%</td></tr>
+    <tr class="hl"><td>kermadectonga2_v9</td><td class="n">15.42</td><td class="n">1.0373</td><td class="n">+3.7%</td></tr>
+    <tr><td>caribbean2_v9</td><td class="n">15.44</td><td class="n">1.0374</td><td class="n">+3.7%</td></tr>
+    <tr><td>kurilsjapan_v9</td><td class="n">16.33</td><td class="n">1.0420</td><td class="n">+4.2%</td></tr>
+    <tr><td>southamerica_v9</td><td class="n">16.62</td><td class="n">1.0436</td><td class="n">+4.4%</td></tr>
+    <tr><td>puysegur2_v9</td><td class="n">36.63</td><td class="n">1.2461</td><td class="n">+24.6%</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="puysegur">Puysegur: a constant 35 mm/yr</h2>
+  <p>PTHA18 used Bird on every zone except one: for <code>puysegur</code> and <code>puysegur2</code> its parameter table (<code>sourcezone_parameters.csv</code>, column <code>use_bird_convergence</code>) says 0, and a constant 35 mm/yr from the literature was used instead. With a constant rate, R's model is also different: scenario probabilities follow the "1/slip" rule (<code>inverse_slip</code>) and the LEVEL 4 target is flat.</p>
+  <p>This package derives every input from public data, so by default it uses Bird on puysegur2 too: <b>25.60 mm/yr</b> on its own mesh (and 24.91 mm/yr on PTHA18's mesh, same code). To reproduce PTHA18's choice instead, edit one line of the example's step 3:</p>
+  <div class="code"><pre><span class="cm"># puysegur2_v9/steps/step3_convergence.py</span>
+CONVERGENCE_OVERRIDE_MM_PER_YR = 35     <span class="cm"># default: None (use Bird)</span></pre></div>
+  <div class="grid g2">
+    <div class="card">
+      <h4><span class="badge">None</span> (default)</h4>
+      <ul class="tight">
+        <li><code>convergence.txt</code> = Bird's area-weighted mean</li>
+        <li><code>use_bird_convergence: true</code> in the per-column JSON</li>
+        <li>step 6 adds both profiles; the engine uses <code>convergent_slip_weighted</code> and the div target</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4><span class="badge warn">a number, e.g. 35</span></h4>
+      <ul class="tight">
+        <li><code>convergence.txt</code> = that number (horizontal, before the dip correction)</li>
+        <li><code>use_bird_convergence: false</code>; step 6 keeps <code>inverse_slip</code> and writes no profiles, so the LEVEL 4 target is flat</li>
+        <li>Bird's per-cell values are still computed and saved, for the report's maps</li>
+      </ul>
+    </div>
+  </div>
+  <p class="where">Where in the code: <code>templates/step3_convergence.py.tmpl</code> (<code>CONVERGENCE_OVERRIDE_MM_PER_YR</code>), <code>templates/step6_write_input.py.tmpl</code> (<code>if use_bird: cfg["rates"].update(bc.rates_entries(...))</code>), <code>bird_convergence.ptha18_uses_bird_convergence()</code> (reads PTHA18's flag, used by step 8).</p>
+  <p><b>What changes.</b> On puysegur2 the two choices differ a lot: 35 / 25.60 = 1.37, so rates before LEVEL 3 would be about 37% higher with the override. In the final run (Bird, 25.60 mm/yr) the rate of Mw &gt; 7.2 is 0.0645 per year against PTHA18's 0.0808 (official run, 35 mm/yr); part of the gap is this choice, part is the smaller mesh (43,468 against 46,853 km&sup2;). The same override works on any zone, if a literature value is preferred to Bird's.</p>
+  <div class="callout warn"><span class="lbl">Editing only the input JSON gives a mixed model</span>Changing just <code>tectonic_convergence_mm_per_yr</code> to 35 in <code>inputs/input_puysegur2_scratch.json</code> and re-running step 7 changes the moment balance (35 mm/yr), but the Bird profiles stay in the file: the scenarios are still weighted by Bird's convergent slip and LEVEL 4 still aims at Bird's shape. That is neither PTHA18's model nor this package's. For PTHA18's constant model use <code>CONVERGENCE_OVERRIDE_MM_PER_YR</code> and re-run step 3, step 6 with <code>--force</code>, then steps 7 and 9, or in the JSON also set <code>"conditional_probability_model": "inverse_slip"</code> and delete <code>convergent_slip_profile</code> and <code>convergence_profile</code>. See <a href="customise.html#convergence">Change a setting</a>.</div>
+</section>
+
+<section>
+  <h2 id="plate-change">Does the mesh run past its own plate boundary?</h2>
+  <p>The match above <b>never fails</b>. Every column is given the nearest Bird segment, and "nearest" always returns something. So a mesh that extends beyond the end of its own subduction zone does not error: it quietly starts reading the <em>next</em> plate boundary's convergence, at a perfectly normal match distance. Nothing else in the run would show it.</p>
+  <p>Step 3 therefore checks for it, on every run, and reports what it finds in the log and in <code>report.html</code>. It never trims anything by itself.</p>
+
+  <div class="callout"><span class="lbl">The case this was written for</span>kurilsjapan's SLAB raster continues south past the Japan Trench onto the <b>Izu-Bonin Trench</b>, a different plate pair that PTHA18 models separately as <code>izumariana</code>. PTHA18 cuts kurilsjapan at 34.30&deg;N and starts izumariana at exactly 34.30&deg;N. A from-scratch mesh built on the whole raster ran to 32.27&deg;N, so its last 5 of 65 columns sat on Izu-Bonin and pulled the zone convergence from 87.71 down to 86.18&nbsp;mm/yr. (The value recovered from PTHA18's own session is 87.7244, so those 5 columns are exactly what stands between the two.)</p></div>
+
+  <div class="tbl"><table>
+    <tr><th>Bird rows</th><th>boundary</th><th>Div_vel</th><th>latitude</th></tr>
+    <tr><td>435 to 448</td><td>Japan Trench (Pacific/Okhotsk)</td><td>&minus;80 to &minus;93</td><td>ends 34.44&deg;N</td></tr>
+    <tr><td>781 to 789</td><td>Izu-Bonin Trench (a different plate pair)</td><td>&minus;44 to &minus;60</td><td>starts 33.96&deg;N</td></tr>
+  </table></div>
+
+  <h3>What counts as a crossing</h3>
+  <p>A step change in <code>div</code> between along-strike <b>neighbours</b> is the signature: within one boundary <code>div</code> drifts smoothly, while crossing onto another plate pair jumps it. Three conditions must all hold, and each one rejects a different false positive:</p>
+  <div class="tbl"><table>
+    <tr><th>condition</th><th>default</th><th>what it rejects</th></tr>
+    <tr><td>jump between neighbouring columns</td><td>&ge; 25 mm/yr</td><td>ordinary drift along one boundary (kurilsjapan's largest within-zone step is 12.9)</td></tr>
+    <tr><td>sustained over a run of columns</td><td>&ge; 2</td><td>a one-column spike that comes straight back: Bird's own segment noise</td></tr>
+    <tr><td>at an END of the zone</td><td>within 25% of either end</td><td>a mid-arc anomaly: a mesh cannot cross onto another plate in its middle and come back</td></tr>
+  </table></div>
+  <p>The far side is compared against the <b>median</b> of the kept side, not its extremes: a single within-zone dip (kurilsjapan's column 57 drops to 77.3 among neighbours near 91) is ordinary Bird noise and must not veto a real crossing five columns away.</p>
+
+  <h3>Results on the 17 example zones</h3>
+  <div class="tbl"><table>
+    <tr><th>zone</th><th>verdict</th></tr>
+    <tr><td><code>kurilsjapan</code></td><td><b>flags</b> the last 5 of 65 columns, jump 30.7 mm/yr: the Izu-Bonin overlap above</td></tr>
+    <tr><td><code>newguinea</code></td><td><b>flags</b> the last 2 of 23 columns, jump 47.2 mm/yr: the eastern tail (lon 142.3 to 142.7) sits on the Bismarck Sea boundary</td></tr>
+    <tr><td>the other 15</td><td>silent</td></tr>
+  </table></div>
+
+  <h3 id="auto-clip"><code>--auto-clip</code>: cutting the flagged columns</h3>
+  <p>When the report warns, re-run with <code>--auto-clip</code> on step 1 (or on <code>step_total.py</code>, which threads it through). You supply <b>no coordinates</b>: it reads step 3's finding, drops the flagged columns, and takes the lon/lat box of the mesh that remains.</p>
+  <pre class="out">.venv/Scripts/python.exe &lt;folder&gt;/steps/step1_fetch_slab2.py     # only if steps 1-3 have not run yet
+.venv/Scripts/python.exe &lt;folder&gt;/steps/step2_build_grid.py
+.venv/Scripts/python.exe &lt;folder&gt;/steps/step3_convergence.py
+.venv/Scripts/python.exe &lt;folder&gt;/steps/step_total.py --auto-clip</pre>
+  <div class="tbl"><table>
+    <tr><th>kurilsjapan</th><th>before</th><th>after <code>--auto-clip</code></th><th>official PTHA18</th></tr>
+    <tr><td>cells</td><td>260 (65&times;4)</td><td>240 (60&times;4)</td><td>244 (61&times;4)</td></tr>
+    <tr><td>southern limit</td><td>32.27&deg;N</td><td>34.24&deg;N</td><td>34.30&deg;N</td></tr>
+    <tr><td>lowest column <code>div</code></td><td>60.2 (Izu-Bonin)</td><td>75.7 (all Japan Trench)</td><td>, </td></tr>
+    <tr><td>convergence</td><td>86.18 mm/yr</td><td>87.91 mm/yr</td><td>87.72 mm/yr</td></tr>
+  </table></div>
+  <p class="where">60 columns rather than 61 is arc length, not a leftover: the clipped trench measures 2966.6 km, and 2966.6/50 = 59.3 &rarr; 60. PTHA18's hand-edited contour is 1.1% longer, which is the expected gap between a SLAB-derived contour and a hand-edited one.</p>
+
+  <div class="callout warn"><span class="lbl">The margin is directional, and that is not a detail</span>The clip box needs a margin: step 1's trench detector works on the raster's outer edge, and a box drawn exactly on the mesh makes the raster's own cut edge look like a trench. But the margin must <b>not</b> be applied on the side the tail was cut from, where it simply re-admits part of what was just removed. The first version padded all four sides by 0.35&deg; and let one extra column regrow at lat 34.078, still reading Izu-Bonin's 60.2 mm/yr and still visible as a dark cell at the tip of the mesh. The margin is now applied only on the sides the tail does not lie beyond.</div>
+
+  <div class="callout warn"><span class="lbl">When a box cannot do it</span>A lon/lat box can only cut a tail that sticks out in lon or lat. <code>newguinea</code>'s arc runs east-west, so its eastern tail sits <em>inside</em> the bounding box of the part you keep. <code>--auto-clip</code> detects this and <b>refuses</b>, asking for an explicit <code>--clip</code> instead of producing a silently useless one.</div>
+
+  <div class="callout"><span class="lbl">With <code>--segmented true</code> (v9)</span>Bird's segmentation uses the same plate pairs as this check, so a flagged tail becomes a segment of its own. On kurilsjapan the unclipped mesh gives 3 Bird segments: <code>ok_pa</code> (columns 1-43), <code>pa_ok</code> (44-60) and the Izu-Bonin tail <code>ps_pa</code> (61-65, no earthquakes). After <code>--auto-clip</code> the mesh has 60 columns and 2 segments, 1-42 and 43-60, against PTHA18's <code>_kurils</code>/<code>_japan</code> boundary at 44/45 on the same mesh: the same split, within 2 columns, from public data only. So on a segmented run, read the step 3 warning before trusting the segment list.</div>
+
+  <div class="callout warn"><span class="lbl"><code>--auto-clip</code> discards hand edits to the input JSON</span>It rebuilds the mesh with fewer along-strike columns, so the input JSON written for the old mesh no longer fits it (its <code>convergent_slip_profile</code> still has the old column count, and step 7 refuses to run). <code>step_total.py --auto-clip</code> therefore also passes <code>--force</code> to step 6. Re-apply any hand edit afterwards.</div>
+</section>
+
+<section>
+  <h2 id="files">Files written</h2>
+  <div class="tbl"><table>
+    <tr><th>file</th><th>content</th><th>read by</th></tr>
+    <tr><td><code>data/convergence.txt</code></td><td>one number, 10 decimals: the zone's convergence in mm/yr, horizontal (Bird's area-weighted mean, or the override); becomes <code>tectonic_convergence_mm_per_yr</code></td><td>step 6</td></tr>
+    <tr><td><code>data/convergence_per_cell.npy</code></td><td>the convergent slip of every cell (mm/yr), in the cell order of step 2's cell table; 219 values on kermadectonga2</td><td>step 9 (maps)</td></tr>
+    <tr><td><code>data/convergence_per_column.json</code></td><td>the per-column profiles, fields below</td><td>step 6</td></tr>
+    <tr><td><code>data/plate_boundary_change.json</code></td><td>written <b>only</b> when the <a href="#plate-change">plate-boundary check</a> finds something, and deleted when it does not, so step 1 <code>--auto-clip</code> and step 9 always see the current mesh's verdict: which columns, the jump, the derived clip window and whether a box can separate it</td><td>step 1 (<code>--auto-clip</code>), step 9 (the report warning)</td></tr>
+  </table></div>
+  <div class="tbl"><table>
+    <tr><th>JSON field</th><th>meaning</th><th>kermadectonga2_v9</th></tr>
+    <tr><td><code>_what_this_is</code></td><td>a one-sentence description</td><td>text</td></tr>
+    <tr><td><code>bird_table</code></td><td>which Bird table was read: <code>bird</code> or <code>bird-griffin</code> (<code>--convergence</code>)</td><td>bird</td></tr>
+    <tr><td><code>use_bird_convergence</code></td><td>true unless the override is set</td><td>true</td></tr>
+    <tr><td><code>alongstrike_number</code></td><td>column numbers 1 to n</td><td>1 ... 73</td></tr>
+    <tr><td><code>div_mm_per_yr</code></td><td>div per column (the LEVEL 4 target shape)</td><td>114.0, 75.0, 77.9, 223.0 ... 4.5 (range 4.4 to 229.0)</td></tr>
+    <tr><td><code>convergent_slip_mm_per_yr</code></td><td>convergent slip per column (the scenario weights)</td><td>177.35, 116.7, 121.2, 251.4 ... 5.8 (range 5.8 to 251.4)</td></tr>
+    <tr><td><code>distance_km</code></td><td>top-edge point to the matched Bird midpoint</td><td>31.5, 5.0, 1.7 ... (largest 107.1)</td></tr>
+    <tr><td><code>area_weighted_mean_mm_per_yr</code></td><td>Bird's zone value (kept even when the override is set)</td><td>99.3560146156</td></tr>
+  </table></div>
+  <p>The step's log (from <code>kermadectonga2_v9/run_final.log</code>):</p>
+  <pre class="out">  table: Bird (2003)'s public catalogue (--convergence bird)
+  1869 convergent-boundary steps (SUB/OCB/CCB) in Bird (2003)'s public catalogue
+  122 steps in the bounding box lon (170.33, 190.48), lat (-45.17, -11.69)
+
+  per-column convergent slip:  5.8 - 251.4 mm/yr
+  top edge to Bird segment:    107.1 km at most
+  area-weighted convergence:   99.3560 mm/yr (horizontal)
+  mean dip:                    15.4180 deg; the engine applies 1/cos(dip) = 1.0373 once</pre>
+  <p class="where">Box limits shortened to two decimals here. With <code>--ptha true</code> the log also prints step 8's convergence and the difference, if step 8 has already run; with <code>--ptha false</code> step 3 reads nothing of PTHA18, and the comparison is in the report.</p>
+  <details class="deep">
+    <summary>Step 8 uses the same code on PTHA18's mesh <span class="tag">add_bird_model()</span></summary>
+    <div class="body">
+      <p>PTHA18 published only the zone's scalar convergence, not its per-column values. Step 8 (the official comparison run, <a href="official.html">details</a>) rebuilds them: <code>add_bird_model()</code> in <code>templates/step8_official.py.tmpl</code> reads PTHA18's own cell table (<code>unit_source_statistics_&lt;zone&gt;.nc</code>), runs <code>column_convergence()</code> on it, checks that the area-weighted mean equals the official convergence (warning above a relative 1e-6), and adds the two profiles to the official input. It also saves the per-cell values on PTHA18's mesh (<code>outputs_official/ptha18_reference/official_convergence_per_cell.npy</code>), which the report draws next to this run's, and the same match <b>per along-strike column</b> (<code>official_convergence_per_column.json</code>), which step 9 exports as <code>convergence_profile_official.csv</code> beside this run's profile. For puysegur2 (flag 0) nothing is added: the official input's constant model is already PTHA18's.</p>
+    </div>
+  </details>
+</section>
+
+<section>
+  <h2 id="results">Results on the 8 examples</h2>
+  <div class="tbl"><table>
+    <tr><th>folder</th><th>Bird table</th><th class="n">steps searched</th><th class="n">farthest match (km)</th><th class="n">this run (mm/yr)</th><th class="n">PTHA18 official</th><th class="n">difference</th></tr>
+    <tr><td>calabria2_v9</td><td>public</td><td class="n">34</td><td class="n">188.2</td><td class="n">7.93</td><td class="n">no PTHA18 run</td><td class="n"></td></tr>
+    <tr><td>caribbean2_v9</td><td>public</td><td class="n">50</td><td class="n">361.0</td><td class="n">15.65</td><td class="n">no PTHA18 run</td><td class="n"></td></tr>
+    <tr><td>antilles2_v9</td><td>public</td><td class="n">29</td><td class="n">124.4</td><td class="n">18.50</td><td class="n">no PTHA18 run</td><td class="n"></td></tr>
+    <tr><td>southamerica_v9</td><td>public</td><td class="n">159</td><td class="n">43.4</td><td class="n">72.59</td><td class="n">58.71</td><td class="n">+23.6%</td></tr>
+    <tr class="hl"><td>kermadectonga2_v9</td><td>public</td><td class="n">122</td><td class="n">107.1</td><td class="n">99.36</td><td class="n">98.77</td><td class="n">+0.6%</td></tr>
+    <tr><td>kurilsjapan_v9 (<code>--auto-clip</code>)</td><td>public</td><td class="n">132</td><td class="n">44.8</td><td class="n">87.91</td><td class="n">87.72</td><td class="n">+0.2%</td></tr>
+    <tr><td>makran2_v9</td><td>public</td><td class="n">29</td><td class="n">50.7</td><td class="n">41.06</td><td class="n">41.06</td><td class="n">0.0%</td></tr>
+    <tr><td>puysegur2_v9</td><td>public</td><td class="n">40</td><td class="n">11.3</td><td class="n">25.60</td><td class="n">35 (constant)</td><td class="n">-26.9%</td></tr>
+  </table></div>
+  <p class="where">From each folder's <code>run_final.log</code> (step 3: convergent Bird steps in the search box, farthest match, area-weighted convergence) and <code>outputs_official/logic_tree_summary.csv</code> (step 8). "public" = Bird's public catalogue, read with <code>--ptha false</code>.</p>
+
+  <h3>Same method, same answer on PTHA18's mesh</h3>
+  <p>Run on PTHA18's own cells, the code reproduces PTHA18's convergence to rounding error. Step 8's logs (<code>add_bird_model()</code>):</p>
+  <div class="tbl"><table>
+    <tr><th>zone</th><th class="n">Bird on PTHA18's mesh (mm/yr)</th><th class="n">PTHA18's convergence (mm/yr)</th><th class="n">relative difference</th></tr>
+    <tr><td>southamerica</td><td class="n">58.7115398279</td><td class="n">58.7115398279</td><td class="n">-7.3e-16</td></tr>
+    <tr><td>kermadectonga2</td><td class="n">98.7721052556</td><td class="n">98.7721052556</td><td class="n">+1.9e-15</td></tr>
+    <tr><td>kurilsjapan</td><td class="n">87.7244615793</td><td class="n">87.7244615793</td><td class="n">-3.2e-16</td></tr>
+    <tr><td>makran2</td><td class="n">41.0642787255</td><td class="n">41.0642787255</td><td class="n">0.0</td></tr>
+  </table></div>
+  <p>The test <code>test_bird_convergence_reproduces_ptha18_convergence</code> (<code>pyptha_v12/tests/test_v8_fidelity.py</code>) checks the same on 7 zones (cascadia, makran2, philippine, kermadectonga2, kurilsjapan, southamerica, izumariana) with a tolerance of 1e-12. So <b>the differences in the first table come from the mesh, not the method</b>, except puysegur2's (PTHA18's constant rate) and a small part on kermadectonga2 and makran2, from the Bird table (<a href="#tables">above</a>).</p>
+
+  <figure class="fig">
+    <img src="img/step3_official_vs_this_run.png" alt="Five panels of convergent slip per column against latitude or longitude, this run in orange and PTHA18's mesh in blue, with each mesh's area-weighted mean as a dashed line">
+    <figcaption><b>Why the zone numbers differ: per-column convergence on this run's mesh (orange) and on PTHA18's mesh (blue).</b> Both curves are computed by <code>bird_convergence.column_convergence()</code>, on <code>data/slab2/unit_source_grid.npy</code> and on PTHA18's <code>inputs/geometry/unit_source_statistics_&lt;zone&gt;.nc</code>. Where the meshes overlap the curves lie on top of each other. <b>southamerica</b>: PTHA18's mesh continues south to about -57.6 deg (165 columns), over Patagonia where Bird's convergence is only 6 to 21 mm/yr; this run's mesh stops near -43 deg (118 columns), so its mean is higher (+23.6%). <b>kurilsjapan</b>: cut with <code>--auto-clip</code>, both meshes stop near 34.4 deg N and the two curves lie on top of each other (+0.2%); before the cut this run's mesh extended to about 32 deg N over Izu-Bonin columns at about 60 mm/yr, which pulled its mean down to -1.8% (<a href="#plate-change">the check</a>). <b>puysegur2</b>: the dotted line is PTHA18's constant 35 mm/yr; Bird gives 24.91 on PTHA18's mesh and 25.60 on this run's. Made by <code>figures_src/make_step3.py</code>.</figcaption>
+  </figure>
+  <figure class="fig">
+    <img src="img/step3_kermadectonga2_mesh_comparison_map_convergence.png" alt="Side-by-side maps of PTHA18's kermadectonga2 mesh and this run's mesh, both coloured by convergent slip on one scale">
+    <figcaption><b>kermadectonga2 on the map, both meshes on one colour scale</b> (step 9's <code>figures/mesh_comparison_map_convergence.png</code>). The pattern is the same; the small difference in the zone number (+0.6%) comes from the slightly different outline and, for +0.2%, from the Bird table (219 against 216 cells, 542,559 against 511,220 km&sup2;).</figcaption>
+  </figure>
+  <figure class="fig">
+    <img src="img/step3_southamerica_mesh_comparison_map_convergence.png" alt="Side-by-side maps of PTHA18's southamerica mesh and this run's mesh coloured by convergent slip; PTHA18's continues far south with low values">
+    <figcaption><b>southamerica on the map</b> (step 9's <code>figures/mesh_comparison_map_convergence.png</code>). Look at the south: PTHA18's mesh (left) continues with dark, slow cells that this run's mesh (right) does not have. That missing part is why this run's convergence is higher.</figcaption>
+  </figure>
+  <div class="callout"><span class="lbl">Next</span>The earthquakes that actually happened on the zone are selected in <a href="seismicity.html">steps 4-5</a>; everything comes together in <a href="engine.html">steps 6-7</a>.</div>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>from_scratch_v12 documentation. Figures come from the example folders in <code>ptha18_logic_tree_test/</code> or from <code>html/docs/figures_src/make_step3.py</code>.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

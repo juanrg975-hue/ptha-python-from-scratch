@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Segmented vs unsegmented | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Rates</div>
+  <h1>Segmented vs unsegmented (LEVEL 0)</h1>
+  <p class="lead">A subduction zone can be modelled as one long fault that may break from end to end (<b>unsegmented</b>), or as several stretches that each break on their own (<b>segmented</b>). PTHA18 does not choose: on its large zones it gives each model half the weight. v9 does the same with <code>--segmented true</code>, with PTHA18's method and public data only. This page is the whole story in one place: what it is, how to run it, what it changes, how it compares with PTHA18 and what is checked.</p>
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">0.5 + 0.5</div><div class="lbl">unsegmented model and the union of segments</div></div>
+    <div class="card kpi"><div class="num">Berryman</div><div class="lbl">et al. (2015) Table 3.1 end points place the boundaries, as for PTHA18</div></div>
+    <div class="card kpi"><div class="num">7 zones</div><div class="lbl">every scenario matches PTHA18's published rates, from PTHA18's inputs</div></div>
+    <div class="card kpi"><div class="num">flag</div><div class="lbl"><code>--segmented true</code>; without it one unsegmented zone</div></div>
+  </div>
+</section>
+
+<section>
+  <h2 id="what">What segmentation is</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 960 300" role="img" aria-label="LEVEL 0: the zone answer is half the unsegmented model plus half the sum of the segments">
+      <defs><marker id="sg-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker></defs>
+      <g font-size="12.5">
+        <rect x="10" y="110" width="170" height="78" rx="10" fill="#f0f2f5" stroke="#8a93a3"/>
+        <text x="95" y="143" text-anchor="middle" font-size="14" font-weight="700">The zone</text>
+        <text x="95" y="164" text-anchor="middle" fill="#5b6475">one subduction trench</text>
+        <rect x="250" y="20" width="400" height="104" rx="10" fill="#fff" stroke="#2f6fdf" stroke-width="1.6"/>
+        <text x="266" y="44" font-size="14" font-weight="700" fill="#2f6fdf">Unsegmented model, weight 0.5</text>
+        <rect x="266" y="58" width="368" height="28" rx="5" fill="#9fb3c1"/><text x="450" y="77" text-anchor="middle" fill="#fff" font-weight="700">one fault: a rupture can run end to end</text>
+        <text x="266" y="110" fill="#5b6475">the whole zone's area, convergence, coupling, earthquakes</text>
+        <rect x="250" y="160" width="400" height="124" rx="10" fill="#fff" stroke="#2e9e6b" stroke-width="1.6"/>
+        <text x="266" y="184" font-size="14" font-weight="700" fill="#2e9e6b">Union of segments, weight 0.5 (a SUM)</text>
+        <rect x="266" y="198" width="120" height="28" rx="5" fill="#2a78d6"/><text x="326" y="217" text-anchor="middle" fill="#fff" font-weight="700">segment A</text>
+        <text x="394" y="218" font-size="17" font-weight="700" fill="#5b6475">+</text>
+        <rect x="410" y="198" width="120" height="28" rx="5" fill="#eb6834"/><text x="470" y="217" text-anchor="middle" fill="#fff" font-weight="700">segment B</text>
+        <text x="538" y="218" font-size="17" font-weight="700" fill="#5b6475">+</text>
+        <rect x="554" y="198" width="80" height="28" rx="5" fill="#2e9e5b"/><text x="594" y="217" text-anchor="middle" fill="#fff" font-weight="700">C</text>
+        <text x="266" y="250" fill="#5b6475">each with its own area, convergence, coupling, earthquakes;</text>
+        <text x="266" y="268" fill="#5b6475">a rupture across a boundary takes rate from both sides</text>
+        <rect x="720" y="112" width="230" height="74" rx="10" fill="#e8f0fd" stroke="#2f6fdf" stroke-width="1.8"/>
+        <text x="835" y="140" text-anchor="middle" font-size="14" font-weight="700">The zone's answer</text>
+        <text x="835" y="162" text-anchor="middle" fill="#5b6475">0.5 x unsegmented + 0.5 x (A + B + C)</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#sg-ar)">
+        <path d="M180,138 C215,138 215,72 248,72"/><path d="M180,160 C215,160 215,222 248,222"/>
+        <path d="M650,72 C690,72 690,140 718,142"/><path d="M650,222 C690,222 690,158 718,156"/>
+      </g>
+    </svg>
+    <figcaption><b>LEVEL 0 in one picture.</b> The two models are alternatives (one of them is true), so they are weighted 0.5 each. The segments are not alternatives (they all exist), so within the segmented model their rates are added (report Section 3.7.6).</figcaption>
+  </figure>
+  <p>Why it matters: several shorter faults produce more moderate earthquakes than one long one, but none of them is long enough for the largest ruptures, because each segment's largest possible earthquake is set by its own size. So segmenting usually raises the rate of moderate magnitudes and lowers the rate of the largest ones. How much depends on how long the segments are and how fast each converges.</p>
+</section>
+
+<section>
+  <h2 id="choose">Unsegmented or segmented: what changes</h2>
+  <div class="tbl"><table>
+    <tr><th></th><th>Unsegmented (default)</th><th>Segmented (<code>--segmented true</code>)</th></tr>
+    <tr><td>Models run</td><td>the zone, weight 1</td><td>the zone (0.5) and every segment (0.5 each, summed)</td></tr>
+    <tr><td>Segment boundaries</td><td>none</td><td>Berryman et al. (2015) Table 3.1's segment end points (public, the default), or Bird (2003)'s plate pairs with <code>--segment-boundaries bird</code>; never PTHA18's table</td></tr>
+    <tr><td>Step 5 (GCMT)</td><td>the zone's catalogue</td><td>also one catalogue per segment, PTHA18's rule on its own cells</td></tr>
+    <tr><td>Step 6 (input)</td><td><code>"segments": {}</code></td><td>a <code>segments</code> block: columns, GCMT events, each segment's own Berryman row</td></tr>
+    <tr><td>Step 7 (engine)</td><td>32,000 branches</td><td>32,000 branches for the zone and for every segment; the zone's scenario rates</td></tr>
+    <tr><td>Step 8 (official)</td><td>PTHA18's unsegmented branch</td><td>PTHA18's own segmented model</td></tr>
+    <tr><td>Step 9 (report)</td><td>v8's blocks, no LEVEL 0 section; a green box at the top says "UNSEGMENTED RUN"</td><td>an amber box at the top says "SEGMENTED RUN" and lists the segments; + the LEVEL 0 section (bar, map, tables, curves), three more series on the rate chart, whose band becomes the zone mix's (<a href="report_guide.html#modes">what changes on the page</a>)</td></tr>
+    <tr><td>Run time (kermadectonga2)</td><td>about 2.5 min</td><td>about 4.5 min</td></tr>
+  </table></div>
+  <p>Only zones Berryman divides into segments can be segmented: kermadectonga2, kurilsjapan, izumariana, ryuku, sunda2, southamerica, alaskaaleutians, newhebrides2, solomon2, mexico, newguinea2, manus (<code>berryman_params.ZONE_BERRYMAN_SEGMENTS</code>). For any other zone (puysegur2, makran2, calabria2, caribbean2, ...) step 5 says "a single segment here", step 6 writes no segments and the run stays unsegmented.</p>
+</section>
+
+<section>
+  <h2 id="run">How to run it</h2>
+  <div class="code"><pre><span class="cm"># unsegmented</span>
+.venv/Scripts/python.exe from_scratch_v12/generate.py kermadec --zone kermadectonga2 --folder kermadectonga2_v9 --ptha false
+.venv/Scripts/python.exe kermadectonga2_v9/steps/step_total.py --skip-hs
+
+<span class="cm"># segmented: the same zone, one more flag (step 8 then runs PTHA18's segmented model)</span>
+.venv/Scripts/python.exe from_scratch_v12/generate.py kermadec --zone kermadectonga2 --folder kermadectonga2_v9seg --ptha false --segmented true
+.venv/Scripts/python.exe kermadectonga2_v9seg/steps/step_total.py --skip-hs
+
+<span class="cm"># kurilsjapan: steps 1-3 first (step 3 flags the Izu-Bonin tail), then the clipped run; both folders the same way</span>
+.venv/Scripts/python.exe from_scratch_v12/generate.py kuril --zone kurilsjapan --folder kurilsjapan_v9seg --ptha false --segmented true
+.venv/Scripts/python.exe kurilsjapan_v9seg/steps/step1_fetch_slab2.py
+.venv/Scripts/python.exe kurilsjapan_v9seg/steps/step2_build_grid.py
+.venv/Scripts/python.exe kurilsjapan_v9seg/steps/step3_convergence.py
+.venv/Scripts/python.exe kurilsjapan_v9seg/steps/step_total.py --skip-hs --auto-clip
+
+<span class="cm"># only the official comparison again, after steps 1-7</span>
+.venv/Scripts/python.exe kermadectonga2_v9seg/steps/step8_official.py
+.venv/Scripts/python.exe kermadectonga2_v9seg/steps/step9_report.py</pre></div>
+  <div class="callout warn"><span class="lbl">A tail that belongs to another zone</span>On kurilsjapan the SLAB mesh runs on past the Japan Trench onto the Izu-Bonin Trench, a separate zone (5 columns, no earthquakes). Berryman's Japan segment ends at 34.7&deg;N, so without a clip those columns join the Japan segment (the last segment is stretched to the mesh's end); with Bird's boundaries they become a segment of their own. Either way they are not the zone: clip them with <code>--auto-clip</code> (<a href="step3.html#auto-clip">why</a>) before trusting the segments.</div>
+  <p>Step 8 needs R with rptha, as for any official run (<a href="official.html">details</a>). To compare the two models of one zone, run both folders; <code>html/segmented_vs_unsegmented.html</code> at the package root compares the four folders above.</p>
+</section>
+
+<section>
+  <h2 id="method">How v9 builds a segment</h2>
+  <p>The method is PTHA18's, checked line by line against rptha (<code>compute_rates_all_sources.R</code>, <code>gcmt_subsetter.R</code>) and against PTHA18's published results. A segment is a stretch of the zone, not a source of its own:</p>
+  <div class="tbl"><table>
+    <tr><th>A segment's ...</th><th>How (as in PTHA18)</th><th>Where</th></tr>
+    <tr><td>columns</td><td>the along-strike columns between the segment's two trench end points in Berryman's Table 3.1, each end point placed on the mesh's top edge (rptha's <code>is_in_segment</code> then selects them)</td><td>steps 5 and 6, <code>lib/segmentation.py</code> <code>berryman_segments</code></td></tr>
+    <tr><td>scenarios</td><td>the zone's whole scenario table; each scenario's probability weighted by the part of it inside the segment</td><td>engine</td></tr>
+    <tr><td>area, mean dip, Mw max range</td><td>from its own cells</td><td>engine</td></tr>
+    <tr><td>convergence</td><td>area-weighted Bird convergence of its own cells (kermadectonga2: Tonga 172, Kermadec 94, Hikurangi 32, zone 99 mm/yr; PTHA18 168, 91, 30)</td><td>engine</td></tr>
+    <tr><td>GCMT events</td><td>the zone's rule on its own cells and unit sources; an event near a boundary counts in both neighbours</td><td>step 5</td></tr>
+    <tr><td>coupling, Mw max observed</td><td>its own Berryman et al. (2015) row, the same row PTHA18 gives it; Mw max observed never below its own largest GCMT event</td><td>step 6, <code>lib/berryman_params.py</code></td></tr>
+    <tr><td>b-value, edge multiplier</td><td>the zone's</td><td>step 6, engine</td></tr>
+    <tr><td>the zone's scenario rates</td><td>0.5 x unsegmented + 0.5 x every segment, scenario by scenario; percentiles from PTHA18's partial-segmentation step</td><td>engine: <code>scenario_rates_&lt;zone&gt;_source_zone.csv</code></td></tr>
+  </table></div>
+  <p class="where">With <code>--segment-boundaries bird</code> a segment is instead a run of columns sharing a Bird plate pair, and takes the Berryman row(s) its plates name (<code>BIRD_SEGMENT_TO_BERRYMAN</code>: TO/PA to Tonga, KE/PA to Kermadec and Hikurangi, OK/PA to Kurile-Kamchatka, PA\OK to Japan, ...). More detail: <a href="engine.html#level0">LEVEL 0 in the engine</a>.</p>
+</section>
+
+<section>
+  <h2 id="bird-vs-ptha18">Where the boundaries fall: Berryman, PTHA18 and Bird</h2>
+  <p>Berryman et al. (2015) Table 3.1 gives, for every segment, the longitude and latitude of both ends of its trench (Appendix A: <code>Left_E_LONG</code>, <code>Left_N_LAT</code>, <code>Right_E_LONG</code>, <code>Right_N_LAT</code>). kermadectonga2's three:</p>
+  <div class="tbl"><table>
+    <tr><th>Berryman segment</th><th>plate pair</th><th class="n">from</th><th class="n">to</th><th>coupling min/pref/max</th><th class="n">Mmax-min</th></tr>
+    <tr><td>Hikurangi</td><td>PA\HF</td><td class="n">175.503, 42.059&deg;S</td><td class="n">179.838, 37.476&deg;S</td><td>0.4 / 0.54 / 0.7</td><td class="n">8.0</td></tr>
+    <tr><td>Kermadec</td><td>PA\KE</td><td class="n">179.838, 37.476&deg;S</td><td class="n">-174.985, 23.750&deg;S</td><td>0.2 / 0.3 / 0.75</td><td class="n">8.1</td></tr>
+    <tr><td>Tonga</td><td>PA\TO</td><td class="n">-174.985, 23.750&deg;S</td><td class="n">-173.407, 14.584&deg;S</td><td>0.1 / 0.2 / 0.7</td><td class="n">8.0</td></tr>
+  </table></div>
+  <p>These are the segments PTHA18 used. Placed on <b>PTHA18's own published meshes</b>, the end points give PTHA18's boundary indices within 0 to 2 columns (<code>validate_v9.py berryman_segments</code>, 9 zones, 18 shared boundaries: 12 on the same column, 5 one column away, 1 two columns). Where the counts differ it is PTHA18's own choice on top of the table: it merged Patagonia North and South (southamerica) and four eastern Alaska segments, and added an Arakan segment to sunda2 that Table 3.1 does not have. v9 keeps Berryman's segments as published.</p>
+  <div class="tbl"><table>
+    <tr><th>zone</th><th class="n">Berryman</th><th class="n">PTHA18</th><th>boundaries on PTHA18's mesh (Berryman vs PTHA18)</th><th class="n">Bird</th></tr>
+    <tr><td>kermadectonga2</td><td class="n">3</td><td class="n">3</td><td>22 vs 24, 57 vs 58</td><td class="n">2 (no Hikurangi)</td></tr>
+    <tr><td>kurilsjapan</td><td class="n">2</td><td class="n">2</td><td>45 vs 45</td><td class="n">2 after <code>--auto-clip</code></td></tr>
+    <tr><td>izumariana</td><td class="n">2</td><td class="n">2</td><td>26 vs 27</td><td class="n">2</td></tr>
+    <tr><td>ryuku</td><td class="n">2</td><td class="n">2</td><td>13 vs 13</td><td class="n">2</td></tr>
+    <tr><td>newhebrides2</td><td class="n">4</td><td class="n">4</td><td>9, 20, 30 vs 9, 20, 29</td><td class="n">-</td></tr>
+    <tr><td>solomon2</td><td class="n">3</td><td class="n">3</td><td>19, 28 vs 19, 29</td><td class="n">-</td></tr>
+    <tr><td>sunda2</td><td class="n">3</td><td class="n">4</td><td>38, 67 vs 39, 67; PTHA18 adds Arakan</td><td class="n">4, 8 to 28 columns off</td></tr>
+    <tr><td>southamerica</td><td class="n">6</td><td class="n">5</td><td>34, 60, 88, 137, all identical; PTHA18 merges Patagonia</td><td class="n">4</td></tr>
+    <tr><td>alaskaaleutians</td><td class="n">6</td><td class="n">3</td><td>29, 67 identical; PTHA18 merges the eastern four</td><td class="n">1 (no split)</td></tr>
+  </table></div>
+  <p>Berryman placed most segment ends where the plate pair changes (Appendix A), so Bird's plate pairs, the alternative <code>--segment-boundaries bird</code>, often land nearby. Bird misses a segment whose plate it does not have: Hikurangi's PA\HF is the forearc of Wallace et al. (2004), not a Bird plate, so Bird gives kermadectonga2 two segments. v9 used Bird until 2026-09-30, believing the table had names but no geography.</p>
+  <div class="grid g2">
+    <figure class="fig" style="margin:0"><img src="img/segments_map_kermadectonga2.png" alt="kermadectonga2: PTHA18's 3 segments on its mesh, this run's 3 Berryman segments on its own"><figcaption><b>kermadectonga2</b>: PTHA18's tonga 1-24, kermadec 25-58, hikurangi 59-72 on its 72 columns (left); this run's tonga 1-23, kermadec 24-57, hikurangi 58-73 on its 73 (right).</figcaption></figure>
+    <figure class="fig" style="margin:0"><img src="img/segments_map_kurilsjapan.png" alt="kurilsjapan: PTHA18's 2 segments on its mesh, this run's 2 Berryman segments on its own clipped mesh"><figcaption><b>kurilsjapan</b> (clipped): PTHA18's kurils 1-45, japan 46-61 (left); this run's kurils 1-43, japan 44-60 (right).</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2 id="results">What it changes: two worked examples</h2>
+  <p>The four folders <code>kermadectonga2_v9</code>, <code>kermadectonga2_v9seg</code>, <code>kurilsjapan_v9</code>, <code>kurilsjapan_v9seg</code>, each with its own step 8. Exceedance rate per year (earthquakes above each magnitude). "Segmented" is the zone's full LEVEL 0 answer.</p>
+  <div class="tbl"><table>
+    <tr><th>zone, Mw</th><th class="n">this run unsegmented</th><th class="n">this run segmented</th><th class="n">change</th><th class="n">PTHA18 unsegmented</th><th class="n">PTHA18 segmented</th><th class="n">change</th></tr>
+    <tr><td>kermadectonga2, 7.2</td><td class="n">0.2251</td><td class="n">0.2521</td><td class="n">+12%</td><td class="n">0.2246</td><td class="n">0.2591</td><td class="n">+15%</td></tr>
+    <tr><td>kermadectonga2, 8.0</td><td class="n">0.04025</td><td class="n">0.04338</td><td class="n">+8%</td><td class="n">0.03975</td><td class="n">0.04361</td><td class="n">+10%</td></tr>
+    <tr><td>kermadectonga2, 9.2</td><td class="n">0.001266</td><td class="n">0.000968</td><td class="n">-24%</td><td class="n">0.001104</td><td class="n">0.000828</td><td class="n">-25%</td></tr>
+    <tr><td>kurilsjapan, 7.2</td><td class="n">0.4623</td><td class="n">0.4674</td><td class="n">+1%</td><td class="n">0.4652</td><td class="n">0.4719</td><td class="n">+1%</td></tr>
+    <tr><td>kurilsjapan, 8.0</td><td class="n">0.08593</td><td class="n">0.08701</td><td class="n">+1%</td><td class="n">0.08498</td><td class="n">0.08572</td><td class="n">+1%</td></tr>
+    <tr><td>kurilsjapan, 9.2</td><td class="n">0.003483</td><td class="n">0.003232</td><td class="n">-7%</td><td class="n">0.003467</td><td class="n">0.003230</td><td class="n">-7%</td></tr>
+  </table></div>
+  <ul class="tight">
+    <li><b>Unsegmented, this run vs PTHA18</b>: within 1% at Mw 7.2 on both zones (+0.2%, -0.6%).</li>
+    <li><b>Segmenting changes both models alike</b>: kermadectonga2 +12% / -24% here against PTHA18's +15% / -25%; kurilsjapan +1% / -7% in both. The zone's segmented answer is within 3% of PTHA18's up to Mw 8.4 on kermadectonga2 and within 3% everywhere on kurilsjapan.</li>
+    <li><b>kurilsjapan</b>: the same 2 segments and rows as PTHA18, the Japan segment collecting the same 8 earthquakes; each segment's rate within 2.3% of PTHA18's.</li>
+    <li><b>kermadectonga2</b>: the same 3 segments and rows. The gap left is at the largest magnitudes (+17% at Mw 9.2), where the unsegmented branch already differs by +15% (this run's mesh is 6% larger), and in Tonga (-15% at Mw 7.2), which has 3 GCMT events here against PTHA18's 4.</li>
+    <li><b>With Bird's boundaries</b> (<code>--segment-boundaries bird</code>, before 2026-09-30) kermadectonga2's segmenting changed the answer by only +6% / -10%: Bird's single KE/PA segment, 50 columns, can host far larger ruptures than PTHA18's shorter Kermadec and Hikurangi.</li>
+  </ul>
+  <p class="where">Every difference between the two segmented columns is an input difference (the boundaries and what follows from them): with PTHA18's own inputs the engine reproduces PTHA18's segmented results exactly (<a href="#checked">below</a>).</p>
+</section>
+
+<section>
+  <h2 id="report">In the report</h2>
+  <p>A segmented run's <code>report.html</code> has a <b>LEVEL 0</b> section after the exceedance-rate curve: a bar of each model's segments along the trench, <code>figures/segments_map.png</code> (the maps above), a table per segmentation (columns, convergence, coupling, Mw max observed, GCMT events, rate at Mw 7.2), this run against PTHA18 for the unsegmented branch, the union and the mix at six magnitudes, and a chart of every segment, union and mix of both models. The main rate chart gains each segment, the union and the mix, and its band becomes the zone mix's. Every other block (step cards, TVD, edge fit, the comparison table) stays the <b>unsegmented branch's</b>. Block by block, with screenshots: <a href="report_guide.html#modes">Reading report.html: what changes on the page</a>.</p>
+  <p>The run also writes <code>report_unsegmented.html</code>, the unsegmented branch alone, exactly as an unsegmented run's report shows it, so the two can be read side by side without a second run. A switch at the top of both pages (<b>Segmented</b> / <b>Unsegmented only</b>) links them (<a href="report_guide.html#unseg-view">details</a>).</p>
+  <div class="tbl"><table>
+    <tr><th>File</th><th>What it holds (segmented runs)</th></tr>
+    <tr><td><code>outputs/rate_curves.csv</code></td><td>one column per segment, <code>exceedance_rate_union_of_segments</code>, <code>exceedance_rate_source_zone</code> (the mix)</td></tr>
+    <tr><td><code>outputs/scenario_rates_&lt;zone&gt;_&lt;segment&gt;.csv</code></td><td>every segment's scenario rates, on the zone's scenario table</td></tr>
+    <tr><td><code>outputs/exceedance_rate_percentiles_unsegmented.csv</code></td><td>the unsegmented branch's own band (the segmented run's <code>exceedance_rate_percentiles.csv</code> is the zone mix's); <code>report_unsegmented.html</code> is built on it</td></tr>
+    <tr><td><code>outputs/scenario_rates_&lt;zone&gt;_source_zone.csv</code></td><td>every scenario's rate for the whole zone (what PTHA18 publishes as <code>rate_annual*</code>)</td></tr>
+    <tr><td><code>data/gcmt/&lt;zone&gt;_gcmt_subset_&lt;segment&gt;.csv</code>, <code>segments.json</code></td><td>each segment's earthquakes</td></tr>
+    <tr><td><code>outputs_official/ptha18_reference/official_segments.json</code></td><td>PTHA18's segments as step 8 ran them</td></tr>
+    <tr><td><code>outputs/exceedance_rate_percentiles.csv</code></td><td>the whole zone's percentiles (the mix), no longer the unsegmented branch's</td></tr>
+    <tr><td><code>outputs/logic_tree_summary.csv</code></td><td>11 more rows per segment (<code>..._&lt;zone&gt;_&lt;segment&gt;</code>)</td></tr>
+    <tr><td><code>outputs/exports/</code></td><td><code>mesh_cells.csv</code> and <code>convergence_profile.csv</code> with a <code>segment</code> column; <code>scenario_rates_source_zone.csv</code> (+ <code>_official</code>)</td></tr>
+    <tr><td><code>figures/segments_map.png</code></td><td>the cells coloured by segment, PTHA18's beside this run's</td></tr>
+  </table></div>
+  <p class="where">The complete list (61 more files on kermadectonga2): <a href="reference.html#segmented-files">Files a segmented run adds</a>.</p>
+</section>
+
+<section>
+  <h2 id="checked">What is checked</h2>
+  <div class="tbl"><table>
+    <tr><th>Check</th><th>Compares</th><th>Result</th></tr>
+    <tr><td><code>official_segments</code></td><td>the engine on PTHA18's segmented inputs vs PTHA18's tree of the zone and every segment, 7 zones</td><td>28 trees, a within 1.2e-11</td></tr>
+    <tr><td><code>events_segmented</code></td><td>every scenario's rate and 5 percentiles on the same 7 zones vs PTHA18's published <code>rate_annual*</code></td><td>30,926 scenarios, mean within 1e-10, percentiles within 4e-10</td></tr>
+    <tr><td><code>gcmt</code></td><td>step 5's rule on PTHA18's mesh vs PTHA18's own list, 8 zones and 12 segments</td><td>identical lists</td></tr>
+    <tr><td><code>berryman_segments</code></td><td>Berryman's end points placed on PTHA18's own mesh vs PTHA18's boundary indices, 9 zones</td><td>18 shared boundaries within 2 columns (12 identical)</td></tr>
+    <tr><td><code>segmentation</code></td><td>Bird's segments tile each example mesh; prints them beside PTHA18's</td><td>well formed</td></tr>
+    <tr><td><code>test_segmentation.py</code></td><td>20 tests: Table 3.1 end points chain and match their Whole Margin rows, Berryman's three kermadectonga2 segments, a segment beyond the mesh dropped, Bird tiling, PTHA18's rows, one PTHA18 segment tree</td><td>pass</td></tr>
+  </table></div>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/validation/validate_v9.py berryman_segments official_segments events_segmented segmentation</pre></div>
+  <p class="where">Details and every number: <a href="validation.html#official-segments">Validation, checks 5 and 6</a>.</p>
+</section>
+
+<section>
+  <h2 id="history">History</h2>
+  <ul class="tight">
+    <li><b>2026-09-29</b>: LEVEL 0 added to v9 (Bird boundaries, per-segment GCMT, report section).</li>
+    <li><b>2026-09-30, audit against rptha</b>: four method differences fixed. Segments took the zone's convergence; were a slice of the mesh (a rupture across a boundary had no rate); got each GCMT event in exactly one segment; took the zone's coupling. Segmented results made before this are wrong segment by segment. Step 8 of a segmented folder now runs PTHA18's segmented model.</li>
+    <li><b>2026-09-30, boundaries from Berryman</b>: Table 3.1 does give every segment's trench end points (Appendix A), so the default boundaries are now Berryman's, the ones PTHA18 used, instead of Bird's plate pairs (<code>--segment-boundaries bird</code> keeps the old rule). kermadectonga2 gets PTHA18's three segments; kurilsjapan's Japan boundary moves two columns and gets PTHA18's 8 events. The report now states at the top whether the run is segmented.</li>
+    <li><b>2026-09-30, zone values</b>: coupling from Berryman's Whole Margin row, Mw max observed as the largest known earthquake (both segmented and unsegmented runs); see the <a href="../../README.md">README</a>, "What v9 adds".</li>
+  </ul>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Sources: <code>lib/segmentation.py</code>, <code>lib/berryman_params.py</code>, <code>python_logic_tree_v12/run_logic_tree.py</code>, <code>templates/step5_subset_gcmt.py.tmpl</code>, <code>step6_write_input.py.tmpl</code>, <code>step8_official.py.tmpl</code>; numbers from <code>kermadectonga2_v9</code>, <code>kermadectonga2_v9seg</code>, <code>kurilsjapan_v9</code>, <code>kurilsjapan_v9seg</code> and <code>validate_v9.py</code>, 2026-09-30. Maps: <code>figures/segments_map.png</code> of the two segmented folders.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

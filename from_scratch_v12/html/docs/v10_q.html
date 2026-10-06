@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What is new in v10 and v10_q | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Start</div>
+  <h1>What is new in v10 and v10_q</h1>
+  <p class="lead">Three changes on top of v9, made on 2026-10-02 for meshes whose cells are not all about 50 x 50 km (Calabria, the Caribbean) and for a wrong stretch of trench (Hellenic). Two of them are opt-in; with the defaults, v10_q gives v9's results except where the trench ramp rule changes the trench.</p>
+
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">3</div><div class="lbl">changes: cell-by-cell ruptures (v10), q (v10_q), trench ramp rule (v10_q)</div></div>
+    <div class="card kpi"><div class="num">58% &rarr; 99.7%</div><div class="lbl">calabria2 ruptures (Mw 7.2-8.7) within a factor 1.5 of Strasser's area</div></div>
+    <div class="card kpi"><div class="num">identical</div><div class="lbl">earthquakes per year of each magnitude: the rupture changes cannot change them</div></div>
+    <div class="card kpi"><div class="num">163</div><div class="lbl">tests passing (15 new), plus control runs on two near-uniform zones</div></div>
+  </div>
+</section>
+
+<section id="glance">
+  <h2 id="at-a-glance">At a glance</h2>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:13%"><col style="width:7%"><col style="width:20%"><col style="width:11%"><col style="width:33%"><col style="width:16%"></colgroup>
+    <tr><th>change</th><th>version</th><th>option</th><th>default</th><th>what it does</th><th>changes the rates per magnitude?</th></tr>
+    <tr><td><a href="#rupture-size">Cell-by-cell ruptures</a></td><td>v10</td><td><code>--rupture-size rptha|local</code></td><td><code>rptha</code> (= v9)</td><td>each uniform-slip rupture gets the number of cells that matches Strasser's area with the real km of ITS cells, instead of one cell count per magnitude from the zone's mean cell</td><td>no</td></tr>
+    <tr><td><a href="#q">q</a></td><td>v10_q</td><td>part of <code>--rupture-size local</code></td><td>off</td><td>each rupture's conditional-probability weight times q, so places covered by more ruptures (smaller cells) do not get more rate</td><td>no</td></tr>
+    <tr><td><a href="#ramp">Trench ramp rule</a></td><td>v10_q</td><td><code>--trench-ramp on|off</code></td><td><code>on</code></td><td>a trench end more than 3 km deeper than the trench's normal depth is the edge of the SLAB data, not trench, and is trimmed before the depth-below-trench datum is built</td><td>yes, where it trims (the fault gets smaller): hellenic_west2 -1.2% to -5.6%</td></tr>
+  </table></div>
+  <div class="callout"><span class="lbl">The full case, with every figure</span><code>V9/html/v10q_rationale.html</code> (<a href="../../../html/v10q_rationale.html">open</a>): why v10_q, with a Calabria / Caribbean switch and two control zones. <code>V9/html/slip_comparison_v9_v10.html</code> (<a href="../../../html/slip_comparison_v9_v10.html">open</a>): slip and sea-floor uplift of every rupture, Calabria. This page is the reference; those two are the evidence.</div>
+</section>
+
+<section id="problem-sec">
+  <h2 id="problem">The problem: PTHA18 assumes equal cells in two places</h2>
+  <p><b>Sizing a rupture.</b> rptha computes ONE block of cells per magnitude (for example 2 along the trench x 1 down the slope at Mw 7.2), from the zone's mean cell length and width, and slides that block over the whole mesh. PTHA18's cells are about 50 x 50 km everywhere, so every placement has about the right area. Ours are not: calabria2's cells go from 377 to 4,042 km&sup2; (a tight arc, the trench 4 times as long as the deepest edge), caribbean2's from 874 to 6,349 km&sup2; (the fault's width changes from 97 to 420 km with the same 4 rows). The same block is then too large in one place and too small in another. Each rupture keeps the right moment (its slip is set from its real area), so the slip is wrong instead: at Mw 7.2 on calabria2, from 0.31 to 2.96 m where Strasser gives 0.99 m.</p>
+  <p><b>Sharing the rate.</b> Within one magnitude, PTHA18 gives each rupture a weight proportional to area x convergence. That is fair if every place of the fault is covered by about the same number of ruptures, which a regular mesh gives (apart from the two ends, the reason for PTHA18's edge correction).</p>
+  <p>The mesh itself cannot be made uniform for those zones (tested at length, see <a href="slab_fixes.html">every fix</a> and the V9 pages it links). So the fix is in how the ruptures are built and weighted.</p>
+</section>
+
+<section id="rupture-size-sec">
+  <h2 id="rupture-size">Cell-by-cell ruptures (v10, <code>--rupture-size local</code>)</h2>
+  <ol>
+    <li>At every top-left cell, for each number of rows, the number of columns whose summed real area is closest to Strasser's area; of those, the block with the smallest |log10 area error| + |log10 aspect-ratio error|. These are rptha's own two criteria, measured with the real km of those cells.</li>
+    <li>A placement whose best block would need cells beyond the far edge of the mesh is skipped, as rptha skips placements where its block does not fit (tested with one virtual column / row, a copy of the last one).</li>
+    <li>A rupture longer than the whole zone takes the full length, with rows chosen by area alone (rptha's <code>nlength &gt; nstrike</code> branch).</li>
+    <li>Every cell must be in at least one rupture of every magnitude (true of rptha's blocks): a cell left out gets the best block that contains it.</li>
+    <li>Slip = M0(Mw) / (rigidity x real area), exactly as before.</li>
+  </ol>
+  <figure class="fig"><img src="img/v10q_calabria_slip.png" alt="calabria2: slip range of the ruptures of each magnitude, v9 against v10_q">
+    <figcaption><b>calabria2, every rupture of every magnitude.</b> Blue (v9): one block per magnitude, the slip of one magnitude spreads up to 10 times. Green (v10_q, the same ruptures as v10): on the dashed Strasser line. Above Mw 9.0 the zone is smaller than Strasser's area and every version uses the whole zone (Mw 9.3: 0.57 of Strasser's area).</figcaption></figure>
+  <div class="tbl"><table>
+    <tr><th>zone</th><th class="n">largest / smallest cell</th><th class="n">ruptures (Mw 7.2-8.7) within x1.5 of Strasser, rptha &rarr; local</th><th class="n">worst rupture, times off</th></tr>
+    <tr><td>calabria2</td><td class="n">10.7</td><td class="n">57.8% &rarr; 99.7%</td><td class="n">4.43 &rarr; 1.69</td></tr>
+    <tr><td>caribbean2</td><td class="n">7.3</td><td class="n">51.2% &rarr; 98.5%</td><td class="n">5.25 &rarr; 2.66</td></tr>
+    <tr><td>kermadectonga2 (control)</td><td class="n">3.3</td><td class="n">81.4% &rarr; 99.1%</td><td class="n">3.42 &rarr; 2.18</td></tr>
+    <tr><td>kurilsjapan (control)</td><td class="n">1.9</td><td class="n">88.5% &rarr; 100%</td><td class="n">2.04 &rarr; 1.44</td></tr>
+    <tr><td>31 PTHA18 meshes (official statistics)</td><td class="n">1.0-3.5</td><td class="n">46-100% &rarr; 85-100%</td><td class="n">worst better or equal on 30, flores 1.53 &rarr; 1.74</td></tr>
+  </table></div>
+  <p>Even with exact 50 x 50 km cells (Kurils-Japan), rptha's whole number of cells jumps between blocks of half or twice the right area from one magnitude to the next (Mw 7.4: 1 x 1, 0.49-0.92 of Strasser's area; Mw 8.0: 4 x 2, 1.21-1.84), so its slip zigzags around Strasser's; the cell-by-cell rule follows it. The smallest rupture is one cell, which sets the remaining limit (calabria2's trench cells are larger than Mw 7.2's area).</p>
+  <p class="where">Where in the code: <code>pyptha_v12/events.py</code> <code>_local_blocks()</code>, called by <code>get_all_earthquake_events_of_magnitude_Mw(rupture_size=)</code> and <code>get_all_earthquake_events(rupture_size=)</code>; it returns each event's own <code>event_dims</code> (<code>event_dim</code> is None with "local"). Read from the input JSON's <code>events.rupture_size</code> by the engine (<code>python_logic_tree_v12/run_logic_tree.py</code>), step 7b and step 9. No rptha counterpart.</p>
+</section>
+
+<section id="q-sec">
+  <h2 id="q">q (v10_q): one rupture per starting cell, without the overlap bias</h2>
+  <p>The cell-by-cell rule makes one rupture start at each cell. Where cells are small, more ruptures overlap the same km&sup2;, and with PTHA18's weight (about equal for ruptures of equal area) those places would collect more rate for no tectonic reason. With rptha's fixed blocks this was hidden by accident: a block of small cells is a small rupture, with a small weight.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 940 210" role="img" aria-label="two equal parts of a fault, one meshed with cells four times smaller">
+      <text x="230" y="22" text-anchor="middle" font-size="14" font-weight="700">part A: big cells</text>
+      <text x="700" y="22" text-anchor="middle" font-size="14" font-weight="700">part B: cells 4 times smaller</text>
+      <rect x="80" y="36" width="100" height="100" fill="#f0efec" stroke="#52514e"/><rect x="180" y="36" width="100" height="100" fill="#f0efec" stroke="#52514e"/><rect x="280" y="36" width="100" height="100" fill="#f0efec" stroke="#52514e"/>
+      <g fill="#f0efec" stroke="#52514e">
+        <rect x="550" y="36" width="50" height="50"/><rect x="600" y="36" width="50" height="50"/><rect x="650" y="36" width="50" height="50"/><rect x="700" y="36" width="50" height="50"/><rect x="750" y="36" width="50" height="50"/><rect x="800" y="36" width="50" height="50"/>
+        <rect x="550" y="86" width="50" height="50"/><rect x="600" y="86" width="50" height="50"/><rect x="650" y="86" width="50" height="50"/><rect x="700" y="86" width="50" height="50"/><rect x="750" y="86" width="50" height="50"/><rect x="800" y="86" width="50" height="50"/>
+      </g>
+      <text x="230" y="160" text-anchor="middle" font-size="13">3 ruptures start here: 3 shares of the rate (v10)</text>
+      <text x="700" y="160" text-anchor="middle" font-size="13">12 ruptures start here: 12 shares, 4 times more (v10)</text>
+      <text x="230" y="186" text-anchor="middle" font-size="13" fill="#1a7f5a" font-weight="700">v10_q: 3 x 1/3 = 1</text>
+      <text x="700" y="186" text-anchor="middle" font-size="13" fill="#1a7f5a" font-weight="700">v10_q: 12 x 1/12 = 1, the same as A</text>
+    </svg>
+    <figcaption><b>Why q.</b> A and B have the same area and the same convergence, so the plates ask for the same rate in both. Only the way the mesh was drawn differs.</figcaption></figure>
+  <p><b>q</b> of a rupture = the average, over its cells, of 1 / (number of ruptures of the same magnitude that contain that cell). The engine multiplies the weight of whichever conditional-probability model the input uses (area x convergence; or 1/slip, or all equal) by q, only with <code>--rupture-size local</code>. Fewer ruptures cover the two ends of the zone, so q also gives them more weight: it does part of the job of PTHA18's edge correction, which is still fitted afterwards (that is why the fitted edge multiplier drops).</p>
+  <figure class="fig"><img src="img/v10q_calabria_rows.png" alt="calabria2: share of the Mw 7.2-7.6 rate in each row, v9, v10 and v10_q">
+    <figcaption><b>calabria2, where the small earthquakes go.</b> The black line is each row's share of the fault area, what the rate should follow. v10 alone moves the rate from the trench row (18% for 30% of the area) to the deep rows with small cells; v10_q puts it back (28%, 26%, 19%, 16%, 11%).</figcaption></figure>
+  <div class="tbl"><table>
+    <tr><th>PTHA18's misfit (integrated slip vs convergence, final model)</th><th class="n">calabria2</th><th class="n">caribbean2</th><th class="n">kermadectonga2</th><th class="n">kurilsjapan</th></tr>
+    <tr><td>rptha's rule</td><td class="n">7.30e-4</td><td class="n">5.71e-4</td><td class="n">3.17e-4</td><td class="n">6.66e-5</td></tr>
+    <tr><td>v10 (no q)</td><td class="n">1.03e-3</td><td class="n">4.77e-4</td><td class="n">3.71e-4</td><td class="n">8.55e-5</td></tr>
+    <tr><td>v10_q</td><td class="n">6.20e-4</td><td class="n">3.98e-4</td><td class="n">2.29e-4</td><td class="n">6.05e-5</td></tr>
+    <tr><td>fitted edge multiplier, rptha &rarr; v10_q</td><td class="n">3.69 &rarr; 1.04</td><td class="n">13.99 &rarr; 4.89</td><td class="n">7.15 &rarr; 1.94</td><td class="n">9.70 &rarr; 2.67</td></tr>
+  </table></div>
+  <p class="where">Where in the code: <code>pyptha_v12/events.py</code> <code>coverage_weights()</code>; applied in <code>python_logic_tree_v12/run_logic_tree.py</code> right before <code>rates.get_event_probabilities_conditional_on_Mw</code>, after all three conditional-probability models. Log line: <code>v10_q: conditional probabilities x q (rupture overlap correction, q from A to B)</code>.</p>
+</section>
+
+<section id="rates-sec">
+  <h2 id="rates-unchanged">Why the earthquakes per magnitude do not change, but the hazard does</h2>
+  <p>The moment balance (LEVEL 2) does read every rupture: it adds up weight x slip x area over the ruptures of each magnitude. But every rupture's slip is set so that slip x area x rigidity is exactly the moment of its magnitude, and the weights of a magnitude add up to 1, so that sum is always M0(Mw) / rigidity, whatever the shapes and the weights. Checked on 12 runs (4 zones x 3 rules): equal to within 1e-14; exceedance tables and rate curves equal to within 3e-13. The rates per magnitude change only with what enters the moment balance (mesh area, convergence, coupling, b, Mw_max, rigidity, GCMT); the ramp rule changes the mesh area, the rupture rules do not.</p>
+  <p>The tsunami hazard adds up waves, not magnitudes, and every wave depends on the slip and the place of its rupture. In PTHA18 even the heterogeneous-slip and variable-area scenarios take their rate from a uniform-slip parent (<code>compute_rates_all_sources.R</code>, lines 1551 to 1600), so they inherit the new rates and places. First link of that chain, the uplift of the sea floor (Okada, Kajiura filter): with v10_q, uplifts larger than 1 m become 27% less frequent on calabria2 (v9's blocks too small where cells are small, too much slip) and 31% more frequent on caribbean2 (v9's blocks too large where cells are wide, too little slip). Details: <code>V9/html/v10q_rationale.html</code>, section 4d.</p>
+</section>
+
+<section id="ramp-sec">
+  <h2 id="ramp">Trench ramp rule (v10_q, <code>--trench-ramp on</code>)</h2>
+  <p>Step 1 measures every contour below the <a href="step1.html#datum">nearby trench</a>, so a wrong stretch of trench becomes a wrong datum for everything near it. At hellenic's Kefalonia end the raster's up-dip edge is not trench but the edge of the SLAB2 data: 19.7 km below sea level, climbing to the trench's normal 11.5 km over about 150 km. It was the datum of the northern half of hellenic_west2; there the slab is almost flat, so its 25-35 km contours piled into one line, and the mesh had a crease of sheared, twisted cells.</p>
+  <figure class="fig"><img src="img/v10q_ramp_profile.png" alt="hellenic trench depth from the Kefalonia end with the ramp rule threshold">
+    <figcaption><b>The rule on hellenic's raster.</b> Each end of the trench is trimmed back, by at most 100 km, while its 50 km running-median depth is more than 3 km deeper than the trench's normal depth there (the larger of its median 100 to 200 km in from that end and the whole trench's median): here 11.6 + 3 = 14.6 km, reached 71 km in. The other end of the trench (35.7 E) is shallower, 6.5 km, and is not touched.</figcaption></figure>
+  <figure class="fig"><img src="img/v10q_ramp_mesh.png" alt="hellenic_west2 mesh before and after the ramp rule">
+    <figcaption><b>hellenic_west2, v9 against v10_q.</b> The crease near 22.7 E, 36.5 N is gone. 20 x 8 &rarr; 19 x 8 cells; smallest cell 13 x 35 &rarr; 19 x 34 km; the worst corner 81 &rarr; 52 deg off square (90th percentile 50 &rarr; 31); twist (a corner off the plane of the other three, relative to the cell size) 0.44 &rarr; 0.07.</figcaption></figure>
+  <div class="tbl"><table>
+    <tr><th>zone (raster as the V9 folders use it)</th><th class="n">trimmed</th><th>effect</th></tr>
+    <tr><td>hellenic (hellenic_west2, hellenic2; hellenic_east2 shares the raster and datum)</td><td class="n">71 km</td><td>hellenic_west2: area 253,725 &rarr; 234,639 km&sup2; (-7.5%), rates Mw &ge; 7.2 -1.2%, &ge; 8.0 -2.3%, &ge; 8.8 -5.6%; PTHA18's misfit 3.87e-4 &rarr; 3.76e-4 (rptha's rule), 2.11e-4 with v10_q; hellenic_east2's trench 564 &rarr; 569 km; hellenic2's 1,557 &rarr; 1,487 km</td></tr>
+    <tr><td>caribbean2, antilles2</td><td class="n">68 km</td><td>a deep ramp at the start of the trench: antilles2's trench depth p95 14.5 &rarr; 11.2 km</td></tr>
+    <tr><td>kermadectonga2</td><td class="n">11 km</td><td>minimal</td></tr>
+    <tr><td>calabria2, kurilsjapan, makran2, puysegur2, southamerica</td><td class="n">0</td><td>identical</td></tr>
+  </table></div>
+  <p><code>--trench-ramp on</code> (default) writes <code>TRENCH_RAMP_RISE_KM = 3.0</code> in step 1; <code>off</code> writes <code>None</code>, v9's trench. Folders generated before this option (calabria2_v10, calabria2_v10_q, caribbean2_v10, caribbean2_v10_q) have no such constant and keep v9's trench even if re-run; regenerating caribbean2 now would trim its 68 km.</p>
+  <p class="where">Where in the code: <code>lib/slab_contours.py</code> <code>_ramp_trim()</code>, <code>find_trench(ramp_rise_km=, ramp_ref_km=(100, 200), ramp_max_km=100)</code> (default None = v9), <code>below_trench_contours(ramp_rise_km=)</code>. Log: <code>ramp rule (...): start trimmed by N km, end by M km</code>; <code>data/step1_contours_info.json</code>: <code>trench_ramp_rise_km</code>, <code>ramp_trim_km</code>; report.html, step 1 card. Tests: <code>pyptha_v12/tests/test_trench_ramp.py</code>.</p>
+</section>
+
+<section id="use-sec">
+  <h2 id="use">How to use it</h2>
+<pre class="code"># from V9/ (venv ../../../.venv)
+python from_scratch_v12/generate.py calabria --zone calabria2      --folder calabria2_v10_q      --ptha false --rupture-size local
+python from_scratch_v12/generate.py hellenic --zone hellenic_west2 --folder hellenic_west2_v10_q --ptha false --discretizer optimal --rupture-size local
+# then the folder's own steps/step_total.py
+# the trench ramp rule is on by default; --trench-ramp off gives v9's trench</pre>
+  <div class="tbl"><table>
+    <tr><th>where</th><th>what to look for</th></tr>
+    <tr><td><code>inputs/input_&lt;zone&gt;_scratch.json</code></td><td><code>"events": {"rupture_size": "local", ...}</code> (absent = "rptha")</td></tr>
+    <tr><td><code>steps/step1_fetch_slab2.py</code></td><td><code>TRENCH_RAMP_RISE_KM = 3.0</code> (or None)</td></tr>
+    <tr><td><code>run_final.log</code></td><td><code>ramp rule (...)</code>, <code>n_events = N (rupture size: local)</code>, <code>v10_q: conditional probabilities x q</code></td></tr>
+    <tr><td><code>README.md</code> of the folder</td><td>"Rupture size: local (v10)" and "Trench ramp rule: on (v10_q)" lines</td></tr>
+    <tr><td><code>report.html</code></td><td>step 1 card (ramp rule), the rupture section (rupture size and q), the rupture explorer (each rupture's own block)</td></tr>
+  </table></div>
+</section>
+
+<section id="checks-sec">
+  <h2 id="checks">How it was checked</h2>
+  <ul>
+    <li><b>Tests</b> (172 passed, 15 skipped): <code>test_rupture_size.py</code> (11: default = rptha; with local every block fits, every cell is covered at every magnitude, no duplicates, exact moment, areas follow Strasser on an uneven mesh, never worse than rptha on a uniform one, the full-length case, the event table; q by hand, equal on rptha's interior, evening out the coverage) and <code>test_trench_ramp.py</code> (4: a synthetic ramp is trimmed, off = v9, no ramp = nothing trimmed, the datum near the ramp is the real trench's).</li>
+    <li><b>31 PTHA18 meshes</b> (official unit-source statistics): areas within x1.5 of Strasser and no cell left out of every rupture of a magnitude.</li>
+    <li><b>Same inputs, one rule changed:</b> calabria2_v9 / _v10 / _v10_q and caribbean2_v9 / _v10 / _v10_q have identical meshes, convergence and GCMT files (byte for byte); the control zones kermadectonga2 and kurilsjapan are their v9 inputs run with each rule (<code>V9/html/v10q_rationale/src/run_controls.py</code>; the "classic" run reproduces the v9 folder exactly); <code>runs/python/hellenic_west2_v10q_geometry_classic</code> separates the ramp rule from the rupture rule.</li>
+    <li><b>Moment identity and rates per magnitude</b> on all 12 runs, as above.</li>
+  </ul>
+</section>
+
+<section id="limits-sec">
+  <h2 id="limits">Known limitations</h2>
+  <ul>
+    <li><b>No rupture smaller than one cell</b> (calabria2: worst rupture 1.69 times off Strasser's area).</li>
+    <li><b>The HS generator (step 7b) still assumes equal cells</b> inside a footprint: rptha's SFFM uses ONE cell spacing, the peak cell's length and width, for the whole field. Inside a v10_q Mw 8.0 rupture the cell length varies up to 2.3 times (90th percentile) on hellenic_west2_v9 and 2.0 on calabria2, against 1.17 on Kurils-Japan. Analysed, not implemented: the same spectrum with correlation by real distance on the slab, or on a regular km grid averaged onto the cells. See <a href="hs_vaus.html#cells">HS and VAUS</a>.</li>
+    <li><b>Cell shape.</b> v10_q fixes how ruptures are built from the cells, not the cells. Okada's sea-floor deformation uses each cell's real, subdivided geometry, so a deformed but valid cell is fine there; index-space blocks at a sharp corner are still wedge-shaped in km. A mesh-smoothing step 2 was prototyped, not implemented (hellenic_west2_v9: corner p90 50 &rarr; 32 deg, twist 0.44 &rarr; 0.11, area -0.1%; calabria2: almost no change, a fan cannot be meshed regularly with rows x columns); after the ramp rule hellenic_west2 is already at p90 31 deg, twist 0.07.</li>
+    <li><b>Not PTHA18's procedure</b> with <code>local</code>: the event list no longer matches PTHA18's event by event, and PTHA18's DART-based calibration of its HS/VAUS families was made with rptha's ruptures.</li>
+    <li><b>Berryman's dip is not used</b> (as in PTHA18): the dip comes from SLAB2. Mesh and Berryman dips agree within a few degrees on Kurils, Kermadec, Makran and the Antilles, not on hellenic (7.5-9 deg against 30-42; rows 5-6 of hellenic_west2 are at 3-4 deg in SLAB2 itself, also after the ramp rule).</li>
+    <li><b>Not regenerated yet</b> with v10_q: hellenic_east2 and hellenic2 (their trench changes slightly with the ramp rule).</li>
+  </ul>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Figures: <code>html/docs/figures_src/make_v10q.py</code>, from the example folders' own outputs (run from V9/). Numbers: <code>V9/html/v10q_rationale/src/</code> and README sections "Trench ramp rule (v10_q)", "What v10_q changes", "What v10 changes", "Known limitations (v10_q)".</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

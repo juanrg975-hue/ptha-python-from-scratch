@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7. Logic tree and rates | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .jsonkey { font-family: var(--mono); font-size: 12.5px; }
+  table.jt { table-layout: fixed; font-size: 13.5px; }
+  table.jt td, table.jt code { overflow-wrap: anywhere; }
+  td.src-d { color: #2e9e6b; font-weight: 600; }
+  td.src-l { color: #8a93a3; font-weight: 600; }
+  td.src-f { color: #2f6fdf; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Rates</div>
+  <h1>7. Logic tree and rates</h1>
+  <p class="lead">Step 6 gathers everything steps 1-5 found into one input file. Step 7 turns it into the answer the whole package exists for: how often each possible earthquake is expected on the zone, per year, with its uncertainty. It does it the way PTHA18 does, in six levels (LEVEL 0 to LEVEL 5). This page explains every level with the real numbers of the main example, <b>kermadectonga2</b>.</p>
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">3,075</div><div class="lbl">earthquake scenarios on kermadectonga2 (Mw 7.2 to 9.8)</div></div>
+    <div class="card kpi"><div class="num">32,000</div><div class="lbl">logic-tree branches: 20 coupling x 20 b x 40 Mw_max x 2 GR types</div></div>
+    <div class="card kpi"><div class="num">0.225 / yr</div><div class="lbl">mean rate of Mw &gt; 7.2 (one every 4.4 years)</div></div>
+    <div class="card kpi"><div class="num">9</div><div class="lbl">observed GCMT earthquakes that re-weight the branches</div></div>
+  </div>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <p>Read from left to right. The input file (step 6) feeds a list of possible earthquakes and a tree of possible "rules" for the zone. Each rule (a <a href="glossary.html#term-branch">branch</a>) is balanced against the plate motion, weighted by how well it explains the earthquakes actually observed, and finally all branches are summarised as a mean and percentiles.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 420" role="img" aria-label="Flow of steps 6 and 7: input JSON, scenarios, LEVELs 0 to 5, outputs">
+      <defs>
+        <marker id="en-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+      </defs>
+      <text x="18" y="24" font-size="12" font-weight="700" fill="#5b6475">STEP 6</text>
+      <text x="220" y="24" font-size="12" font-weight="700" fill="#5b6475">STEP 7 (run_logic_tree.py)</text>
+      <text x="800" y="24" font-size="12" font-weight="700" fill="#5b6475">OUTPUTS</text>
+
+      <rect x="18" y="40" width="170" height="250" rx="10" fill="#fff" stroke="#2f6fdf" stroke-width="1.6"/>
+      <text x="30" y="62" font-size="13.5" font-weight="700">input JSON</text>
+      <rect x="30" y="74" width="146" height="34" rx="6" fill="#e4f5ec" stroke="#2e9e6b"/>
+      <text x="40" y="96" font-size="12">geometry (steps 1-2)</text>
+      <rect x="30" y="116" width="146" height="34" rx="6" fill="#fcf0e2" stroke="#d9822b"/>
+      <text x="40" y="138" font-size="12">convergence (step 3)</text>
+      <rect x="30" y="158" width="146" height="34" rx="6" fill="#f1eafb" stroke="#8a5cd1"/>
+      <text x="40" y="180" font-size="12">GCMT count (steps 4-5)</text>
+      <rect x="30" y="200" width="146" height="34" rx="6" fill="#f0f2f5" stroke="#8a93a3" stroke-dasharray="4 3"/>
+      <text x="40" y="222" font-size="12">Berryman values</text>
+      <rect x="30" y="242" width="146" height="34" rx="6" fill="#f0f2f5" stroke="#8a93a3"/>
+      <text x="40" y="264" font-size="12">settings (bins, N)</text>
+
+      <rect x="220" y="40" width="165" height="64" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="232" y="62" font-size="13" font-weight="700">Scenarios</text>
+      <text x="232" y="80" font-size="11.5" fill="#5b6475">3,075 rectangles of cells,</text>
+      <text x="232" y="95" font-size="11.5" fill="#5b6475">Mw 7.2-9.8, uniform slip</text>
+
+      <rect x="220" y="126" width="165" height="64" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="232" y="148" font-size="13" font-weight="700">LEVEL 0</text>
+      <text x="232" y="166" font-size="11.5" fill="#5b6475">segmentation: whole</text>
+      <text x="232" y="181" font-size="11.5" fill="#5b6475">zone only, weight 1</text>
+
+      <rect x="220" y="212" width="165" height="64" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="232" y="234" font-size="13" font-weight="700">LEVEL 1</text>
+      <text x="232" y="252" font-size="11.5" fill="#5b6475">32,000 branches</text>
+      <text x="232" y="267" font-size="11.5" fill="#5b6475">with prior weights</text>
+
+      <rect x="420" y="40" width="165" height="64" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="432" y="62" font-size="13" font-weight="700">Conditional prob.</text>
+      <text x="432" y="80" font-size="11.5" fill="#5b6475">share of each scenario</text>
+      <text x="432" y="95" font-size="11.5" fill="#5b6475">in its magnitude</text>
+
+      <rect x="420" y="126" width="165" height="64" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="432" y="148" font-size="13" font-weight="700">LEVEL 2</text>
+      <text x="432" y="166" font-size="11.5" fill="#5b6475">moment balance:</text>
+      <text x="432" y="181" font-size="11.5" fill="#5b6475">one a-value per branch</text>
+
+      <rect x="420" y="212" width="165" height="64" rx="9" fill="#f1eafb" stroke="#8a5cd1"/>
+      <text x="432" y="234" font-size="13" font-weight="700">LEVEL 3</text>
+      <text x="432" y="252" font-size="11.5" fill="#5b6475">GCMT re-weights</text>
+      <text x="432" y="267" font-size="11.5" fill="#5b6475">the branches</text>
+
+      <rect x="620" y="126" width="150" height="64" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="632" y="148" font-size="13" font-weight="700">LEVEL 4</text>
+      <text x="632" y="166" font-size="11.5" fill="#5b6475">edge correction</text>
+      <text x="632" y="181" font-size="11.5" fill="#5b6475">multiplier 7.15</text>
+
+      <rect x="620" y="212" width="150" height="64" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="632" y="234" font-size="13" font-weight="700">LEVEL 5</text>
+      <text x="632" y="252" font-size="11.5" fill="#5b6475">percentiles from</text>
+      <text x="632" y="267" font-size="11.5" fill="#5b6475">40,000 samples</text>
+
+      <g font-size="12">
+        <rect x="800" y="40" width="145" height="46" rx="8" fill="#fff" stroke="#2f6fdf"/>
+        <text x="810" y="60" font-weight="700">scenario_rates</text>
+        <text x="810" y="76" font-size="11" fill="#5b6475">rate of each scenario</text>
+        <rect x="800" y="98" width="145" height="46" rx="8" fill="#fff" stroke="#2f6fdf"/>
+        <text x="810" y="118" font-weight="700">rate_curves</text>
+        <text x="810" y="134" font-size="11" fill="#5b6475">mean rate vs Mw</text>
+        <rect x="800" y="156" width="145" height="46" rx="8" fill="#fff" stroke="#2f6fdf"/>
+        <text x="810" y="176" font-weight="700">percentiles</text>
+        <text x="810" y="192" font-size="11" fill="#5b6475">uncertainty band</text>
+        <rect x="800" y="214" width="145" height="46" rx="8" fill="#fff" stroke="#2f6fdf"/>
+        <text x="810" y="234" font-weight="700">branches, summary</text>
+        <text x="810" y="250" font-size="11" fill="#5b6475">+ 8 figures</text>
+      </g>
+
+      <g stroke="#8a93a3" stroke-width="1.7" fill="none" marker-end="url(#en-ar)">
+        <path d="M188,90 L218,72"/>
+        <path d="M188,165 L218,158"/>
+        <path d="M188,240 L218,244"/>
+        <path d="M385,72 L418,72"/>
+        <path d="M385,244 L418,160"/>
+        <path d="M502,104 L502,124"/>
+        <path d="M585,158 L618,158"/>
+        <path d="M502,190 L502,210"/>
+        <path d="M585,244 L618,244"/>
+        <path d="M770,158 C785,158 785,70 798,64"/>
+        <path d="M695,190 L695,210"/>
+        <path d="M770,244 L798,180"/>
+        <path d="M770,244 L798,237"/>
+        <path d="M770,158 L798,121"/>
+      </g>
+      <path d="M695,126 C695,100 540,100 520,108" stroke="#2f6fdf" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#en-ar)"/>
+      <text x="600" y="98" font-size="11" fill="#2f6fdf">new shares: LEVEL 2 runs again</text>
+
+      <rect x="18" y="316" width="927" height="88" rx="10" fill="#f6f7f9" stroke="#dde1e8"/>
+      <text x="34" y="340" font-size="13" font-weight="700">The idea in three sentences</text>
+      <text x="34" y="360" font-size="12">1. The plates must release a known amount of slip over the long term; each branch turns that into a Gutenberg-Richter curve (how many quakes of each size per year).</text>
+      <text x="34" y="378" font-size="12">2. Branches that predict far more (or fewer) large quakes than GCMT recorded since 1976 lose weight; the others gain it.</text>
+      <text x="34" y="396" font-size="12">3. The rate of each magnitude is then split between the scenarios of that magnitude, favouring fast-converging parts and the zone ends.</text>
+    </svg>
+    <figcaption><b>Steps 6 and 7 in one picture.</b> Green, orange, purple and grey show where each input comes from (see the <a href="input_json.html#keys">input table</a>). Blue boxes are computed by the engine. The dashed arrow is real: the engine computes the rates once, fits LEVEL 4, then rebuilds the rates with the corrected shares (<a href="#level4">LEVEL 4</a>).</figcaption>
+  </figure>
+  <div class="io">
+    <div><b>Reads</b><code>data/slab2/unit_source_grid.npy</code> (step 2), <code>data/convergence.txt</code> and <code>data/convergence_per_column.json</code> (step 3), <code>data/gcmt/&lt;zone&gt;_gcmt_subset.csv</code> (step 5), <code>inputs/geometry/&lt;zone&gt;_slab2_contours.shp</code> (step 1), Berryman values from <code>lib/berryman_params.py</code></div>
+    <div><b>Writes</b><code>inputs/input_&lt;zone&gt;_scratch.json</code> (step 6); <code>runs/python/&lt;run_name&gt;/</code>, copied whole to <code>&lt;folder&gt;/outputs/</code> (step 7): 8 CSV files and 8 figures</div>
+  </div>
+  <div class="callout"><span class="lbl">New words on this page</span>A <a href="glossary.html#term-logic-tree">logic tree</a> lists every combination of uncertain choices (a <a href="glossary.html#term-branch">branch</a> is one combination) with a weight saying how much it is believed. The <a href="glossary.html#term-exceedance-rate">exceedance rate</a> at Mw is how many earthquakes larger than Mw happen per year. <a href="glossary.html#term-mw">Mw</a> is the moment magnitude; each step of 1 means about 32 times more <a href="glossary.html#term-seismic-moment">seismic moment</a> (energy released). New to all this? Read <a href="concepts.html#logic-tree">PTHA in plain words</a> first.</div>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="input-json">The input file (step 6)</h2>
+  <p>Everything the engine uses is in one file, <code>inputs/input_&lt;zone&gt;_scratch.json</code>, written by step 6. Every key, what it means and where its value comes from: <a href="input_json.html">6. The input file</a>.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="events">The earthquake scenarios</h2>
+  <p>A <b>scenario</b> is one possible earthquake: a rectangle of adjacent <a href="glossary.html#term-unit-source">unit sources</a> (cells of the <a href="glossary.html#term-mesh">mesh</a>), all slipping by the same amount. PTHA18 calls this <a href="glossary.html#term-faus">FAUS</a> (fixed-area uniform slip). The engine builds every scenario that fits on the mesh, for each of the 27 magnitudes. It is a direct port of rptha's <code>rupture_events.R</code>.</p>
+
+  <figure class="fig">
+    <svg viewBox="0 0 960 300" role="img" aria-label="How one magnitude becomes a block of cells, placed everywhere on the mesh, numbered down dip first">
+      <defs><marker id="ev-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker></defs>
+      <text x="20" y="24" font-size="13" font-weight="700">1. Size from Strasser</text>
+      <rect x="20" y="40" width="210" height="120" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="32" y="64" font-size="12.5">Mw 8.0 (Strasser et al. 2010):</text>
+      <text x="32" y="86" font-size="12.5">area 13,804 km<tspan dy="-5" font-size="9">2</tspan></text>
+      <text x="32" y="106" font-size="12.5" dy="0">length 159.6 km</text>
+      <text x="32" y="126" font-size="12.5">width 84.3 km</text>
+      <text x="32" y="148" font-size="11.5" fill="#5b6475">mean cell: 47.2 x 52.5 km</text>
+      <path d="M232,100 L268,100" stroke="#8a93a3" stroke-width="1.7" marker-end="url(#ev-ar)"/>
+
+      <text x="275" y="24" font-size="13" font-weight="700">2. Block of whole cells</text>
+      <g stroke="#fff" stroke-width="2">
+        <rect x="285" y="50" width="42" height="42" fill="#2f6fdf"/><rect x="327" y="50" width="42" height="42" fill="#2f6fdf"/><rect x="369" y="50" width="42" height="42" fill="#2f6fdf"/><rect x="411" y="50" width="42" height="42" fill="#2f6fdf"/>
+        <rect x="285" y="92" width="42" height="42" fill="#2f6fdf"/><rect x="327" y="92" width="42" height="42" fill="#2f6fdf"/><rect x="369" y="92" width="42" height="42" fill="#2f6fdf"/><rect x="411" y="92" width="42" height="42" fill="#2f6fdf"/>
+      </g>
+      <text x="285" y="156" font-size="12">4 along strike x 2 down dip</text>
+      <text x="285" y="174" font-size="11.5" fill="#5b6475">best aspect ratio of 4 candidates</text>
+      <path d="M462,158 L505,158" stroke="#8a93a3" stroke-width="1.7" marker-end="url(#ev-ar)"/>
+
+      <text x="515" y="24" font-size="13" font-weight="700">3. Every placement, down dip first</text>
+      <g font-size="11.5" text-anchor="middle">
+        <text x="506" y="66" text-anchor="end" fill="#5b6475" font-size="11">row 1</text>
+        <text x="506" y="100" text-anchor="end" fill="#5b6475" font-size="11">row 2</text>
+        <text x="506" y="134" text-anchor="end" fill="#5b6475" font-size="11">row 3</text>
+        <g stroke="#b8bfca" fill="#f6f7f9">
+          <rect x="515" y="46" width="34" height="34"/><rect x="549" y="46" width="34" height="34"/><rect x="583" y="46" width="34" height="34"/><rect x="617" y="46" width="34" height="34"/><rect x="651" y="46" width="34" height="34"/><rect x="685" y="46" width="34" height="34"/><rect x="719" y="46" width="34" height="34"/>
+          <rect x="515" y="80" width="34" height="34"/><rect x="549" y="80" width="34" height="34"/><rect x="583" y="80" width="34" height="34"/><rect x="617" y="80" width="34" height="34"/><rect x="651" y="80" width="34" height="34"/><rect x="685" y="80" width="34" height="34"/><rect x="719" y="80" width="34" height="34"/>
+          <rect x="515" y="114" width="34" height="34"/><rect x="549" y="114" width="34" height="34"/><rect x="583" y="114" width="34" height="34"/><rect x="617" y="114" width="34" height="34"/><rect x="651" y="114" width="34" height="34"/><rect x="685" y="114" width="34" height="34"/><rect x="719" y="114" width="34" height="34"/>
+        </g>
+        <rect x="515" y="46" width="136" height="68" fill="none" stroke="#eb6834" stroke-width="3"/>
+        <rect x="517" y="82" width="132" height="64" fill="none" stroke="#8a5cd1" stroke-width="2.4" stroke-dasharray="6 3"/>
+        <text x="583" y="70" font-weight="700" fill="#eb6834">1</text>
+        <text x="583" y="136" font-weight="700" fill="#8a5cd1">2</text>
+      </g>
+      <text x="515" y="172" font-size="11.5" fill="#5b6475">4 x 2 block on a 7 x 3 mesh: scenario 1 at row 1,</text>
+      <text x="515" y="188" font-size="11.5" fill="#5b6475">scenario 2 one row deeper, then 3 moves one column.</text>
+      <text x="515" y="204" font-size="11.5" fill="#5b6475">2 rows x 4 columns = 8 placements.</text>
+
+      <text x="790" y="24" font-size="13" font-weight="700">4. Uniform slip</text>
+      <rect x="780" y="40" width="165" height="120" rx="9" fill="#fff" stroke="#2f6fdf"/>
+      <text x="792" y="64" font-size="12.5">M0 = 10<tspan dy="-5" font-size="9">1.5 Mw + 9.05</tspan></text>
+      <text x="792" y="90" font-size="12.5">slip = M0 / (&#956; A)</text>
+      <text x="792" y="114" font-size="11.5" fill="#5b6475">&#956; = 3e10 Pa, A = the</text>
+      <text x="792" y="130" font-size="11.5" fill="#5b6475">block's real area, so each</text>
+      <text x="792" y="146" font-size="11.5" fill="#5b6475">placement has its own slip</text>
+
+      <rect x="20" y="226" width="925" height="60" rx="9" fill="#f6f7f9" stroke="#dde1e8"/>
+      <text x="34" y="250" font-size="12.5">Repeat for Mw 7.2, 7.3, ..., 9.8. The rows of <tspan font-family="Consolas, monospace">scenario_rates_kermadectonga2.csv</tspan> follow exactly this order (magnitude, then along strike,</text>
+      <text x="34" y="270" font-size="12.5">then down dip fastest), which is rptha's order, so on the same mesh scenario number N here is scenario N in PTHA18's published tables.</text>
+    </svg>
+    <figcaption><b>How one magnitude becomes many scenarios.</b> Numbers are the real ones for kermadectonga2 at Mw 8.0 (mesh 73 x 3, 219 cells, total area 542,559 km<sup>2</sup>). The small 7 x 3 mesh in panel 3 only illustrates the numbering.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li><b>Target size.</b> The <a href="glossary.html#term-scaling-relation">scaling relation</a> of Strasser et al. (2010) gives the typical area, length and width of a subduction earthquake of magnitude Mw: log10(area) = -3.476 + 0.952 Mw, log10(width) = -0.882 + 0.351 Mw, log10(length) = -2.477 + 0.585 Mw (km<sup>2</sup>, km).</li>
+    <li><b>Whole cells.</b> The block must be made of whole cells. The code counts cells as ceil(length / mean cell length) and ceil(width / mean cell width). If the length does not fit on the zone, it takes all columns and fits the width to the area; if the width does not fit, it takes all rows and fits the length. Otherwise it tries four length/width pairs (floor and ceiling of each dimension, the other from the target area) and keeps the one whose aspect ratio is closest to Strasser's, measured in log10.</li>
+    <li><b>Every placement.</b> The block is slid over every position where it fits entirely on the mesh. The positions are listed with the down-dip index varying fastest (rptha's <code>expand.grid(dipIndex, strikeIndex)</code>).</li>
+    <li><b>Slip.</b> The <a href="glossary.html#term-seismic-moment">seismic moment</a> of magnitude Mw is M0 = 10<sup>1.5 Mw + 9.05</sup> N m. The slip is M0 / (&#956; x area), with the rigidity &#956; = 3e10 Pa and the real area of the cells in that placement (in m<sup>2</sup>). The code checks that every scenario's moment equals M0.</li>
+  </ol>
+  <div class="callout"><span class="lbl">v10: --rupture-size local</span>The rule above uses the zone's MEAN cell size, which is right when the cells are about equal (PTHA18's 50 x 50 km). On a mesh whose cells differ a lot (calabria2: 377 to 4,042 km&sup2;) the same block is too large in one place and too small in another. With <code>--rupture-size local</code> (input JSON <code>events.rupture_size</code>) each placement gets its own block: for each number of rows, the number of columns whose summed real area is closest to Strasser's, then the block with the smallest area + shape error; a placement whose block does not fit is skipped; a rupture longer than the zone takes its full length; every cell is in at least one rupture of each magnitude. The slip is set from the real area, as here. calabria2, Mw 7.2-8.7 within x1.5 of Strasser: 58% &rarr; 99.7%. Not PTHA18's procedure. <a href="v10_q.html#rupture-size">Details</a>.</div>
+  <p class="where">Where in the code: <code>pyptha_v12/events.py</code> <code>get_all_earthquake_events_of_magnitude_Mw()</code>, <code>get_all_earthquake_events()</code> (v10: <code>rupture_size=</code>, <code>_local_blocks()</code>); <code>pyptha_v12/scaling.py</code> <code>Mw_2_rupture_size()</code>, <code>M0_2_Mw()</code>, <code>slip_from_Mw_area_mu()</code>. The engine then rounds every Mw to 3 decimals, as R does, so the "is this bin below Mw_max" test cannot flip on the last bit.</p>
+
+  <h3>kermadectonga2: the numbers</h3>
+  <div class="tbl"><table>
+    <tr><th class="n">Mw</th><th class="n">Strasser area (km<sup>2</sup>)</th><th class="n">length x width (km)</th><th>block (cells)</th><th class="n">scenarios</th><th class="n">mean slip (m)</th></tr>
+    <tr><td class="n">7.2</td><td class="n">2,390</td><td class="n">54.3 x 44.2</td><td>1 x 1</td><td class="n">219</td><td class="n">0.99</td></tr>
+    <tr><td class="n">7.5</td><td class="n">4,613</td><td class="n">81.4 x 56.3</td><td>2 x 1</td><td class="n">216</td><td class="n">1.39</td></tr>
+    <tr><td class="n">8.0</td><td class="n">13,804</td><td class="n">159.6 x 84.3</td><td>4 x 2</td><td class="n">140</td><td class="n">1.94</td></tr>
+    <tr><td class="n">8.5</td><td class="n">41,305</td><td class="n">313.0 x 126.3</td><td>7 x 2</td><td class="n">134</td><td class="n">6.23</td></tr>
+    <tr><td class="n">9.0</td><td class="n">123,595</td><td class="n">613.8 x 189.2</td><td>17 x 3</td><td class="n">57</td><td class="n">9.77</td></tr>
+    <tr><td class="n">9.5</td><td class="n">369,828</td><td class="n">1203.6 x 283.5</td><td>50 x 3</td><td class="n">24</td><td class="n">18.75</td></tr>
+    <tr><td class="n">9.6</td><td class="n">460,469</td><td class="n">1377.2 x 307.3</td><td>62 x 3</td><td class="n">12</td><td class="n">20.66</td></tr>
+    <tr><td class="n">9.8</td><td class="n">713,839</td><td class="n">1803.0 x 361.2</td><td>73 x 3 (whole zone)</td><td class="n">1</td><td class="n">34.55</td></tr>
+  </table></div>
+  <p class="where">Source: computed with <code>pyptha_v12/events.py</code> on <code>kermadectonga2_v9/data/slab2/unit_source_grid.npy</code> (script <code>figures_src/make_engine.py</code>, which also checks that the total, 3,075, and every area match <code>outputs/scenario_rates_kermadectonga2.csv</code>). Note Mw 8.0: Strasser's width (84 km) needs 2 rows, so the block is 4 x 2 = 8 cells (about 19,900 km<sup>2</sup>), larger than the target area; the slip is lower to keep the moment.</p>
+
+  <figure class="fig">
+    <img src="img/engine_kermadectonga2_scenarios_per_mw.png" alt="Bar chart of the number of scenarios per magnitude on kermadectonga2, with block sizes">
+    <figcaption><b>How many scenarios each magnitude has.</b> Small blocks fit in many places (219 single cells at Mw 7.2); the whole-zone block at Mw 9.8 fits once. The count drops in steps where the block gains a down-dip row (Mw 8.0: 2 rows, so only 2 positions down dip; Mw 8.6: 3 rows, 1 position). Grey tops: scenarios whose rate is exactly zero. With <code>--convergence bird</code> every column has some convergence (4 to 6 mm/yr at the southern end), so the only zero-rate scenarios are the two at Mw 9.7 and 9.8, which are above every Mw_max.</figcaption>
+  </figure>
+
+  <figure class="fig narrow" style="max-width:760px">
+    <img src="img/engine_kermadectonga2_scenario_map.png" alt="Two Mw 8.5 scenarios drawn on the kermadectonga2 mesh coloured by convergence">
+    <figcaption><b>Two real Mw 8.5 scenarios on the mesh</b> (7 x 2 cells each). Cells are coloured by the Bird convergent slip of their column (<code>convergent_slip_profile</code>). Left: the most likely Mw 8.5 scenario, 2.66e-4 per year, at the fast-converging north end and touching the zone's edge. Right: a scenario in the middle, 1.78e-5 per year, 15 times less likely. The next sections explain where those two numbers come from.</figcaption>
+  </figure>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="level0">LEVEL 0: segmentation</h2>
+  <div class="callout"><span class="lbl">The whole story in one page</span>How to run a segmented zone, what it changes against the unsegmented one, both worked examples and how it compares with PTHA18: <a href="segmentation.html">Segmented vs unsegmented</a>. This section is the engine's side of it.</div>
+  <p><a href="glossary.html#term-segmentation">Segmentation</a> asks: does the zone break as one long fault, or as separate pieces (segments) that rupture independently? PTHA18 does not choose. It gives a segmented zone <b>both</b> answers, 50% weight each, and within the segmented half the segments are <b>summed</b> rather than chosen between, because all of them are active (report Section 3.7.6).</p>
+  <p>v9 reproduces this with <code>generate.py --segmented true</code>. Without the flag the <code>segments</code> block stays empty, the unsegmented zone gets weight 1, and the engine does exactly what v8's does (on v8's own input it gives v8's outputs bit for bit, <code>validate_v9.py v8parity</code>). A segmented run's report and files: <a href="report_guide.html#modes">what changes on the page</a>, <a href="reference.html#segmented-files">files a segmented run adds</a>.</p>
+
+  <figure class="fig narrow">
+    <svg viewBox="0 0 620 250" role="img" aria-label="LEVEL 0: the zone curve is half the unsegmented branch plus half the sum of the segments">
+      <rect x="20" y="20" width="270" height="150" rx="10" fill="#e8f0fd" stroke="#2f6fdf" stroke-width="1.6"/>
+      <text x="36" y="46" font-size="14" font-weight="700">Unsegmented zone</text>
+      <rect x="40" y="66" width="230" height="34" rx="5" fill="#2f6fdf"/>
+      <text x="155" y="88" font-size="12.5" fill="#fff" text-anchor="middle">73 columns, one fault</text>
+      <text x="36" y="130" font-size="13">weight <tspan font-weight="700">0.5</tspan></text>
+      <text x="36" y="152" font-size="11.5" fill="#5b6475">(1.0 when the zone has no segments)</text>
+
+      <rect x="330" y="20" width="270" height="150" rx="10" fill="#fdf0e8" stroke="#eb6834" stroke-width="1.6"/>
+      <text x="346" y="46" font-size="14" font-weight="700">Union of segments</text>
+      <rect x="350" y="66" width="70" height="34" rx="5" fill="#2a78d6"/>
+      <text x="385" y="88" font-size="11.5" fill="#fff" text-anchor="middle">tonga</text>
+      <rect x="423" y="66" width="105" height="34" rx="5" fill="#eb6834"/>
+      <text x="475" y="88" font-size="11.5" fill="#fff" text-anchor="middle">kermadec</text>
+      <rect x="531" y="66" width="49" height="34" rx="5" fill="#2e9e5b"/>
+      <text x="555" y="88" font-size="10.5" fill="#fff" text-anchor="middle">hikurangi</text>
+      <text x="346" y="130" font-size="13">weight <tspan font-weight="700">0.5</tspan>, and each segment</text>
+      <text x="346" y="152" font-size="11.5" fill="#5b6475">carries the full 0.5: their rates ADD</text>
+
+      <text x="310" y="200" font-size="13" text-anchor="middle" font-weight="700">zone = 0.5 x unsegmented + 0.5 x (sum of segments)</text>
+      <text x="310" y="224" font-size="11.5" text-anchor="middle" fill="#5b6475">column <tspan font-family="monospace">exceedance_rate_source_zone</tspan> of rate_curves.csv</text>
+    </svg>
+    <figcaption><b>LEVEL 0 on a segmented run.</b> <code>segmentation.csv</code> for the kermadectonga2 example has four rows: the unsegmented zone at 0.5, and <code>_tonga</code>, <code>_kermadec</code> and <code>_hikurangi</code> at 0.5 each. Dividing 0.5 between the segments would be wrong: the union is a sum, not a choice.</figcaption>
+  </figure>
+
+  <h3>Where the segment boundaries come from</h3>
+  <p>The obvious source is PTHA18's own <code>sourcezone_parameters.csv</code>, which lists <code>segment_boundary_alongstrike_index_lower/upper</code> for each of its 13 segmented zones. <b>v9 does not use it under <code>--ptha false</code></b>, because the point of that flag is that nothing PTHA18 produced feeds the result.</p>
+  <p>Instead the boundaries come from where PTHA18 took them: <b>Berryman et al. (2015) Table 3.1</b>. Its Appendix A defines, for every segment row, the trench end points <code>Left_E_LONG</code>, <code>Left_N_LAT</code>, <code>Right_E_LONG</code>, <code>Right_N_LAT</code> (kermadectonga2: Hikurangi 42.06&deg;S to 37.48&deg;S, Kermadec to 23.75&deg;S, Tonga to 14.58&deg;S). <code>lib/segmentation.py</code> <code>berryman_segments()</code> places each end point on the mesh's top edge and puts every boundary at the column edge nearest to the end point two neighbours share; the first and last segments are stretched to the mesh's ends, and a segment whose trench lies beyond the mesh gets no column and is left out. On kermadectonga2_v9seg the end points fall 2 to 11 km from this mesh's trench.</p>
+  <p>Each segment then takes <b>its own Berryman row</b>, as PTHA18's segments do (PTHA18's <code>_tonga</code> 0.1/0.2/0.7 and Mmax-min 8.0 are Berryman's "Tonga"): coupling from the row, <code>Mw_max_observed</code> the larger of the segment's own GCMT maximum and the row's Mmax-min (GCMT alone starts in 1976 and would miss Kamchatka 1952, Mw 9.0, in the Kurils segment). b is the zone's, as on every PTHA18 segment row. A segment too small to host its Mmax-min keeps its own catalogue value, with a warning from step 6.</p>
+  <p><b>The alternative, <code>--segment-boundaries bird</code>:</b> the boundaries from <b>Bird (2003)</b>'s plate pairs, each along-strike column assigned to the plate pair of its nearest subduction step and a run of columns sharing a pair made one segment (<code>bird_segments()</code>; each Bird segment takes the Berryman row(s) its plates name, <code>BIRD_SEGMENT_TO_BERRYMAN</code>). Berryman placed most segment ends where the plate pair changes, so the two usually agree; Bird misses a segment whose plate it does not have (kermadectonga2's Hikurangi, PA\HF, the forearc of Wallace et al. 2004). v9 used Bird until 2026-09-30, believing Table 3.1 had no geography.</p>
+
+  <h3>How this compares with PTHA18</h3>
+  <p>Placed on <b>PTHA18's own published meshes</b>, Berryman's end points give PTHA18's boundaries within 0 to 2 columns wherever the two split the zone at the same place (<code>validate_v9.py berryman_segments</code>): 12 of the 18 shared boundaries land on PTHA18's exact column, 5 one column away, 1 two columns (kermadectonga2's Tonga/Kermadec). The differences in count are PTHA18's own choices on top of Berryman:</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Zone</th><th>Berryman</th><th>PTHA18</th><th>Boundaries on PTHA18's mesh</th></tr></thead>
+      <tbody>
+        <tr><td>kermadectonga2</td><td>3</td><td>3</td><td>22 vs 24, 57 vs 58</td></tr>
+        <tr><td>kurilsjapan</td><td>2</td><td>2</td><td>45 vs 45</td></tr>
+        <tr><td>izumariana</td><td>2</td><td>2</td><td>26 vs 27</td></tr>
+        <tr><td>ryuku</td><td>2</td><td>2</td><td>13 vs 13</td></tr>
+        <tr><td>newhebrides2</td><td>4</td><td>4</td><td>9, 20, 30 vs 9, 20, 29</td></tr>
+        <tr><td>solomon2</td><td>3</td><td>3</td><td>19, 28 vs 19, 29</td></tr>
+        <tr><td>sunda2</td><td>3</td><td>4</td><td>38, 67 vs 39, 67; PTHA18 adds Arakan, which Table 3.1 does not have</td></tr>
+        <tr><td>southamerica</td><td>6</td><td>5</td><td>34, 60, 88, 137 identical; PTHA18 merges Patagonia North and South</td></tr>
+        <tr><td>alaskaaleutians</td><td>6 on the mesh</td><td>3</td><td>29, 67 identical; PTHA18 merges Shumagin to Prince William Sound into "eastern" (Yakataga lies beyond the mesh)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>v9 keeps Berryman's segments as Table 3.1 gives them rather than copying PTHA18's merges, which are not in any public table. On this run's own mesh the boundaries can move by a column or two more, because the mesh itself differs (kermadectonga2: 73 columns against PTHA18's 72). PTHA18's exact segments enter only as the comparison target, below.</p>
+
+  <h3 id="level0-official">The official segmented comparison</h3>
+  <p>On a segmented example, step 8 runs <b>PTHA18's own segmented model</b> through the same engine, so the report compares like with like: PTHA18's unsegmented branch, each of its segments, their union and the 0.5/0.5 mix, beside the same four curves of this run. Each official segment takes its row of <code>sourcezone_parameters.csv</code> (its columns of PTHA18's mesh, its coupling, b range and <code>mw_max_observed</code>) and the GCMT events the saved session gives it. <code>validate_v9.py official_segments</code> checks this against PTHA18's official tree of every segment of 7 zones (kermadectonga2, kurilsjapan, izumariana, ryuku, sunda2, southamerica, alaskaaleutians): every representation matches branch by branch ('a' to 1e-11, posterior weight to 1e-14).</p>
+  <p>The engine does what PTHA18 does with a segment's scenarios (<code>compute_rates_all_sources.R</code> 492-574, 761-774; report Section 3.7.6): it keeps the whole zone's scenario table and weights each scenario's conditional probability by the part of it inside the segment, so a rupture across a boundary takes rate from every segment it touches. The zone's own scenario rates are then 0.5 x unsegmented + 0.5 x every segment, scenario by scenario, with the percentiles of PTHA18's partial-segmentation step (lines 998-1409, <code>logic_tree.scenario_rate_percentiles_partial_segmentation</code>), written to <code>scenario_rates_&lt;zone&gt;_source_zone.csv</code>. <code>validate_v9.py events_segmented</code> compares these with PTHA18's published <code>rate_annual</code> and its 5 percentiles on the same 7 zones: every scenario, mean within 1e-10 and percentiles within 4e-10. Given v8's own input, v9's engine still reproduces v8's outputs bit for bit (<code>validate_v9.py v8parity</code>).</p>
+
+  <h3>What each segment gets</h3>
+  <p>A segment is a stretch of the zone with its own parameters: its columns (<code>alongstrike_slice</code>, rptha's <code>is_in_segment</code>), its own area, mean dip and Mw_max range from its own cells, its <b>own convergence</b>, the area-weighted Bird convergence of its cells (<code>compute_rates_all_sources.R</code> 406-412; before 2026-09-30 every segment took the zone's value, which gave kermadectonga2's Tonga segment 99 mm/yr instead of its own 168), its own GCMT catalogue (PTHA18's rule on its own cells, so an event near a boundary can count in both neighbours; the engine refuses to run a segment that would inherit the zone's catalogue), its own coupling (above) and its own full 32,000-branch LEVELs 1 to 3. It <b>inherits</b> the whole zone's LEVEL 4 edge multiplier, because edge events have too little leverage on a segment to fit it stably. LEVEL 5 then draws the percentiles across the unsegmented branch and the segments with a <a href="#level5">copula</a>.</p>
+  <p class="where">Where in the code: <code>pyptha_v12/logic_tree.py</code> <code>get_unsegmented_and_segmented_source_names_on_source_zone()</code>; <code>lib/segmentation.py</code> (<code>berryman_segments</code>, and <code>bird_segments</code> for the alternative); <code>run_logic_tree.py</code> <code>main()</code>. Limits: <a href="reference.html#caveats">known limits</a>.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="level1">LEVEL 1: the 32,000 branches</h2>
+  <p>Four things about the zone are uncertain. Each becomes an <b>axis</b> of the logic tree with a list of possible values and a weight per value (the <b>prior</b>, what we believe before looking at earthquakes). A branch takes one value from each axis; its prior weight is the product of the four weights.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 250" role="img" aria-label="Four axes multiplied into 32,000 branches">
+      <g font-size="13">
+        <rect x="20" y="20" width="200" height="170" rx="10" fill="#fff" stroke="#2f6fdf"/>
+        <text x="34" y="44" font-weight="700">Coupling: 20</text>
+        <text x="34" y="62" font-size="11.5" fill="#5b6475">0.10 to 1.30, log-spaced</text>
+        <g fill="#2f6fdf">
+          <rect x="34" y="160" width="7" height="3"/><rect x="43" y="157" width="7" height="6"/><rect x="52" y="156" width="7" height="7"/><rect x="61" y="130" width="7" height="33"/><rect x="70" y="100" width="7" height="63"/><rect x="79" y="91" width="7" height="72"/><rect x="88" y="81" width="7" height="82"/><rect x="97" y="116" width="7" height="47"/><rect x="106" y="128" width="7" height="35"/><rect x="115" y="123" width="7" height="40"/><rect x="124" y="117" width="7" height="46"/><rect x="133" y="111" width="7" height="52"/><rect x="142" y="103" width="7" height="60"/><rect x="151" y="95" width="7" height="68"/><rect x="160" y="85" width="7" height="78"/><rect x="169" y="116" width="7" height="47"/><rect x="178" y="118" width="7" height="45"/><rect x="187" y="111" width="7" height="52"/><rect x="196" y="104" width="7" height="59"/><rect x="205" y="131" width="7" height="32"/>
+        </g>
+        <text x="34" y="182" font-size="11" fill="#5b6475">Berryman + uniform, 50/50</text>
+
+        <text x="232" y="112" font-size="26" fill="#8a93a3">x</text>
+        <rect x="258" y="20" width="200" height="170" rx="10" fill="#fff" stroke="#2f6fdf"/>
+        <text x="272" y="44" font-weight="700">b-value: 20</text>
+        <text x="272" y="62" font-size="11.5" fill="#5b6475">0.70 to 1.20, even steps</text>
+        <g fill="#2f6fdf">
+          <rect x="272" y="120" width="7" height="43"/><rect x="281" y="120" width="7" height="43"/><rect x="290" y="120" width="7" height="43"/><rect x="299" y="120" width="7" height="43"/><rect x="308" y="120" width="7" height="43"/><rect x="317" y="120" width="7" height="43"/><rect x="326" y="120" width="7" height="43"/><rect x="335" y="120" width="7" height="43"/><rect x="344" y="120" width="7" height="43"/><rect x="353" y="120" width="7" height="43"/><rect x="362" y="120" width="7" height="43"/><rect x="371" y="120" width="7" height="43"/><rect x="380" y="120" width="7" height="43"/><rect x="389" y="120" width="7" height="43"/><rect x="398" y="120" width="7" height="43"/><rect x="407" y="120" width="7" height="43"/><rect x="416" y="120" width="7" height="43"/><rect x="425" y="120" width="7" height="43"/><rect x="434" y="120" width="7" height="43"/><rect x="443" y="120" width="7" height="43"/>
+        </g>
+        <text x="272" y="182" font-size="11" fill="#5b6475">equal weights, 1/20 each</text>
+
+        <text x="470" y="112" font-size="26" fill="#8a93a3">x</text>
+        <rect x="496" y="20" width="200" height="170" rx="10" fill="#fff" stroke="#2f6fdf"/>
+        <text x="510" y="44" font-weight="700">Mw_max: 40</text>
+        <text x="510" y="62" font-size="11.5" fill="#5b6475">8.05 to 9.76, capped at 9.6</text>
+        <g fill="#2f6fdf">
+          <rect x="510" y="140" width="4" height="23"/><rect x="515" y="140" width="4" height="23"/><rect x="520" y="140" width="4" height="23"/><rect x="525" y="140" width="4" height="23"/><rect x="530" y="140" width="4" height="23"/><rect x="535" y="140" width="4" height="23"/><rect x="540" y="140" width="4" height="23"/><rect x="545" y="140" width="4" height="23"/><rect x="550" y="140" width="4" height="23"/><rect x="555" y="140" width="4" height="23"/><rect x="560" y="140" width="4" height="23"/><rect x="565" y="140" width="4" height="23"/><rect x="570" y="140" width="4" height="23"/><rect x="575" y="140" width="4" height="23"/><rect x="580" y="140" width="4" height="23"/><rect x="585" y="140" width="4" height="23"/><rect x="590" y="140" width="4" height="23"/><rect x="595" y="140" width="4" height="23"/><rect x="600" y="140" width="4" height="23"/><rect x="605" y="140" width="4" height="23"/><rect x="610" y="140" width="4" height="23"/><rect x="615" y="140" width="4" height="23"/><rect x="620" y="140" width="4" height="23"/><rect x="625" y="140" width="4" height="23"/><rect x="630" y="140" width="4" height="23"/><rect x="635" y="140" width="4" height="23"/><rect x="640" y="140" width="4" height="23"/><rect x="645" y="140" width="4" height="23"/><rect x="650" y="140" width="4" height="23"/><rect x="655" y="140" width="4" height="23"/><rect x="660" y="140" width="4" height="23"/><rect x="665" y="140" width="4" height="23"/><rect x="670" y="140" width="4" height="23"/><rect x="675" y="140" width="4" height="23"/><rect x="680" y="140" width="4" height="23"/><rect x="685" y="72" width="4" height="91" fill="#eb6834"/>
+        </g>
+        <text x="510" y="182" font-size="11" fill="#5b6475">1/40 each; 4 slots piled on 9.6</text>
+
+        <text x="708" y="112" font-size="26" fill="#8a93a3">x</text>
+        <rect x="734" y="20" width="200" height="170" rx="10" fill="#fff" stroke="#2f6fdf"/>
+        <text x="748" y="44" font-weight="700">GR shape: 2</text>
+        <text x="748" y="62" font-size="11.5" fill="#5b6475">truncated, characteristic</text>
+        <rect x="770" y="92" width="50" height="71" fill="#2f6fdf"/><rect x="840" y="133" width="50" height="30" fill="#d9822b"/>
+        <text x="795" y="86" font-size="12" text-anchor="middle">0.7</text><text x="865" y="127" font-size="12" text-anchor="middle">0.3</text>
+        <text x="748" y="182" font-size="11" fill="#5b6475">fixed weights</text>
+      </g>
+      <text x="480" y="228" font-size="15" font-weight="700" text-anchor="middle">20 x 20 x 40 x 2 = 32,000 branches (x 1 Mw_min value, 7.15)</text>
+    </svg>
+    <figcaption><b>The four axes of kermadectonga2</b>, with bar heights proportional to the real prior weights (the Mw_max axis: the orange bar at 9.6 holds 4 of the 40 slots, weight 0.1). Branch order in <code>logic_tree_branches_*.csv</code>: coupling varies slowest, GR shape fastest.</figcaption>
+  </figure>
+
+  <div class="tabs">
+    <button data-pane="ax-c" class="on">Coupling</button><button data-pane="ax-b">b-value</button><button data-pane="ax-m">Mw_max</button><button data-pane="ax-g">GR shape</button>
+  </div>
+  <div class="pane on" id="ax-c">
+    <p><b>Seismic <a href="glossary.html#term-coupling">coupling</a></b> is the fraction of the plate motion that is released in earthquakes (the rest creeps silently). It is the most uncertain number of all and cannot be measured from geometry or a catalogue, so it comes from the literature.</p>
+    <ol class="steps">
+      <li>Two cumulative distributions are built: a <b>uniform</b> one on [0.1, 1.3], and a <b>Berryman</b> one that rises linearly from 0 at 0.21, through 0.5 at 0.31, to 1 at 0.72 (the zone's min / preferred / max: Berryman's "Hikurangi-Tonga-Kermadec Whole margin" row, the one PTHA18 used).</li>
+      <li>They are averaged 50/50 (PTHA18's <code>spreadsheet_and_uniform_50_50</code>).</li>
+      <li>20 coupling values are laid out with <b>logarithmic</b> spacing over the combined range [0.10, 1.30], so small values are resolved as finely as large ones in relative terms: 0.100, 0.114, 0.131, 0.150, 0.172, 0.196, 0.225, 0.257, ..., 1.136, 1.300.</li>
+      <li>The weight of each value is the averaged distribution's increase between the midpoints on either side of it (a numerical derivative), then normalised to sum to 1.</li>
+    </ol>
+    <p>Result: the prior mean coupling is <b>0.543</b> (<code>logic_tree_summary.csv</code>, <code>prior_mean_coupling</code>), the same as PTHA18's. The weight bunches near 0.22-0.30, where Berryman's distribution is steep, with a long tail up to 1.3 from the uniform half.</p>
+    <div class="formula">slip rate (m/yr) = convergence (mm/yr) / 1000 x coupling / cos(mean dip)<span class="where">This is how coupling enters the rates: every coupling value gives one slip rate. kermadectonga2: 99.3560 / 1000 x coupling x 1.0373 (mean dip 15.42 deg). The mean dip is an angle average of the cells' dips (the direction of the mean unit vector, rptha's <code>mean_angle</code>). Dividing by cos(dip) once converts the horizontal plate speed into slip along the sloping fault, and only once (<a href="step3.html#double-dip">why once</a>).</span></div>
+    <p class="where">Where in the code: <code>pyptha_v12/moment_balance.py</code> <code>coupling_prior_spreadsheet_and_uniform_50_50()</code>, <code>mean_dip_cos_factor()</code>; <code>run_logic_tree.py</code> <code>build_parameter_axes()</code>.</p>
+  </div>
+  <div class="pane" id="ax-b">
+    <p><b>The <a href="glossary.html#term-b-value">b-value</a></b> sets how fast earthquakes become rarer with size: with b = 1, each unit of magnitude is 10 times rarer. The anchor [0.7, 0.95, 1.2] is spread into 20 values by linear interpolation along the anchor (R's <code>approx(anchor, n = 20)</code>): 0.700, 0.726, 0.753, ..., 1.174, 1.200, in equal steps of 0.0263. Each gets weight 1/20.</p>
+    <p class="where">Where in the code: <code>moment_balance.py</code> <code>interpolate_logic_tree_parameter()</code>.</p>
+  </div>
+  <div class="pane" id="ax-m">
+    <p><b><a href="glossary.html#term-mw-max">Mw_max</a></b> is the largest magnitude the zone can produce. PTHA18 does not type it: it derives its range from the mesh, and so does this package (<code>Mw_max_anchor: "derive"</code>).</p>
+    <ol class="steps">
+      <li><b>Lower end</b> = mw_max_observed + 0.05 = 8.0 + 0.05 = <b>8.05</b>, but never below 7.35.</li>
+      <li><b>Upper end</b> = the smaller of two limits from the Strasser relation: the magnitude whose area at -1 standard deviation equals the zone's area (542,559 km<sup>2</sup> gives 9.994), and the magnitude whose width at -2 standard deviations equals the zone's mean column width (157.4 km gives <b>9.758</b>). The width limit wins: a narrow zone cannot host a very wide rupture.</li>
+      <li>40 values are spread evenly between 8.05 and 9.758 (step 0.0438), each with weight 1/40.</li>
+      <li><b>Only then</b> are they capped at 9.6 (9.0 for a normal-fault zone). On kermadectonga2 the last 4 values (9.626 to 9.758) become 9.6, so 37 distinct values remain and 9.6 carries 4/40 = 0.1 of the weight. Capping before interpolating would give a different axis; PTHA18 caps after (<code>compute_rates_all_sources.R</code> lines 358-363; the reason is explained in the docstring of <code>mw_max_anchor()</code>).</li>
+    </ol>
+    <p class="where">Where in the code: <code>moment_balance.py</code> <code>mw_max_anchor()</code>; cap in <code>run_logic_tree.py</code> <code>build_parameter_axes()</code>.</p>
+  </div>
+  <div class="pane" id="ax-g">
+    <p>A <a href="glossary.html#term-gr">Gutenberg-Richter (GR)</a> curve gives the rate of earthquakes larger than Mw as 10<sup>a - b Mw</sup>. PTHA18 uses two ways of stopping it at Mw_max:</p>
+    <div class="formula">truncated: N(&gt;Mw) = 10<sup>a - b Mw</sup> - 10<sup>a - b Mw_max</sup> (Mw &lt;= Mw_max), 0 above<br>characteristic: N(&gt;Mw) = 10<sup>a - b Mw</sup> (Mw &lt;= Mw_max), 0 above<span class="where">For Mw below Mw_min (7.15) the formulas use Mw_min. Truncated: the curve bends smoothly to zero at Mw_max. Characteristic: the rate stays finite up to Mw_max and drops there, which puts extra earthquakes exactly at Mw_max. Weights: 0.7 truncated, 0.3 characteristic.</span></div>
+    <figure class="fig narrow">
+      <img src="img/engine_gr_truncated_vs_characteristic.png" alt="Truncated and characteristic GR curves for two real branches">
+      <figcaption><b>Two real kermadectonga2 branches</b> (10545 and 10546), identical except for the GR shape. Each has its own a-value from <a href="#level2">LEVEL 2</a>: the characteristic one spends more of its moment budget on Mw 9.45 earthquakes, so it has fewer small ones (lower curve on the left).</figcaption>
+    </figure>
+    <p class="where">Where in the code: <code>pyptha_v12/rates.py</code> <code>Mw_exceedance_rate_truncated_gutenberg_richter()</code>, <code>Mw_exceedance_rate_characteristic_gutenberg_richter()</code>.</p>
+  </div>
+  <pre class="out">      coupling: 20 values in [0.100, 1.300], prior mean = 0.543
+      LEVEL 1: 32,000 branches (20 coupling x 20 b x 40 Mw_max x 2 GR type)
+      Mw_max anchor derived from geometry: [8.0500, 9.7578]</pre>
+  <p class="where">From <code>kermadectonga2_v9/run_final.log</code>.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="conditional-probability">Conditional probability</h2>
+  <p>A GR curve says how many Mw 8.5 earthquakes happen per year, not <b>where</b>. The <a href="glossary.html#term-conditional-probability">conditional probability</a> of a scenario is its share of its magnitude bin: the shares of the 134 Mw 8.5 scenarios add up to 1. The rate of one scenario is then (PTHA18 report, Equation 3):</p>
+  <div class="formula">r<sub>j</sub> = P(j | Mw<sub>j</sub>) x [ N(&gt;Mw<sub>j</sub> - 0.05) - N(&gt;Mw<sub>j</sub> + 0.05) ]<span class="where">r<sub>j</sub>: rate of scenario j (per year). P(j | Mw<sub>j</sub>): its conditional probability. The bracket: the rate of the magnitude bin Mw<sub>j</sub> +/- half a bin, from the mean curve (or from a percentile curve for the <code>rate_p*</code> columns). Summing r<sub>j</sub> over all scenarios above a magnitude gives back the exceedance curve.</span></div>
+  <p>The engine has three models; which one is used depends on step 3.</p>
+  <div class="grid g3">
+    <div class="card"><h4><span class="badge">all_equal</span></h4><p>Every scenario of a magnitude has the same share. Not used by PTHA18, nor by default here; kept for tests.</p></div>
+    <div class="card"><h4><span class="badge grey">inverse_slip</span></h4><p>Share proportional to 1 / slip. PTHA18's model for zones with a <b>constant</b> convergence (only puysegur). Used here when you set <code>CONVERGENCE_OVERRIDE_MM_PER_YR</code> in step 3.</p></div>
+    <div class="card"><h4><span class="badge good">convergent_slip_weighted</span></h4><p>Share proportional to <b>area x mean convergent slip</b> of the scenario's cells. PTHA18's model for every zone that uses Bird, and the default here.</p></div>
+  </div>
+  <div class="formula">weight<sub>j</sub> = area<sub>j</sub> x ( &#931;<sub>cells i in j</sub> area<sub>i</sub> x s<sub>col(i)</sub> ) / ( &#931;<sub>cells i in j</sub> area<sub>i</sub> ),   P(j | Mw) = weight<sub>j</sub> / &#931;<sub>same Mw</sub> weight<span class="where">s<sub>col</sub>: <code>convergent_slip_profile</code>, Bird's slip speed of the cell's column, sqrt(convergent<sup>2</sup> + sideways<sup>2</sup>). So within one magnitude, scenarios on fast-converging parts of the zone are more likely. The kermadectonga2 profile runs from 251 mm/yr near the north end down to about 6 mm/yr in the last three southern columns (71-73), near New Zealand, so scenarios lying only there get a small share.</span></div>
+  <figure class="fig">
+    <img src="img/engine_kermadectonga2_conditional_prob.png" alt="Conditional probability of the Mw 8.5 scenarios along strike, before and after LEVEL 4, with the convergence profile">
+    <figcaption><b>How the Mw 8.5 rate is split, kermadectonga2.</b> Grey bars: the share from area x convergent slip, which follows the orange convergence curve. Blue bars: after <a href="#level4">LEVEL 4</a>, which multiplies the two scenarios at each end (they touch column 1 or 73) by 1 + 6.14 and renormalises the bin. Together the edge-touching Mw 8.5 scenarios go from 2.9% to 17.8% of the bin. This is why the most likely Mw 8.5 scenario sits at the north end (map above).</figcaption>
+  </figure>
+  <p>It does not change how many earthquakes of each magnitude happen, only <b>where</b>, which is what a tsunami study needs. Checked on PTHA18's own inputs, zone by zone: with this model the per-scenario rates match PTHA18's published rates within 1e-10, and their percentiles within 1e-8 (<a href="validation.html#events">Validation</a>); with the 1/slip model on the same Bird zones they would be off by a median 3.8% (philippine) to 26% (makran2), worst case 121%.</p>
+  <div class="callout"><span class="lbl">v10_q: q</span>With <code>--rupture-size local</code> one rupture starts at each cell, so where cells are small more ruptures overlap the same km&sup2; and, with the weights above, would collect more rate for no tectonic reason. The engine then multiplies the weight of whichever model is used by q = the mean over the rupture's cells of 1 / (number of ruptures of the same magnitude containing that cell). The rate of each magnitude is unchanged (only its sharing among scenarios); q is also larger at the two ends, so it does part of LEVEL 4's job and the fitted edge multiplier drops (calabria2 3.69 &rarr; 1.04). Not used with rptha's rule. <a href="v10_q.html#q">Details</a>.</div>
+  <p class="where">Where in the code: <code>run_logic_tree.py</code> <code>build_source_representation()</code> (the <code>convergent_slip_weighted</code> branch; v10_q: q from <code>events.coverage_weights()</code> after all three models); <code>pyptha_v12/rates.py</code> <code>get_event_probabilities_conditional_on_Mw()</code>, <code>individual_scenario_rates()</code>. R original: <code>make_conditional_probability_function_uniform_slip</code>.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="level2">LEVEL 2: moment balance</h2>
+  <p>This is where the rates are born. The idea of the <a href="glossary.html#term-moment-balance">moment balance</a>: over thousands of years, the earthquakes on the zone must release the slip that the coupled part of the plate motion accumulates. A GR curve has a shape (b, Mw_max, truncated or characteristic) and a height (the <b>a-value</b>). For each branch, the engine chooses the height so that the long-term slip released by all the scenarios equals the long-term slip supplied by the plates.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 250" role="img" aria-label="The moment balance as a pair of scales">
+      <line x1="480" y1="70" x2="480" y2="200" stroke="#8a93a3" stroke-width="3"/>
+      <path d="M440,210 L520,210 L480,196 z" fill="#8a93a3"/>
+      <line x1="170" y1="70" x2="790" y2="70" stroke="#5b6475" stroke-width="3"/>
+      <rect x="40" y="90" width="330" height="120" rx="10" fill="#fcf0e2" stroke="#d9822b" stroke-width="1.6"/>
+      <line x1="205" y1="70" x2="205" y2="90" stroke="#5b6475" stroke-width="2"/>
+      <text x="56" y="116" font-size="14" font-weight="700">Supplied by the plates (per year)</text>
+      <text x="56" y="142" font-size="13">area x slip rate x moment fraction</text>
+      <text x="56" y="166" font-size="12" fill="#5b6475">542,559 km<tspan dy="-5" font-size="9">2</tspan><tspan dy="5"> x 23.1 mm/yr x 0.935</tspan></text>
+      <text x="56" y="190" font-size="12" fill="#5b6475">= 1.17e10 m<tspan dy="-5" font-size="9">3</tspan><tspan dy="5">/yr (branch 10545)</tspan></text>
+      <rect x="590" y="90" width="340" height="120" rx="10" fill="#e8f0fd" stroke="#2f6fdf" stroke-width="1.6"/>
+      <line x1="760" y1="70" x2="760" y2="90" stroke="#5b6475" stroke-width="2"/>
+      <text x="606" y="116" font-size="14" font-weight="700">Released by the scenarios (per year)</text>
+      <text x="606" y="142" font-size="13">&#931; slip<tspan dy="4" font-size="9">j</tspan><tspan dy="-4"> x area</tspan><tspan dy="4" font-size="9">j</tspan><tspan dy="-4"> x rate</tspan><tspan dy="4" font-size="9">j</tspan></text>
+      <text x="606" y="166" font-size="12" fill="#5b6475">with a = 0: 4,649 m<tspan dy="-5" font-size="9">3</tspan><tspan dy="5">/yr</tspan></text>
+      <text x="606" y="190" font-size="12" fill="#5b6475">so 10<tspan dy="-5" font-size="9">a</tspan><tspan dy="5"> = 1.17e10 / 4,649, a = 6.403</tspan></text>
+      <text x="480" y="40" font-size="14" font-weight="700" text-anchor="middle">Choose a so that the two sides are equal</text>
+      <text x="480" y="238" font-size="12" fill="#5b6475" text-anchor="middle">(the rigidity 3e10 Pa would multiply both sides, so it cancels)</text>
+    </svg>
+    <figcaption><b>The moment balance of one real branch</b> (kermadectonga2 branch 10545: coupling 0.2248, b 0.9895, Mw_max 9.469, truncated GR). The numbers were recomputed from the branch's row of <code>logic_tree_branches_kermadectonga2.csv</code> (a = 6.402531).</figcaption>
+  </figure>
+  <div class="formula">10<sup>a</sup> = ( A<sub>zone</sub> x v<sub>slip</sub> x f<sub>moment</sub> ) / ( &#931;<sub>j</sub> slip<sub>j</sub> x A<sub>j</sub> x n<sub>j</sub>(a=0) x P(j | Mw<sub>j</sub>) )
+    <span class="where">A<sub>zone</sub>: total mesh area (m<sup>2</sup>). v<sub>slip</sub> = convergence / 1000 x coupling / cos(mean dip) (m/yr), one per coupling value. f<sub>moment</sub>: the fraction of the branch's total moment carried by magnitudes 7.15 to 9.85 (below). slip<sub>j</sub>, A<sub>j</sub>: the scenario's uniform slip (m) and area (m<sup>2</sup>). n<sub>j</sub>(a=0): the rate of scenario j's magnitude bin on the branch's GR curve with a = 0. P(j | Mw<sub>j</sub>): the conditional probability. Because only 10<sup>a</sup> scales the whole curve, a follows directly: a = log10(left / right).</span></div>
+
+  <h3>The moment below Mw 7.15</h3>
+  <p>Earthquakes smaller than Mw 7.15 also release some of the plate's slip, but they are not in the scenario list. With <code>account_for_moment_below_mwmin: true</code> the engine extends the branch's GR curve (a = 0, same b and Mw_max) down to Mw 0 on a 0.001 grid, adds up the moment of each tiny bin, and keeps only the fraction carried by magnitudes 7.15 to 9.85. For branch 10545 (b = 0.99) this fraction is <b>0.935</b>: 6.5% of the plate's seismic slip goes to small earthquakes, and the scenarios get the remaining 93.5%. A higher b-value (more small quakes) lowers the fraction.</p>
+
+  <h3>Worked example, kermadectonga2 branch 10545</h3>
+  <ol class="steps">
+    <li>Slip rate: 99.3560 mm/yr / 1000 x 0.2248 x 1.0373 = 0.023168 m/yr.</li>
+    <li>Left side: 542,559 km<sup>2</sup> x 1e6 x 0.023168 x 0.9346 = 1.1747e10 m<sup>3</sup>/yr.</li>
+    <li>Right side with a = 0, summed over the 3,075 scenarios with the edge-corrected conditional probabilities: 4,649 m<sup>3</sup>/yr.</li>
+    <li>a = log10(1.1747e10 / 4,649) = <b>6.4025</b>.</li>
+    <li>The branch then predicts N(&gt;7.15) = 10<sup>6.4025 - 0.9895 x 7.15</sup> - 10<sup>6.4025 - 0.9895 x 9.4692</sup> = <b>0.212 per year</b>.</li>
+  </ol>
+  <p>Across all 32,000 branches, a runs from <b>3.220 to 9.242</b> (<code>logic_tree_summary.csv</code>, level 2). The engine only loops over the 1,600 distinct (b, Mw_max, GR shape) combinations: coupling only shifts a by log10 of the slip rate, so it is added at the end. Each branch's curve is tabulated from Mw 7.15 to 9.6 every 0.02 (PTHA18's <code>computational_increment</code>).</p>
+  <p class="where">Where in the code: <code>pyptha_v12/rates.py</code> <code>rate_of_earthquakes_greater_than_Mw_function()</code> and <code>compute_moment_fraction_from_events_greater_or_equal_than_mwmin()</code>. Validated: on PTHA18's own inputs, all 32,000 a-values match PTHA18's branch tables within 3e-12 on 4 zones (<a href="validation.html#engine">Validation</a>).</p>
+
+  <figure class="fig">
+    <img src="img/engine_kermadectonga2_branch_fan.png" alt="All 32,000 branch curves of kermadectonga2, before and after the weight update">
+    <figcaption><b>All 32,000 balanced branches</b> (grey), written by the engine as <code>fig_branch_fan_kermadectonga2.png</code>. Left: the prior mean (red), before <a href="#level3">LEVEL 3</a>. Right: after LEVEL 3, the posterior mean (red), median and percentile bands. Green: the 9 GCMT earthquakes as an observed rate. Look at the left end: the prior mean is far above the green data (0.93 earthquakes of Mw &gt; 7.15 per year against 0.22 observed), the posterior mean sits on it (0.245). The fan is wide because coupling alone spans a factor 13 (0.1 to 1.3).</figcaption>
+  </figure>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="level3">LEVEL 3: Bayesian update with GCMT</h2>
+  <p>The prior weights come from the literature. LEVEL 3 checks each branch against the earthquakes that actually happened: 9 GCMT earthquakes of Mw &gt;= 7.15 on this zone in 41.16 years (1976-01-01 to 2017-03-01; see <a href="seismicity.html">steps 4-5</a>). This is a <a href="glossary.html#term-bayesian-update">Bayesian update</a>:</p>
+  <div class="formula">posterior<sub>k</sub> = prior<sub>k</sub> x likelihood<sub>k</sub> / &#931;<sub>all branches</sub> ( prior x likelihood )<span class="where">k: one branch. The likelihood is how probable the observed data are if branch k were true.</span></div>
+  <figure class="fig">
+    <svg viewBox="0 0 960 230" role="img" aria-label="Prior times likelihood gives posterior">
+      <defs><marker id="l3-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker></defs>
+      <g font-size="12.5">
+        <rect x="20" y="20" width="250" height="160" rx="10" fill="#fff" stroke="#8a93a3"/>
+        <text x="34" y="44" font-weight="700">Prior (literature)</text>
+        <text x="34" y="62" font-size="11.5" fill="#5b6475">mean rate of Mw &gt; 7.15: 0.93 / yr</text>
+        <g fill="#8a93a3"><rect x="40" y="140" width="18" height="20"/><rect x="62" y="120" width="18" height="40"/><rect x="84" y="118" width="18" height="42"/><rect x="106" y="112" width="18" height="48"/><rect x="128" y="104" width="18" height="56"/><rect x="150" y="100" width="18" height="60"/><rect x="172" y="96" width="18" height="64"/><rect x="194" y="92" width="18" height="68"/><rect x="216" y="98" width="18" height="62"/></g>
+        <text x="40" y="174" font-size="11" fill="#5b6475">low coupling ..... high coupling</text>
+        <text x="288" y="106" font-size="26" fill="#8a93a3">x</text>
+        <rect x="318" y="20" width="290" height="160" rx="10" fill="#f1eafb" stroke="#8a5cd1"/>
+        <text x="332" y="44" font-weight="700">Likelihood (GCMT)</text>
+        <text x="332" y="64" font-size="11.5">P(9 events in 41.16 yr | branch) (Poisson)</text>
+        <text x="332" y="82" font-size="11.5">x density of each observed Mw on its GR</text>
+        <path d="M340,160 C380,160 400,70 440,70 C480,70 500,150 590,158" stroke="#8a5cd1" stroke-width="2.5" fill="none"/>
+        <text x="410" y="104" font-size="11" fill="#8a5cd1">peak where the branch</text>
+        <text x="410" y="118" font-size="11" fill="#8a5cd1">predicts ~0.22 / yr</text>
+        <text x="630" y="106" font-size="26" fill="#8a93a3">=</text>
+        <rect x="660" y="20" width="280" height="160" rx="10" fill="#fff" stroke="#8a5cd1" stroke-width="1.6"/>
+        <text x="674" y="44" font-weight="700">Posterior</text>
+        <text x="674" y="62" font-size="11.5" fill="#5b6475">mean rate of Mw &gt; 7.15: 0.245 / yr</text>
+        <g fill="#8a5cd1"><rect x="680" y="126" width="18" height="34"/><rect x="702" y="80" width="18" height="80"/><rect x="724" y="84" width="18" height="76"/><rect x="746" y="112" width="18" height="48"/><rect x="768" y="132" width="18" height="28"/><rect x="790" y="142" width="18" height="18"/><rect x="812" y="150" width="18" height="10"/><rect x="834" y="154" width="18" height="6"/><rect x="856" y="157" width="18" height="3"/></g>
+        <text x="680" y="174" font-size="11" fill="#5b6475">low coupling ..... high coupling</text>
+      </g>
+      <text x="480" y="214" font-size="12.5" text-anchor="middle" fill="#5b6475">Schematic bars; the real weights are in the next figure. Observed: 9 / 41.16 = 0.219 per year.</text>
+    </svg>
+    <figcaption><b>What LEVEL 3 does.</b> Most prior weight sat on branches predicting far more Mw 7+ earthquakes than GCMT recorded; those branches lose their weight.</figcaption>
+  </figure>
+
+  <h3>The likelihood, exactly as coded</h3>
+  <ol class="steps">
+    <li><b>Count.</b> For each branch, its rate of earthquakes above the threshold, N(&gt;7.15), comes from its GR curve. The probability of seeing exactly 9 in 41.16 years is the Poisson probability P(9; N(&gt;7.15) x 41.16). Example: branch 10545 predicts 0.216 per year, so P = 0.132; a branch predicting 0.8 per year gets P = 6e-7.</li>
+    <li><b>Magnitudes.</b> Because step 6 also passes the 9 magnitudes, the likelihood is multiplied by the probability density of each observed magnitude under the branch's GR curve above 7.15 (computed by a centred difference of the curve with a step of 1e-4). This rewards branches whose b-value and Mw_max fit the observed mix of sizes. PTHA18 passes the magnitudes too.</li>
+    <li>Prior x likelihood, normalised to sum to 1, gives the <code>posterior_prob</code> of every branch.</li>
+  </ol>
+  <p class="where">Where in the code: <code>pyptha_v12/rates.py</code> <code>compute_updated_logic_tree_weights()</code> (a full port of rptha's, which also supports inter-event times; PTHA18 and this package use the Poisson count). The threshold must not be below Mw_min: the engine refuses it, because the half-bin shift already lives in Mw_min = 7.15.</p>
+
+  <figure class="fig">
+    <img src="img/engine_kermadectonga2_prior_posterior.png" alt="Prior and posterior weights of the coupling and Mw_max axes of kermadectonga2">
+    <figcaption><b>What the 9 earthquakes changed</b> (weights summed over the other axes, from <code>logic_tree_branches_kermadectonga2.csv</code>). Coupling: the weight moves to 0.22-0.30; the mean drops from 0.54 to 0.33. Mw_max: larger values gain weight (mean 8.94 to 9.30). For the same moment budget, a larger Mw_max spends more of it on rare giant earthquakes and leaves fewer Mw 7-8 ones, which fits the low observed count. The b-value hardly moves (mean 0.950 to 0.917), and truncated GR goes from 0.70 to 0.63.</figcaption>
+  </figure>
+
+  <h3>TVD: how much did the weights move?</h3>
+  <p>The engine summarises the update with one number, the <b>total-variation distance</b>:</p>
+  <div class="formula">TVD = &#189; &#931;<sub>k</sub> | posterior<sub>k</sub> - prior<sub>k</sub> |<span class="where">0 means the data changed nothing; 1 means the posterior sits entirely on branches that had no prior weight. It equals the share of the total weight that had to move.</span></div>
+  <p>kermadectonga2: <b>TVD = 0.690</b>, so about two thirds of the weight moved. Branches predicting more than 0.5 Mw 7.15+ earthquakes per year held about 60% of the prior weight and hold 0.3% after. With PTHA18's inputs (step 8) the TVD is 0.679.</p>
+  <pre class="out">      LEVEL 3 data: 9 events above Mw 7.15 in 41.1636 yr (whole zone), magnitudes supplied
+      LEVEL 3: posterior applied, TVD = 0.6898, mean coupling 0.543 -&gt; 0.326</pre>
+  <p class="where">From <code>kermadectonga2_v9/run_final.log</code>. The branch-weight figure <code>fig_branch_weights_kermadectonga2.png</code> (in <code>outputs/figures/</code>) shows the same marginals for b, coupling and Mw_max, with the TVD in its title.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="level4">LEVEL 4: edge correction</h2>
+  <p>A problem of uniform-slip rectangles: a cell in the middle of the zone is covered by many placements of each block, a cell in the first or last column by few. So, if every placement had its fair share, the ends of the zone would slip less over the long term than the plates push them. LEVEL 4 fixes this <a href="glossary.html#term-edge-correction">edge effect</a> by making scenarios that touch the first or last column more likely.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 250" role="img" aria-label="Integrated slip sags at the edges; the edge multiplier lifts it">
+      <g font-size="12.5">
+        <text x="20" y="24" font-weight="700">Long-term slip per column (schematic)</text>
+        <line x1="40" y1="200" x2="450" y2="200" stroke="#b8bfca"/>
+        <path d="M50,80 L440,80" stroke="#2f6fdf" stroke-width="2.5" stroke-dasharray="7 4"/>
+        <text x="330" y="72" fill="#2f6fdf" font-size="11.5">target: convergence shape</text>
+        <path d="M50,165 C80,115 110,95 150,88 L340,88 C380,95 410,115 440,165" stroke="#8a93a3" stroke-width="2.5" fill="none"/>
+        <text x="160" y="118" fill="#5b6475" font-size="11.5">no correction: ends sag</text>
+        <text x="40" y="220" fill="#5b6475" font-size="11">column 1</text><text x="400" y="220" fill="#5b6475" font-size="11">last column</text>
+        <text x="500" y="24" font-weight="700">The fix, within each magnitude</text>
+        <rect x="500" y="40" width="440" height="160" rx="10" fill="#e8f0fd" stroke="#2f6fdf"/>
+        <text x="516" y="66">1. Scenario rates r<tspan dy="4" font-size="9">j</tspan><tspan dy="-4"> of scenarios touching column 1 or the</tspan></text>
+        <text x="530" y="84">last column are multiplied by (1 + m).</text>
+        <text x="516" y="108">2. The bin is renormalised: its total rate is unchanged,</text>
+        <text x="530" y="126">rate moves to the ends, none is created.</text>
+        <text x="516" y="150">3. m is chosen so that the SHAPE of the long-term slip</text>
+        <text x="530" y="168">best matches the shape of the convergence.</text>
+        <text x="516" y="190" fill="#2f6fdf" font-weight="700">kermadectonga2: m = 7.1507 (edge scenarios x 8.15)</text>
+      </g>
+    </svg>
+    <figcaption><b>Why and how.</b> The long-term slip of a cell is the sum, over every scenario covering it, of slip x rate. The target is <code>convergence_profile</code>, the convergent part of Bird's speed per column (flat if the convergence is constant).</figcaption>
+  </figure>
+  <ol class="steps">
+    <li><b>First pass.</b> The engine builds the rate model (LEVELs 1-3) with the uncorrected conditional probabilities and computes every scenario's rate r<sub>j</sub>.</li>
+    <li><b>Integrated slip.</b> For a trial multiplier m, each cell's long-term slip is &#931; slip<sub>j</sub> x r<sub>j</sub> over the scenarios covering it, with edge-touching scenarios' rates multiplied by (1 + m) and each magnitude bin renormalised.</li>
+    <li><b>Misfit.</b> Both the modelled slip and the target are divided by their totals (coupling sets the size, only the shape is compared), and the misfit is &#931;<sub>cells</sub> (model share - target share)<sup>2</sup>. The target is per column, repeated down dip, not weighted by cell area, as in R.</li>
+    <li><b>Search.</b> m is found in [0, 30] by Brent's method (scipy <code>minimize_scalar</code>, bounded), stopping at R's tolerance, machine epsilon<sup>0.25</sup> = 1.2e-4 (with scipy's default tolerance, 1e-5, the multiplier would differ slightly from R's and the per-scenario rates would match PTHA18's only to 1e-6; with R's tolerance they match within 1e-10). If the misfit at m = 0 and m = 10 is the same, the engine stops with an error (no scenario touches an edge with any weight).</li>
+    <li><b>Second pass.</b> The corrected conditional probabilities go back into LEVEL 2: they change the right side of the moment balance, so every a-value is recomputed, and LEVEL 3 with it.</li>
+  </ol>
+  <pre class="out">      LEVEL 4 edge correction: FITTED multiplier = 7.1507, misfit 0.0007026 -&gt; 0.000317 (54.9% better)</pre>
+  <p>96 of the 3,075 kermadectonga2 scenarios touch an edge. Step 8's run with PTHA18's own mesh and inputs fits 6.6953 (misfit 54.0% better). If the fit ends within 0.001 of a bound, the log prints a warning.</p>
+  <figure class="fig">
+    <img src="img/engine_kermadectonga2_moment_balance.png" alt="Normalised integrated slip per column: target, before and after the edge correction, and residuals">
+    <figcaption><b>The fit on kermadectonga2</b> (the engine's own <code>fig_moment_balance_kermadectonga2.png</code>). Left: blue, the target (Bird convergence shape); grey, the modelled long-term slip without correction; orange, with m = 7.15. Look at columns 1-3 and 70-73: the grey curve drops, the orange one follows the target better. Right: the residual that is minimised. The shape is not matched everywhere: uniform rectangles cannot follow every bump of the Bird profile, only the edges are corrected.</figcaption>
+  </figure>
+  <p class="where">Where in the code: <code>pyptha_v12/moment_balance.py</code> <code>fit_edge_multiplier()</code>, <code>back_calculate_convergence()</code>; two-pass logic in <code>run_logic_tree.py</code> <code>build_source_representation()</code>. R original: <code>compute_rates_all_sources.R</code> (<code>optimize(fun_to_optimize, lower = 0, upper = 30)</code>) and <code>back_calculate_convergence.R</code>.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="level5">LEVEL 5: percentiles</h2>
+  <p>After LEVEL 3 each of the 32,000 branches has a curve and a weight. The <b>mean</b> curve is the weighted average. But a hazard study also wants the spread: "with 84% confidence the rate is below X". That is a <a href="glossary.html#term-percentile">percentile</a> of the branch rates, weighted by the branches' posterior weights. The engine computes percentiles in two ways, for two different files.</p>
+
+  <h3>1. Monte Carlo, for <code>exceedance_rate_percentiles.csv</code></h3>
+  <p>This is PTHA18's LEVEL 5 routine (<code>compute_exceedance_rate_percentiles_with_random_sampling</code>), applied here to magnitude thresholds instead of tsunami heights.</p>
+  <ol class="steps">
+    <li>Each branch's exceedance rate is read at every 0.1 of Mw from 7.2 to 9.8, 27 thresholds (zero above its own Mw_max).</li>
+    <li>At each threshold, the weighted distribution of the 32,000 rates is summarised by its inverse at 1,000 probabilities (spaced as 0.5 (1 + sin(t)), denser near 0 and 1).</li>
+    <li>N = 40,000 uniform random numbers (seed 123) are drawn and turned into 40,000 sampled rates through that inverse distribution.</li>
+    <li>With segments, each segment would get its own sample and their rates would be added; the <b>copula</b> says whether segments share the same random number (<code>comonotonic</code>: when one segment is at its 90th percentile, so are all) or not (<code>independent</code>). Without segments all 40,000 samples go to the whole zone and the copula has no effect.</li>
+    <li>The mean of the samples, and their 2.5, 16, 50, 84 and 97.5 percentiles (R's <code>quantile(type = 6)</code>), are written.</li>
+  </ol>
+  <figure class="fig narrow">
+    <svg viewBox="0 0 620 220" role="img" aria-label="40,000 samples and their percentiles at one threshold">
+      <line x1="40" y1="170" x2="590" y2="170" stroke="#b8bfca"/>
+      <g fill="#f5c9b3">
+        <rect x="60" y="165" width="20" height="5"/><rect x="82" y="150" width="20" height="20"/><rect x="104" y="126" width="20" height="44"/><rect x="126" y="96" width="20" height="74"/><rect x="148" y="70" width="20" height="100"/><rect x="170" y="58" width="20" height="112"/><rect x="192" y="60" width="20" height="110"/><rect x="214" y="72" width="20" height="98"/><rect x="236" y="88" width="20" height="82"/><rect x="258" y="104" width="20" height="66"/><rect x="280" y="118" width="20" height="52"/><rect x="302" y="130" width="20" height="40"/><rect x="324" y="140" width="20" height="30"/><rect x="346" y="148" width="20" height="22"/><rect x="368" y="154" width="20" height="16"/><rect x="390" y="158" width="20" height="12"/><rect x="412" y="162" width="20" height="8"/><rect x="434" y="165" width="20" height="5"/>
+      </g>
+      <g stroke-width="2">
+        <line x1="96" y1="40" x2="96" y2="170" stroke="#8a5cd1" stroke-dasharray="4 3"/>
+        <line x1="148" y1="40" x2="148" y2="170" stroke="#eb6834" stroke-dasharray="4 3"/>
+        <line x1="208" y1="40" x2="208" y2="170" stroke="#1d2433"/>
+        <line x1="286" y1="40" x2="286" y2="170" stroke="#eb6834" stroke-dasharray="4 3"/>
+        <line x1="384" y1="40" x2="384" y2="170" stroke="#8a5cd1" stroke-dasharray="4 3"/>
+      </g>
+      <g font-size="11.5" text-anchor="middle">
+        <text x="96" y="34" fill="#8a5cd1">p2.5: 0.116</text>
+        <text x="148" y="20" fill="#eb6834">p16: 0.160</text>
+        <text x="208" y="34" fill="#1d2433">p50: 0.218</text>
+        <text x="286" y="20" fill="#eb6834">p84: 0.288</text>
+        <text x="384" y="34" fill="#8a5cd1">p97.5: 0.374</text>
+      </g>
+      <text x="40" y="194" font-size="12" fill="#5b6475">rate of Mw &gt; 7.2 (per year), 40,000 weighted samples; mean 0.2248</text>
+      <text x="40" y="212" font-size="11" fill="#5b6475">(histogram schematic; the five values are kermadectonga2's)</text>
+    </svg>
+    <figcaption><b>One threshold, Mw 7.2.</b> The sampled rates and the five percentiles written to the file.</figcaption>
+  </figure>
+
+  <div class="tbl"><table>
+    <tr><th class="n">Mw threshold</th><th class="n">mean</th><th class="n">p2.5</th><th class="n">p16</th><th class="n">median</th><th class="n">p84</th><th class="n">p97.5</th><th class="n">step 8 mean</th></tr>
+    <tr><td class="n">7.2</td><td class="n">0.2248</td><td class="n">0.1160</td><td class="n">0.1602</td><td class="n">0.2183</td><td class="n">0.2882</td><td class="n">0.3739</td><td class="n">0.2243</td></tr>
+    <tr><td class="n">7.6</td><td class="n">0.0953</td><td class="n">0.0507</td><td class="n">0.0682</td><td class="n">0.0916</td><td class="n">0.1225</td><td class="n">0.1617</td><td class="n">0.0947</td></tr>
+    <tr><td class="n">8.0</td><td class="n">0.0402</td><td class="n">0.0202</td><td class="n">0.0273</td><td class="n">0.0376</td><td class="n">0.0534</td><td class="n">0.0735</td><td class="n">0.0397</td></tr>
+    <tr><td class="n">8.4</td><td class="n">0.0162</td><td class="n">0.0063</td><td class="n">0.0099</td><td class="n">0.0148</td><td class="n">0.0227</td><td class="n">0.0333</td><td class="n">0.0158</td></tr>
+    <tr><td class="n">8.8</td><td class="n">0.00557</td><td class="n">0</td><td class="n">0.00286</td><td class="n">0.00492</td><td class="n">0.00869</td><td class="n">0.01417</td><td class="n">0.00520</td></tr>
+    <tr><td class="n">9.2</td><td class="n">0.00126</td><td class="n">0</td><td class="n">0</td><td class="n">0.00095</td><td class="n">0.00246</td><td class="n">0.00549</td><td class="n">0.00110</td></tr>
+  </table></div>
+  <p class="where">Source: <code>kermadectonga2_v9/outputs/exceedance_rate_percentiles.csv</code> and <code>outputs_official/exceedance_rate_percentiles.csv</code> (step 8: PTHA18's mesh, convergence and GCMT list, run unsegmented through the same engine). A percentile of 0 means that more than that share of the weight is on branches whose Mw_max is below the threshold. The Monte Carlo mean (0.2248 at Mw 7.2) differs slightly from the exact mean curve (0.2251 in <code>rate_curves.csv</code>) because it is estimated from 40,000 samples. On a segmented run this file holds the whole zone's percentiles: the unsegmented branch and the segments are sampled together (PTHA18's method), so its mean is the LEVEL 0 mix, not the unsegmented curve.</p>
+
+  <h3>2. Exact, for the <code>rate_p*</code> columns of <code>scenario_rates_*.csv</code></h3>
+  <p>For each scenario the engine reads the weighted percentile of the 32,000 branch curves directly, at every point of the 0.02 grid (sort the branch rates, accumulate their weights, take the first rate where the sum reaches p), and applies the <a href="#conditional-probability">Equation 3</a> split to that percentile curve. No random numbers. Caveat from the PTHA18 report (Section 3.7.7): these are increments of percentile curves, not percentiles of increments, so one scenario's 16th percentile rate can exceed its median; summed over scenarios the order is restored.</p>
+  <p class="where">Where in the code: <code>pyptha_v12/logic_tree.py</code> <code>branch_exceedance_rates_on_thresholds()</code>, <code>compute_exceedance_rate_percentiles_with_random_sampling()</code>, <code>weighted_percentile()</code>, <code>_r_quantile_type6()</code>; <code>pyptha_v12/rates.py</code> <code>MwRateFunction._quantile_curve()</code>, <code>individual_scenario_rates()</code>. Validated: every scenario's 5 percentiles match PTHA18's published ones within 8e-9 on 4 unsegmented zones, and within 4e-10 on 7 segmented zones (<code>events_segmented</code>).</p>
+
+  <figure class="fig">
+    <img src="img/engine_kermadectonga2_rate_curve.png" alt="Exceedance-rate curve of kermadectonga2 with percentiles, step 8 and GCMT">
+    <figcaption><b>The final answer for kermadectonga2.</b> Orange line: the mean curve (<code>rate_curves.csv</code>, every 0.01 from 7.2 to 9.8). Shaded: the 68% and 95% ranges from LEVEL 5 at the six thresholds (straight lines between them), dashed: the median. Blue: step 8, PTHA18's inputs through the same engine (0.2% lower at Mw 7.2, 7% lower at Mw 8.8). The coupling anchors (0.21 / 0.31 / 0.72) and mw_max_observed (8.1) are now PTHA18's own, both taken from Berryman as PTHA18 did, so the gap is the mesh: this run's is 6% larger (542,559 vs 511,220 km<sup>2</sup>), its mean dip is 15.4 vs 16.0 deg, and its edge multiplier 7.15 vs 6.70. Green: the observed GCMT rate, which LEVEL 3 made the curve follow. The curve is exactly 0 above Mw 9.6, the largest Mw_max. Note: PTHA18's published curve for kermadectonga2 is segmented (<a href="#level0">LEVEL 0</a>), so it is not this blue line.</figcaption>
+  </figure>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="outputs">Outputs</h2>
+  <p>The engine writes to <code>runs/python/&lt;run_name&gt;/</code> (fixed in the engine), and step 7 then <b>deletes and replaces</b> <code>&lt;folder&gt;/outputs/</code> with a copy of it. Files marked <i>&lt;name&gt;</i> are written once per source representation; in unsegmented runs <i>&lt;name&gt;</i> is the zone (<code>kermadectonga2</code>), in segmented runs also every segment (<code>kermadectonga2_tonga</code>, <code>kermadectonga2_kermadec</code>, <code>kermadectonga2_hikurangi</code>), all on the zone's scenario table. All numbers are written with 17 significant digits.</p>
+  <div class="tbl"><table>
+    <tr><th>File</th><th>Rows (kermadectonga2)</th><th>Columns and meaning</th></tr>
+    <tr><td><code>scenario_rates_&lt;name&gt;.csv</code></td><td class="n">3,075</td><td><b>The end product.</b> <code>event_id</code> (1-based, rptha order), <code>Mw</code>, <code>area_km2</code>, <code>slip_m</code>, <code>mean_depth_km</code> (mean of the cells' centre depths), <code>is_edge_touching</code> (1 if it covers column 1 or the last), <code>conditional_probability</code> (after LEVEL 4), <code>rate_mean</code> (per year, from the mean curve), <code>rate_p0.025</code> ... <code>rate_p0.975</code> (from the exact percentile curves). Sum of <code>rate_mean</code> = 0.2506 = rate of Mw &gt; 7.15.</td></tr>
+    <tr><td><code>rate_curves.csv</code></td><td class="n">261</td><td><code>Mw</code> (7.20 to 9.80 by 0.01), <code>exceedance_rate_unsegmented</code> (posterior mean, per year). With segments, also one column per segment, <code>exceedance_rate_union_of_segments</code> and <code>exceedance_rate_source_zone</code> (the LEVEL 0 mix).</td></tr>
+    <tr><td><code>exceedance_rate_percentiles.csv</code></td><td class="n">6</td><td><code>threshold_Mw</code>, <code>mean_exrate</code>, <code>p0.025</code>, <code>p0.16</code>, <code>p0.5</code>, <code>p0.84</code>, <code>p0.975</code> (LEVEL 5 Monte Carlo). Segmented: the whole zone's.</td></tr>
+    <tr><td><code>logic_tree_branches_&lt;name&gt;.csv</code></td><td class="n">32,000</td><td><code>branch_id</code>, <code>coupling</code>, <code>slip_rate</code> (m/yr), <code>b</code>, <code>Mw_min</code>, <code>Mw_max</code> (after the 9.6 cap), <code>Mw_frequency_distribution</code>, <code>a</code>, <code>prior_prob</code>, <code>posterior_prob</code>, <code>posterior_prob_with_Mw_error</code> (equals <code>posterior_prob</code> unless a magnitude-error model is set). About 7 MB.</td></tr>
+    <tr><td><code>conditional_prob_&lt;name&gt;.csv</code></td><td class="n">3,075</td><td><code>Mw</code>, <code>ecp_raw</code> (before LEVEL 4), <code>ecp_edge_corrected</code> (after), <code>is_edge_touching</code>. Same row order as the scenarios.</td></tr>
+    <tr><td><code>integrated_slip_&lt;name&gt;.csv</code></td><td class="n">219</td><td>One row per cell: <code>unit_source</code>, <code>alongstrike_number</code>, <code>downdip_number</code>, <code>lon_c</code>, <code>lat_c</code>, <code>depth_km</code>, <code>area_km2</code>, <code>target_convergence_shape</code> (the LEVEL 4 target, normalised to sum 1), <code>integrated_slip_no_edge_correction</code> and <code>integrated_slip</code> (long-term slip rate in m/yr from the first-pass mean scenario rates, without and with the fitted multiplier).</td></tr>
+    <tr><td><code>logic_tree_summary.csv</code></td><td class="n">17</td><td><code>level,item,value</code>: level 0 weights and segment count; level 1 branch count, mean dip, 1/cos(dip), convergence, prior mean coupling; level 2 a_min, a_max; level 3 prior-posterior TVD; level 4 edge multiplier and total integrated slip; <code>R</code> total scenario rate; level 5 copula and N.</td></tr>
+    <tr><td><code>segmentation.csv</code></td><td class="n">1</td><td><code>source_representation,role,weight</code>: <code>kermadectonga2,unsegmented,1</code>. Segmented: one more row per segment, each at the union's full weight (0.5), and the unsegmented row at 0.5.</td></tr>
+    <tr><td><code>scenario_rates_&lt;zone&gt;_source_zone.csv</code></td><td>segmented only</td><td>Every scenario's rate for the zone as a whole: <code>event_id</code>, <code>Mw</code>, <code>area_km2</code>, <code>slip_m</code>, <code>mean_depth_km</code>, <code>rate_mean</code> (0.5 x unsegmented + 0.5 x each segment), <code>rate_p0.025</code> ... <code>rate_p0.975</code> (PTHA18's partial-segmentation percentiles). What PTHA18 publishes as <code>rate_annual*</code> for a segmented zone.</td></tr>
+    <tr><td><code>branch_rate_curves_&lt;name&gt;.csv</code></td><td>not written</td><td>Every branch's curve on the 0.02 grid. Only when <code>outputs.write_branch_rate_curves</code> is true (step 6 sets false).</td></tr>
+  </table></div>
+
+  <h3>kermadectonga2's <code>logic_tree_summary.csv</code></h3>
+  <pre class="out">level,item,value
+0,unsegmented_weight,1
+0,n_segments,0
+1,n_branches_kermadectonga2,32000
+1,mean_dip_deg_kermadectonga2,15.418044719251787
+1,dip_factor_kermadectonga2,1.0373317843838645
+1,convergence_mm_per_yr_kermadectonga2,99.356014615600003
+1,prior_mean_coupling_kermadectonga2,0.54332240267403342
+2,a_min_kermadectonga2,3.2199185152383256
+2,a_max_kermadectonga2,9.2416788114644088
+3,prior_posterior_tvd_kermadectonga2,0.68979093565161853
+4,edge_multiplier_kermadectonga2,7.1507274326377139
+4,total_integrated_slip_kermadectonga2,7.3541896104967206
+R,total_scenario_rate_kermadectonga2,0.25056579652806499
+5,copula,comonotonic
+5,N_samples,40000</pre>
+  <p class="where">Three rows (union and per-segment weights, both 0) are left out above. A segmented run (kermadectonga2_v9seg) has the 11 items from <code>n_branches</code> to <code>total_scenario_rate</code> again for every segment, named <code>..._kermadectonga2_tonga</code>, <code>..._kermadec</code> and <code>..._hikurangi</code>, and the level 0 rows give the weights: unsegmented 0.5, union 0.5, 3 segments.</p>
+
+  <h3>Figures (<code>outputs/figures/</code>)</h3>
+  <div class="tbl"><table>
+    <tr><th>File</th><th>Shows</th></tr>
+    <tr><td><code>fig_geometry_&lt;name&gt;.png</code></td><td>The mesh in map view, cell centres coloured by depth (skipped for step 8's <code>official_statistics</code> mode, which has no corners; step 8 therefore writes 7 figures).</td></tr>
+    <tr><td><code>fig_branch_fan_&lt;name&gt;.png</code></td><td>All branch curves, prior mean (left) and posterior mean, median and percentiles (right), with the GCMT rate (<a href="#level2">shown above</a>).</td></tr>
+    <tr><td><code>fig_branch_weights_&lt;name&gt;.png</code></td><td>Prior vs posterior weight over b, coupling and Mw_max, TVD in the title.</td></tr>
+    <tr><td><code>fig_scenario_rates_&lt;name&gt;.png</code></td><td>Every scenario rate vs Mw (edge-touching ones in orange), and the per-bin and summed rates.</td></tr>
+    <tr><td><code>fig_moment_balance_&lt;name&gt;.png</code></td><td>The LEVEL 4 fit (<a href="#level4">shown above</a>).</td></tr>
+    <tr><td><code>fig_segmentation.png</code></td><td>The source representations on a map and their LEVEL 0 weights.</td></tr>
+    <tr><td><code>fig_representation_curves.png</code></td><td>Mean curve per representation (one curve here).</td></tr>
+    <tr><td><code>fig_percentiles.png</code></td><td>The LEVEL 5 bands and their relative width.</td></tr>
+  </table></div>
+  <div class="callout warn"><span class="lbl">What the order in the log means</span>The log prints "LEVEL 4" before "LEVEL 2" because the engine really works in this order: scenarios and conditional probabilities, LEVEL 1 axes, a first LEVEL 2 + 3 pass, the LEVEL 4 fit, then LEVEL 2 + 3 again with the corrected shares (whose a-range is the one printed), then the files, then LEVEL 5.</div>
+  <p>Next: <a href="hs_vaus.html">step 7b</a> adds realistic slip patterns to these scenarios without changing any rate; <a href="official.html">step 8</a> and <a href="report_guide.html">step 9</a> run PTHA18's inputs through the same engine and write the report.</p>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>from_scratch_v12 documentation. Numbers on this page come from <code>kermadectonga2_v9/</code> (<code>outputs/</code>, <code>outputs_official/</code>, <code>inputs/</code>, <code>run_final.log</code>); the figures named <code>engine_*</code> were made by <code>html/docs/figures_src/make_engine.py</code> from those files, except the branch fan and moment-balance figures, which are the engine's own.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

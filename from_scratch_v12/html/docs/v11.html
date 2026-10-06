@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What is new in v11 | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+figure.fig svg .b0{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+figure.fig svg .b1{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+figure.fig svg .b2{fill:var(--good-soft);stroke:var(--good);stroke-width:1.5}
+figure.fig svg .b3{fill:var(--warn-soft);stroke:var(--warn);stroke-width:1.5}
+figure.fig svg .t1{font-size:14px;font-weight:600;fill:var(--ink)}
+figure.fig svg .t2{font-size:12px;fill:var(--muted)}
+figure.fig svg .ar{stroke:var(--muted);stroke-width:1.6}
+figure.fig svg .ah{fill:var(--muted)}
+figure.fig svg .gr{stroke:var(--line);stroke-width:1}
+figure.fig svg .cst{stroke:var(--muted);stroke-width:1.3;stroke-dasharray:5 4}
+figure.fig svg .cv{fill:none;stroke:var(--accent);stroke-width:2.5}
+figure.fig svg .pt{fill:var(--warn);stroke:var(--card);stroke-width:2}
+figure.fig svg .tk{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+figure.fig svg .lb{font-family:var(--mono);font-size:11.5px;font-weight:600;fill:var(--ink);paint-order:stroke;stroke:var(--card);stroke-width:4px}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Start</div>
+  <h1>What is new in v11: variable shear modulus</h1>
+  <p class="lead">v11 (2026-10-06) is v10_q plus PTHA18's second set of rates, the ones with a rigidity that grows with depth (<code>variable_mu_rate_annual</code>). PTHA18's headline hazard maps use them with the HS scenarios. A new step 7c, switched on with <code>generate.py --variable-mu on</code> (default off), computes them next to the constant-rigidity ones, which do not change: every file steps 1-7b write is byte for byte v10_q's.</p>
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">1</div><div class="lbl">new step, 7c, after 7b; on with <code>--variable-mu on</code></div></div>
+    <div class="card kpi"><div class="num">7e-13</div><div class="lbl">largest relative difference to PTHA18's published variable_mu rates (puysegur2, mean and 5 percentiles)</div></div>
+    <div class="card kpi"><div class="num">identical</div><div class="lbl">constant-rigidity results to v10_q (calabria2: every output file)</div></div>
+    <div class="card kpi"><div class="num">179</div><div class="lbl">tests passing (7 new), plus validation/validate_v11.py</div></div>
+  </div>
+</section>
+
+<section id="what-sec">
+  <h2 id="what">What the shear modulus is, and why it matters for tsunamis</h2>
+  <p>The <b>shear modulus</b> or <b>rigidity</b> (&mu;) is how stiff the rock is. An earthquake's size as a seismometer measures it is its seismic moment, M0 = &mu; &times; area &times; slip, and its magnitude Mw follows from M0. For the same M0, softer rock needs more slip. Near the trench the rock is soft (about 10 GPa) and deep down it is stiff (up to 67 GPa), so a shallow earthquake of a given measured magnitude slips more than one at depth, and more slip near the trench makes a bigger tsunami. Steps 7 and 7b use 30 GPa everywhere (PTHA18's <code>rate_annual</code>); step 7c adds the depth-varying case (PTHA18's <code>variable_mu_rate_annual</code>, report Section 3.7.5).</p>
+  <figure class="fig"><svg viewBox="0 0 640 300" role="img" aria-label="Rigidity against depth with the calabria2 rows"><line x1="56" x2="616" y1="256.0" y2="256.0" class="gr"/><text x="50" y="260.0" text-anchor="end" class="tk">0</text><line x1="56" x2="616" y1="224.3" y2="224.3" class="gr"/><text x="50" y="228.3" text-anchor="end" class="tk">10</text><line x1="56" x2="616" y1="160.8" y2="160.8" class="gr"/><text x="50" y="164.8" text-anchor="end" class="tk">30</text><line x1="56" x2="616" y1="97.3" y2="97.3" class="gr"/><text x="50" y="101.3" text-anchor="end" class="tk">50</text><line x1="56" x2="616" y1="43.4" y2="43.4" class="gr"/><text x="50" y="47.4" text-anchor="end" class="tk">67</text><text x="56.0" y="272" text-anchor="middle" class="tk">0</text><text x="168.0" y="272" text-anchor="middle" class="tk">10</text><text x="280.0" y="272" text-anchor="middle" class="tk">20</text><text x="392.0" y="272" text-anchor="middle" class="tk">30</text><text x="504.0" y="272" text-anchor="middle" class="tk">40</text><text x="616.0" y="272" text-anchor="middle" class="tk">50</text><text x="336" y="294" text-anchor="middle" class="t2">depth of the cell (km)</text><text x="14" y="137" text-anchor="middle" class="t2" transform="rotate(-90 14 137)">rigidity (GPa)</text><line x1="56" x2="616" y1="160.8" y2="160.8" class="cst"/><text x="612" y="154.8" text-anchor="end" class="t2">constant 30 GPa (steps 7, 7b)</text><polyline points="56.0,224.3 58.8,224.3 61.6,224.3 64.4,224.3 67.3,224.3 70.1,224.3 72.9,224.3 75.7,224.3 78.5,224.3 81.3,224.3 84.1,224.3 87.0,224.3 89.8,224.3 92.6,224.3 95.4,224.3 98.2,224.3 101.0,224.3 103.8,224.3 106.7,224.3 109.5,224.3 112.3,224.3 115.1,224.3 117.9,224.3 120.7,224.3 123.5,224.3 126.4,224.3 129.2,224.3 132.0,224.3 134.8,224.3 137.6,224.3 140.4,224.1 143.2,222.9 146.1,221.7 148.9,220.4 151.7,219.0 154.5,217.6 157.3,216.2 160.1,214.7 162.9,213.2 165.7,211.6 168.6,209.9 171.4,208.2 174.2,206.4 177.0,204.5 179.8,202.6 182.6,200.6 185.4,198.5 188.3,196.3 191.1,194.1 193.9,191.8 196.7,189.4 199.5,186.9 202.3,184.3 205.1,181.6 208.0,178.8 210.8,175.9 213.6,172.9 216.4,169.8 219.2,166.6 222.0,163.2 224.8,160.5 227.7,159.5 230.5,158.6 233.3,157.6 236.1,156.6 238.9,155.6 241.7,154.5 244.5,153.5 247.4,152.5 250.2,151.4 253.0,150.4 255.8,149.3 258.6,148.2 261.4,147.1 264.2,146.0 267.1,144.9 269.9,143.8 272.7,142.6 275.5,141.5 278.3,140.3 281.1,139.1 283.9,138.0 286.8,136.8 289.6,135.6 292.4,134.3 295.2,133.1 298.0,131.9 300.8,130.6 303.6,129.3 306.5,128.0 309.3,126.7 312.1,125.4 314.9,124.1 317.7,122.8 320.5,121.4 323.3,120.0 326.2,118.7 329.0,117.3 331.8,115.9 334.6,114.4 337.4,113.0 340.2,111.6 343.0,110.1 345.8,108.6 348.7,107.1 351.5,105.6 354.3,104.1 357.1,102.5 359.9,101.0 362.7,99.4 365.5,97.8 368.4,96.2 371.2,94.6 374.0,93.0 376.8,91.3 379.6,89.6 382.4,87.9 385.2,86.2 388.1,84.5 390.9,82.8 393.7,81.0 396.5,79.2 399.3,77.5 402.1,75.6 404.9,73.8 407.8,72.0 410.6,70.1 413.4,68.2 416.2,66.3 419.0,64.4 421.8,62.4 424.6,60.5 427.5,58.5 430.3,56.5 433.1,54.5 435.9,52.4 438.7,50.4 441.5,48.3 444.3,46.2 447.2,44.0 450.0,43.4 452.8,43.4 455.6,43.4 458.4,43.4 461.2,43.4 464.0,43.4 466.9,43.4 469.7,43.4 472.5,43.4 475.3,43.4 478.1,43.4 480.9,43.4 483.7,43.4 486.6,43.4 489.4,43.4 492.2,43.4 495.0,43.4 497.8,43.4 500.6,43.4 503.4,43.4 506.3,43.4 509.1,43.4 511.9,43.4 514.7,43.4 517.5,43.4 520.3,43.4 523.1,43.4 525.9,43.4 528.8,43.4 531.6,43.4 534.4,43.4 537.2,43.4 540.0,43.4 542.8,43.4 545.6,43.4 548.5,43.4 551.3,43.4 554.1,43.4 556.9,43.4 559.7,43.4 562.5,43.4 565.3,43.4 568.2,43.4 571.0,43.4 573.8,43.4 576.6,43.4 579.4,43.4 582.2,43.4 585.0,43.4 587.9,43.4 590.7,43.4 593.5,43.4 596.3,43.4 599.1,43.4 601.9,43.4 604.7,43.4 607.6,43.4 610.4,43.4 613.2,43.4 616.0,43.4" class="cv"/><text x="612.0" y="35.4" text-anchor="end" class="t2">PTHA18 (Bilek &amp; Lay 1999 fit)</text><circle cx="69.0" cy="224.3" r="6" class="pt"/><circle cx="96.9" cy="224.3" r="6" class="pt"/><text x="105.9" y="242.3" text-anchor="start" class="lb">rows 1-2: Mw -0.32</text><circle cx="153.9" cy="213.6" r="6" class="pt"/><text x="162.9" y="231.6" text-anchor="start" class="lb">row 3: Mw -0.23</text><circle cx="277.4" cy="140.0" r="6" class="pt"/><text x="286.4" y="158.0" text-anchor="start" class="lb">row 4: Mw +0.06</text><circle cx="545.0" cy="43.4" r="6" class="pt"/><text x="536.0" y="61.4" text-anchor="end" class="lb">row 5: Mw +0.23</text></svg><figcaption>PTHA18's rigidity curve (rptha <code>shear_modulus_depth</code>: 10 GPa down to 7.5 km, 30 GPa at 15 km, 67 GPa from 35 km, log-linear between) and the rows of calabria2's mesh at their mean depth, with the magnitude change of a rupture on each row.</figcaption></figure>
+  <div class="tbl"><table>
+    <tr><th>calabria2 row (1 = trench)</th><th>mean depth (km)</th><th>rigidity (GPa)</th><th>Mw shift of a rupture there</th><th>slip of a real earthquake there (&times; constant)</th></tr>
+    <tr><td>1</td><td>1.2</td><td>10</td><td>-0.32</td><td>3.00</td></tr><tr><td>2</td><td>3.7</td><td>10</td><td>-0.32</td><td>3.00</td></tr><tr><td>3</td><td>8.7</td><td>13</td><td>-0.23</td><td>2.25</td></tr><tr><td>4</td><td>19.8</td><td>37</td><td>+0.06</td><td>0.82</td></tr><tr><td>5</td><td>43.7</td><td>67</td><td>+0.23</td><td>0.45</td></tr>
+  </table></div>
+</section>
+
+<section id="how-sec">
+  <h2 id="how">How PTHA18 does it, and what step 7c ports</h2>
+  <figure class="fig"><svg viewBox="0 0 860 300" role="img" aria-label="How the variable shear modulus enters the pipeline"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah"/></marker></defs><rect x="10" y="20" width="190" height="60" rx="8" class="b0"/><text x="105.0" y="44.0" text-anchor="middle" class="t1">step 7: FAUS rates</text><text x="105.0" y="62.0" text-anchor="middle" class="t2">constant rigidity 30 GPa</text><rect x="10" y="120" width="190" height="60" rx="8" class="b0"/><text x="105.0" y="144.0" text-anchor="middle" class="t1">step 7b: HS and VAUS</text><text x="105.0" y="162.0" text-anchor="middle" class="t2">fields + their rates</text><rect x="250" y="20" width="190" height="60" rx="8" class="b1"/><text x="345.0" y="44.0" text-anchor="middle" class="t1">Mw relabelled</text><text x="345.0" y="62.0" text-anchor="middle" class="t2">M0 = sum area x slip x mu(depth)</text><rect x="250" y="120" width="190" height="60" rx="8" class="b1"/><text x="345.0" y="144.0" text-anchor="middle" class="t1">difference distribution</text><text x="345.0" y="162.0" text-anchor="middle" class="t2">(variable - constant) Mw | Mw</text><rect x="490" y="70" width="170" height="60" rx="8" class="b1"/><text x="575.0" y="94.0" text-anchor="middle" class="t1">LEVEL 3 weights</text><text x="575.0" y="112.0" text-anchor="middle" class="t2">catalogue Mw has an error</text><rect x="700" y="20" width="150" height="60" rx="8" class="b2"/><text x="775.0" y="44.0" text-anchor="middle" class="t1">variable_mu rates</text><text x="775.0" y="62.0" text-anchor="middle" class="t2">FAUS, curves, percentiles</text><rect x="700" y="120" width="150" height="60" rx="8" class="b2"/><text x="775.0" y="144.0" text-anchor="middle" class="t1">HS / VAUS shares</text><text x="775.0" y="162.0" text-anchor="middle" class="t2">DART curves, variable mu</text><rect x="250" y="220" width="410" height="56" rx="8" class="b3"/><text x="455.0" y="242.0" text-anchor="middle" class="t1">unchanged: cells, slip, tsunami of every scenario</text><text x="455.0" y="260.0" text-anchor="middle" class="t2">only how often each one happens changes</text><line x1="200" y1="150" x2="250" y2="150" class="ar" marker-end="url(#ah)"/><line x1="200" y1="50" x2="250" y2="50" class="ar" marker-end="url(#ah)"/><line x1="345" y1="80" x2="345" y2="120" class="ar" marker-end="url(#ah)"/><line x1="440" y1="150" x2="490" y2="110" class="ar" marker-end="url(#ah)"/><line x1="660" y1="100" x2="700" y2="50" class="ar" marker-end="url(#ah)"/><line x1="660" y1="100" x2="700" y2="150" class="ar" marker-end="url(#ah)"/><text x="12" y="210" class="t2">existing steps</text><text x="252" y="205" class="t2">step 7c (v11)</text></svg><figcaption>Step 7c reads what steps 7 and 7b wrote and adds the variable shear modulus files. No scenario is rebuilt.</figcaption></figure>
+  <ol>
+    <li><b>Relabel the magnitude.</b> Every scenario keeps its cells and its slip (computed with 30 GPa). Its magnitude is recomputed with the rigidity of each cell: M0 = sum(area &times; slip &times; &mu;(depth)). Shallow scenarios get a lower magnitude, deep ones a higher one. <code>pyptha_v12/variable_mu.py</code>: <code>shear_modulus_depth</code>, <code>variable_mu_Mw</code> (rptha <code>append_variable_mu_variables_to_event_netcdf.R</code> 90-114).</li>
+    <li><b>Measure the difference</b> (variable &minus; constant Mw) on the HS scenarios of each magnitude and keep it as a distribution that depends on the magnitude (<code>make_conditional_ecdf</code>, rptha <code>rupture_probabilities.R</code> 1481; <code>compute_rates_all_sources.R</code> 476-516). On a segment only the HS scenarios touching it count.</li>
+    <li><b>LEVEL 3 with an observation error.</b> The rates stay functions of the constant-rigidity magnitude, the scale every scenario is built on. The GCMT earthquakes have real magnitudes, so the difference is treated as an error of the catalogue magnitudes when the branch weights are updated. That gives a second set of weights (<code>posterior_prob_with_Mw_error</code>, already in v9's engine but unused).</li>
+    <li><b>The variable rates</b> are the same branch curves averaged with those weights: scenario rates, their 5 percentiles, the rate curves, LEVEL 5 (<code>MwRateFunction.with_mw_error</code>; <code>compute_rates_all_sources.R</code> 749-869).</li>
+    <li><b>HS and VAUS</b> share the variable FAUS rates with PTHA18's DART curves for that case (a second pair, recovered from PTHA18's published rates like the constant ones). The peak-slip limit (7.5 &times;) is the same.</li>
+  </ol>
+  <div class="callout good"><span class="lbl">What does not change</span>No scenario changes: same cells, same slip, same sea-floor deformation, same tsunami. Only how often each scenario happens, and only through the LEVEL 3 weights. A zone with many GCMT earthquakes (and deep or shallow ones) feels it more; a zone without, like calabria2, little.</div>
+</section>
+
+<section id="calabria-sec">
+  <h2 id="calabria">What it changes in calabria2</h2>
+  <div class="tbl"><table>
+    <tr><th>Mw</th><th>constant: rate of Mw &ge;</th><th>variable, same Mw scale</th><th>ratio</th><th>variable: rate of real Mw &ge;</th><th>ratio</th></tr>
+    <tr><td>7.5</td><td>0.00776 (129 yr)</td><td>0.00805 (124 yr)</td><td>1.038</td><td>0.00591 (169 yr)</td><td>0.76</td></tr><tr><td>8.0</td><td>0.00187 (536 yr)</td><td>0.00186 (537 yr)</td><td>0.998</td><td>0.0014 (715 yr)</td><td>0.75</td></tr><tr><td>8.5</td><td>0.000345 (2,899 yr)</td><td>0.000333 (2,999 yr)</td><td>0.966</td><td>0.000238 (4,210 yr)</td><td>0.69</td></tr><tr><td>9.0</td><td>3.38e-05 (29,570 yr)</td><td>3.19e-05 (31,387 yr)</td><td>0.942</td><td>1.18e-05 (84,693 yr)</td><td>0.35</td></tr>
+  </table></div>
+  <p>Rates per year (return period). calabria2 has no GCMT earthquake in LEVEL 3, so the two sets of weights are close (total variation distance 0.037): on the constant-magnitude scale the rates move between -6% and +4% at these magnitudes. Counted by their real magnitude the rates are lower, because most of the rate sits on the shallow rows, whose real magnitude is about 0.3 lower. Said the other way round: an earthquake of a given real magnitude in Calabria has more slip, and a bigger tsunami, than the constant rigidity gives it.</p>
+  <div class="callout"><span class="lbl">For tsunami maps</span>Use the variable rates with the HS scenarios (<code>variable_mu_rate_*</code> in <code>outputs/hs_slip_fields/summary.csv</code>), as PTHA18's headline maps do. Quote <code>variable_mu_Mw</code> when a scenario is compared with a real earthquake or picked as "the Mw 8" for a map: on calabria2's shallow rows a real Mw 8 is a constant-rigidity Mw of about 8.3.</div>
+</section>
+
+<section id="files-sec">
+  <h2 id="files">Files step 7c writes</h2>
+  <div class="tbl"><table>
+    <tr><th>file (in <code>outputs/</code>)</th><th>what it holds</th></tr>
+    <tr><td><code>scenario_rates_&lt;zone&gt;_variable_mu.csv</code></td><td>every FAUS scenario: <code>Mw</code> (constant), <code>variable_mu_Mw</code>, <code>rate_mean</code> and 5 percentiles</td></tr>
+    <tr><td><code>rate_curves_variable_mu.csv</code>, <code>exceedance_rate_percentiles_variable_mu.csv</code></td><td>as the constant files, with the variable weights</td></tr>
+    <tr><td><code>variable_mu_deviation_&lt;zone&gt;.csv</code></td><td>the HS magnitude differences the distribution is built from</td></tr>
+    <tr><td><code>logic_tree_branches_&lt;zone&gt;_variable_mu.csv</code></td><td><code>posterior_prob_with_Mw_error</code> = the variable weights of every branch</td></tr>
+    <tr><td><code>logic_tree_summary_variable_mu.csv</code></td><td>adds the TVDs (prior to variable posterior, constant to variable posterior) and the summed rate</td></tr>
+    <tr><td><code>hs_slip_fields/summary.csv</code>, <code>vaus_slip_fields/summary.csv</code></td><td>new columns <code>variable_mu_Mw</code>, <code>variable_mu_weight_in_family</code>, <code>variable_mu_rate_*</code></td></tr>
+    <tr><td><code>inputs/input_&lt;zone&gt;_scratch_variable_mu.json</code></td><td>the engine's input: step 6's plus a <code>variable_shear_modulus</code> block</td></tr>
+  </table></div>
+  <p>In <code>report.html</code>: a STEP 7c card (this explanation, the curve with the zone's rows, the shift of the HS scenarios, the rate table), and the rupture explorer gives every FAUS and VAUS block its magnitude with the variable rigidity.</p>
+</section>
+
+<section id="use-sec">
+  <h2 id="use">How to use it</h2>
+<pre class="code"># from V9/ (venv ../.venv)
+../.venv/Scripts/python.exe from_scratch_v12/generate.py calabria --zone calabria2 --folder calabria2_v11_varmu --ptha false --rupture-size local --variable-mu on
+../.venv/Scripts/python.exe calabria2_v11_varmu/steps/step_total.py --skip-official
+# or, on an existing v11 folder after steps 7 and 7b:
+../.venv/Scripts/python.exe &lt;folder&gt;/steps/step7c_variable_mu.py --force</pre>
+  <p>It is off by default: <code>generate.py --variable-mu on</code> makes <code>step_total.py</code> run step 7c after 7b (<code>--skip-hs</code> skips both); in a folder generated with <code>off</code>, <code>step7c_variable_mu.py --force</code> runs it by hand. Zones whose unit sources are normal faults keep the constant rigidity, as in PTHA18.</p>
+</section>
+
+<section id="checks-sec">
+  <h2 id="checks">How it was checked</h2>
+  <ul>
+    <li><b>Against PTHA18's published files</b> (<code>validation/validate_v11.py</code>): every published <code>variable_mu_Mw</code> of puysegur2 and kermadectonga2 (FAUS, HS and VAUS, 101,000+ scenarios) to 4e-15; the v11 engine on PTHA18's official puysegur2 input, with PTHA18's own HS catalogue, gives its <code>variable_mu_rate_annual</code> and all 5 percentiles to 7e-13 with every zero rate in place (and the constant <code>rate_annual</code> unchanged, 8e-13); every published HS and VAUS rate of both zones, both rigidities, to 4e-12.</li>
+    <li><b>The four DART curves</b> (HS and VAUS, constant and variable rigidity) recovered from PTHA18's published rates: fitted on puysegur2 alone they reproduce kermadectonga2 to 2e-14; each is the derivative of the inverse of a cubic through (0,0) and (1,1), the method of PTHA18's report Section 3.6 (largest residual 4e-4).</li>
+    <li><b>calabria2_v11_varmu</b>: every file of steps 1-7b identical to calabria2_v10_q's; step 7c checks that the engine's constant results equal step 7's before copying anything.</li>
+    <li><b>Tests</b> (179 passed, 15 skipped): <code>test_variable_mu.py</code> (7: the rigidity curve and its log interpolation, the relabelled magnitude, the conditional ECDF against R's semantics, the rate function with the variable weights, the four weight curves, and PTHA18's published variable_mu_Mw when the files are present).</li>
+  </ul>
+</section>
+
+<section id="limits-sec">
+  <h2 id="limits">Known limitations</h2>
+  <ul>
+    <li><b>Only PTHA18's curve</b> (Bilek &amp; Lay fit, or PREM through <code>"curve": "prem"</code> in the input's <code>variable_shear_modulus</code> block). A Mediterranean-specific rigidity profile would be a new curve, not PTHA18's.</li>
+    <li><b>The depth is PTHA18's:</b> the curve is applied to each unit source's <code>depth</code>, measured below the nearby trench (PTHA18's convention), while Bilek &amp; Lay's depths include the water. PTHA18 does exactly this (its published <code>variable_mu_Mw</code> is reproduced to 4e-15), so v11 does too.</li>
+    <li><b>The DART curves come from 18 Pacific and Indian Ocean tsunamis</b> (2006-2016); there are no DART buoys in the Mediterranean. PTHA18 applies them to every zone, because they correct the slip generator, not a place; using them for Calabria is the same assumption.</li>
+    <li><b>The segmented official check</b> (kermadectonga2) was not run for the variable rates: the code path is the constant one's (validated to 1e-10) with the variable weights, and each segment uses the HS scenarios touching it, as rptha does.</li>
+    <li>Everything in <a href="v10_q.html#limits">v10_q's limitations</a> still applies.</li>
+  </ul>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Generated by <code>html/docs/figures_src/make_v11_page.py</code> from <code>calabria2_v11_varmu/outputs/</code> (run from V9/). README sections "What v11 changes" and "step7c_variable_mu.py".</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

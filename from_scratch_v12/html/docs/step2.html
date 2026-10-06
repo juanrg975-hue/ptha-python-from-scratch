@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2. The mesh | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Geometry: from SLAB to mesh</div>
+  <h1>2. The mesh</h1>
+  <p class="lead">Step 1 gave a set of depth lines (<a href="glossary.html#term-contour">contours</a>) drawn on the plate interface. Step 2 cuts that surface into a grid of cells of about 50 x 50 km, the <b>unit sources</b>. It does it with rptha's own method, the one PTHA18 used. It checks the result for broken cells, and only if it finds one does it try a repair. This page explains the method, what "broken" means, what <code>--discretizer optimal</code> does, and shows it working on real data.</p>
+
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">8 / 8</div><div class="lbl">examples use rptha's own mesh, kept unchanged (no repair needed)</div></div>
+    <div class="card kpi"><div class="num">14 / 14</div><div class="lbl">PTHA18 zones: given PTHA18's contours, this code builds PTHA18's published mesh</div></div>
+    <div class="card kpi"><div class="num">0</div><div class="lbl">folded, collapsed or overlapping cells in the 8 final meshes</div></div>
+    <div class="card kpi"><div class="num">73 x 3</div><div class="lbl">cells on kermadectonga2, the running example (PTHA18: 72 x 3)</div></div>
+  </div>
+</section>
+
+<section id="glance">
+  <h2 id="at-a-glance">At a glance</h2>
+  <p>Read left to right. The contours go through rptha's method. The mesh is checked. If it is healthy (the normal case, all 8 examples), it is kept as it is. Only a broken mesh goes down the repair path. The accepted mesh is saved once, with a fingerprint, and every later step reuses it.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 330" role="img" aria-label="Contours go through rptha's method, the mesh is checked, kept if healthy or repaired if broken, then saved with a fingerprint and reused by steps 3, 5, 7 and 9">
+      <defs>
+        <marker id="s2g-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+      </defs>
+      <!-- contours -->
+      <rect x="10" y="40" width="150" height="110" rx="9" fill="#e4f5ec" stroke="#2e9e6b"/>
+      <text x="22" y="62" font-size="13" font-weight="700">Depth contours</text>
+      <text x="22" y="79" font-size="11.5" fill="#5b6475">from step 1, every 5 km</text>
+      <g fill="none" stroke-width="2">
+        <path d="M22,98 C60,92 100,96 148,92" stroke="#fdd9b5"/>
+        <path d="M22,112 C60,106 100,110 148,106" stroke="#fb9f5a"/>
+        <path d="M22,126 C60,120 100,124 148,120" stroke="#e5590a"/>
+        <path d="M22,140 C60,134 100,138 148,134" stroke="#8c2d04"/>
+      </g>
+      <!-- rptha method -->
+      <rect x="195" y="30" width="235" height="130" rx="9" fill="#fff" stroke="#2e9e6b" stroke-width="1.6"/>
+      <text x="207" y="52" font-size="13" font-weight="700">rptha's method</text>
+      <text x="207" y="72" font-size="11.5">1. place down-dip lines across the</text>
+      <text x="207" y="87" font-size="11.5">    contours (least squares, LM)</text>
+      <text x="207" y="104" font-size="11.5">2. columns: one per ~50 km of trench</text>
+      <text x="207" y="121" font-size="11.5">3. rows: mean line length / width</text>
+      <text x="207" y="138" font-size="11.5">4. cut each line in equal 3D pieces</text>
+      <!-- check -->
+      <path d="M470,55 L540,95 L470,135 L400,95 Z" transform="translate(40,0)" fill="#fdf6e3" stroke="#b7791f"/>
+      <text x="510" y="90" font-size="12.5" font-weight="700" text-anchor="middle">defects?</text>
+      <text x="510" y="106" font-size="11" text-anchor="middle" fill="#5b6475">mesh_defects</text>
+      <!-- keep -->
+      <rect x="600" y="30" width="170" height="54" rx="9" fill="#e4f5ec" stroke="#2e9e6b"/>
+      <text x="612" y="52" font-size="13" font-weight="700">none: keep it</text>
+      <text x="612" y="70" font-size="11.5" fill="#5b6475">unchanged (all 8 examples)</text>
+      <!-- repair -->
+      <rect x="600" y="112" width="170" height="70" rx="9" fill="#fbeaea" stroke="#c43d3d"/>
+      <text x="612" y="133" font-size="13" font-weight="700">some: try repairs</text>
+      <text x="612" y="151" font-size="11.5" fill="#5b6475">a, b, c in order; first</text>
+      <text x="612" y="167" font-size="11.5" fill="#5b6475">defect-free one wins</text>
+      <!-- save -->
+      <rect x="800" y="60" width="150" height="90" rx="9" fill="#fff" stroke="#eb6834" stroke-width="1.6"/>
+      <text x="812" y="82" font-size="13" font-weight="700">unit_source_grid</text>
+      <text x="812" y="99" font-size="11.5" fill="#5b6475">.npy (the nodes)</text>
+      <text x="812" y="116" font-size="11.5" fill="#5b6475">+ .meta.json</text>
+      <text x="812" y="133" font-size="11.5" fill="#5b6475">(the fingerprint)</text>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#s2g-ar)">
+        <path d="M160,95 L193,95"/>
+        <path d="M430,95 L438,95"/>
+        <path d="M555,82 L598,60"/>
+        <path d="M555,108 L598,140"/>
+        <path d="M770,57 L798,85"/>
+        <path d="M770,147 L798,125"/>
+      </g>
+      <text x="566" y="62" font-size="11" fill="#2e9e6b" font-weight="700">no</text>
+      <text x="566" y="140" font-size="11" fill="#c43d3d" font-weight="700">yes</text>
+      <!-- bottom row: consumers -->
+      <rect x="195" y="220" width="235" height="92" rx="9" fill="#f0f2f5" stroke="#8a93a3"/>
+      <text x="207" y="242" font-size="13" font-weight="700">Cell properties</text>
+      <text x="207" y="260" font-size="11.5" fill="#5b6475">centre, depth, strike, dip, length,</text>
+      <text x="207" y="276" font-size="11.5" fill="#5b6475">width, area of every cell; total area</text>
+      <text x="207" y="292" font-size="11.5" fill="#5b6475">and mean dip drive the rates (#statistics)</text>
+      <rect x="470" y="220" width="220" height="92" rx="9" fill="#fcf0e2" stroke="#d9822b"/>
+      <text x="482" y="242" font-size="13" font-weight="700">Steps 3 and 5</text>
+      <text x="482" y="260" font-size="11.5" fill="#5b6475">read the .npy directly</text>
+      <text x="482" y="276" font-size="11.5" fill="#5b6475">(convergence per column,</text>
+      <text x="482" y="292" font-size="11.5" fill="#5b6475">earthquakes on the mesh)</text>
+      <rect x="730" y="220" width="220" height="92" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="742" y="242" font-size="13" font-weight="700">Steps 7 and 9</text>
+      <text x="742" y="260" font-size="11.5" fill="#5b6475">reuse it if the fingerprint</text>
+      <text x="742" y="276" font-size="11.5" fill="#5b6475">matches the input JSON,</text>
+      <text x="742" y="292" font-size="11.5" fill="#5b6475">else rebuild (#cache)</text>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#s2g-ar)">
+        <path d="M875,150 L875,200 L312,200 L312,218" stroke-dasharray="4 4"/>
+        <path d="M580,200 L580,218"/>
+        <path d="M875,200 L875,218"/>
+      </g>
+    </svg>
+    <figcaption><b>Step 2 in one picture.</b> Green: geometry. The diamond is the defect check (<code>mesh_defects</code>). The repair path (red) exists as a safety net. None of the 8 examples needed it, but a real case where it is needed is shown in <a href="discretizer.html#optimal">--discretizer optimal</a>. The dashed arrow means "computed from", not "read from a file": the cell properties are recomputed from the grid wherever they are needed.</figcaption>
+  </figure>
+  <div class="io">
+    <div><b>Reads</b><code>inputs/geometry/&lt;zone&gt;_slab2_contours.shp</code> (step 1). With <code>--ptha false</code> nothing else (50 km width); with <code>--ptha true</code> the width and the row count from PTHA18's files.</div>
+    <div><b>Writes</b><code>data/slab2/unit_source_grid.npy</code> + <code>unit_source_grid.meta.json</code>, and <code>figures/scratch_mesh_map.png</code> (preliminary, step 9 redraws it). The log prints the grid size, the defect check, the cell statistics and, where PTHA18 has a mesh, the comparison.</div>
+  </div>
+  <p class="where">Where in the code: <code>templates/step2_build_grid.py.tmpl</code> <code>main()</code> (becomes <code>&lt;folder&gt;/steps/step2_build_grid.py</code>), <code>pyptha_v12/contour_discretisation.py</code>, <code>pyptha_v12/unit_sources.py</code>, <code>pyptha_v12/grid_cache.py</code>.</p>
+</section>
+
+<section id="basics">
+  <div class="callout"><span class="lbl">v12: your own mesh</span>With <code>generate.py --mesh-file</code> this step does not mesh anything: the unit sources are the cells of the file you give, read by <code>pyptha_v12/mesh_file.py</code> into the same node array and used as given. Everything below describes the SLAB path. <a href="v12.html">What is new in v12</a>.</div>
+
+  <h2 id="mesh-basics">The mesh, in plain words</h2>
+  <p>A large subduction earthquake breaks part of the plate interface (the surface where one plate slides under the other). PTHA18 does not model every possible shape of rupture. It cuts the interface into a grid of cells, the <a href="glossary.html#term-unit-source">unit sources</a>, and builds every earthquake scenario as a rectangle of neighbouring cells. All the cells together are the <a href="glossary.html#term-mesh">mesh</a>. Everything later in the pipeline is computed per cell: the plate speed under it (step 3), which past earthquakes fall on it (step 5), how often each block of cells ruptures (step 7).</p>
+  <p>Two words describe directions on the interface. <a href="glossary.html#term-along-strike">Along strike</a> means parallel to the <a href="glossary.html#term-trench">trench</a> (the line on the sea floor where the plate starts to dive). <a href="glossary.html#term-down-dip">Down dip</a> means down the slope of the interface, away from the trench. A mesh has <b>columns</b> side by side along strike, and <b>rows</b> stacked down dip. The lines that separate the columns run from the trench to the deepest contour: they are the <b>down-dip lines</b>. Placing them well is the whole difficulty of step 2.</p>
+
+  <figure class="fig narrow">
+    <svg viewBox="0 0 620 300" role="img" aria-label="Layout of the unit_source_grid array: rows of nodes down dip, columns of nodes along strike, each node holds lon, lat, depth">
+      <defs>
+        <marker id="s2l-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6475"/></marker>
+      </defs>
+      <g fill="#fdd9b5" stroke="#6b4a3a" stroke-width="1">
+        <path d="M60,60 L160,55 L165,120 L62,125 Z"/>
+        <path d="M160,55 L260,52 L262,117 L165,120 Z"/>
+        <path d="M260,52 L360,55 L358,120 L262,117 Z"/>
+        <path d="M360,55 L460,60 L455,125 L358,120 Z"/>
+      </g>
+      <g fill="#fb9f5a" stroke="#6b4a3a" stroke-width="1">
+        <path d="M62,125 L165,120 L170,190 L65,195 Z"/>
+        <path d="M165,120 L262,117 L264,187 L170,190 Z"/>
+        <path d="M262,117 L358,120 L356,190 L264,187 Z"/>
+        <path d="M358,120 L455,125 L450,195 L356,190 Z"/>
+      </g>
+      <g stroke="#1d2433" stroke-width="2.4" fill="none">
+        <path d="M160,55 L165,120 L170,190"/>
+      </g>
+      <g fill="#1d2433">
+        <circle cx="60" cy="60" r="4"/><circle cx="160" cy="55" r="4"/><circle cx="260" cy="52" r="4"/><circle cx="360" cy="55" r="4"/><circle cx="460" cy="60" r="4"/>
+        <circle cx="62" cy="125" r="4"/><circle cx="165" cy="120" r="4"/><circle cx="262" cy="117" r="4"/><circle cx="358" cy="120" r="4"/><circle cx="455" cy="125" r="4"/>
+        <circle cx="65" cy="195" r="4"/><circle cx="170" cy="190" r="4"/><circle cx="264" cy="187" r="4"/><circle cx="356" cy="190" r="4"/><circle cx="450" cy="195" r="4"/>
+      </g>
+      <text x="60" y="40" font-size="12" fill="#5b6475">trench (row 0 of nodes, depth 0)</text>
+      <text x="40" y="222" font-size="12" fill="#5b6475">deepest contour (the seismogenic cutoff)</text>
+      <text x="182" y="165" font-size="12" font-weight="700">a down-dip line</text>
+      <text x="275" y="92" font-size="12">cell (row 1,</text>
+      <text x="275" y="107" font-size="12">column 3)</text>
+      <path d="M485,60 L485,190" stroke="#5b6475" stroke-width="1.5" marker-end="url(#s2l-ar)"/>
+      <text x="494" y="130" font-size="12" fill="#5b6475">down dip</text>
+      <path d="M60,250 L450,250" stroke="#5b6475" stroke-width="1.5" marker-end="url(#s2l-ar)"/>
+      <text x="200" y="270" font-size="12" fill="#5b6475">along strike</text>
+      <text x="494" y="60" font-size="11.5" fill="#1d2433">grid[r, :, c] =</text>
+      <text x="494" y="76" font-size="11.5" fill="#1d2433">(lon, lat, depth)</text>
+      <text x="494" y="220" font-size="11.5" fill="#1d2433">shape here:</text>
+      <text x="494" y="236" font-size="11.5" fill="#1d2433">(2+1, 3, 4+1)</text>
+    </svg>
+    <figcaption><b>How a mesh is stored.</b> 4 columns x 2 rows of cells need 5 x 3 nodes (dots). The array <code>unit_source_grid</code> has shape <code>(n_downdip+1, 3, n_alongstrike+1)</code>: node row <code>r</code> (0 = trench), the three numbers lon, lat, depth (km below the trench), and node column <code>c</code>. The same layout as rptha's R code. A cell is the quadrilateral between nodes <code>(r, c)</code>, <code>(r, c+1)</code>, <code>(r+1, c+1)</code>, <code>(r+1, c)</code>.</figcaption>
+  </figure>
+  <p>kermadectonga2's grid has shape <code>(4, 3, 74)</code>: 4 node rows (3 rows of cells) and 74 node columns (73 columns of cells), 219 cells in all.</p>
+</section>
+
+<section id="method">
+  <h2 id="rptha-method">rptha's method, step by step</h2>
+  <p><a href="glossary.html#term-rptha">rptha</a> is the R package PTHA18 was computed with. Its mesh builder takes depth contours and returns the grid. The Python code ports it line by line (<code>discretized_source_from_contours_orthogonal</code>, called by <code>lm</code> and by <code>optimal</code>). The figure shows the three stages on the real kermadectonga2 run. It was produced by calling the same functions and checking the result against step 2's saved grid: identical to the last digit.</p>
+  <figure class="fig">
+    <img src="img/step2_kermadectonga2_build.png" alt="kermadectonga2: whole zone, then a zoom showing the depth contours, the down-dip lines crossing them, and the resulting cells">
+    <figcaption><b>From contours to cells, kermadectonga2 (Tonga), real data.</b> Left: the whole 73 x 3 mesh, with the zoomed box. 1: step 1's 9 contours, 0 km (the trench, east) to 40 km (west). 2: the 74 down-dip lines found by the optimiser. Each crosses every contour close to a right angle, and neighbouring lines are evenly spaced. The dots are the crossings. 3: each line is cut into 3 pieces of equal 3D length, giving 4 nodes per line and 3 rows of cells. Colour = depth below the trench.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li><b>Order and orient the contours.</b> The contours are sorted by depth. The shallowest (the trench) is turned to run along strike in a fixed sense, then every deeper contour is flipped if it runs the other way. Without this, the start of one contour could be paired with the end of the next.</li>
+    <li><b>Describe every contour by a number <i>s</i> from 0 to 1.</b> <i>s</i> = 0 is the contour's first point, <i>s</i> = 1 its last, and <i>s</i> = 0.5 the point half way along it (by distance). A small function turns any <i>s</i> into a longitude and latitude (<code>_line_interpolator</code>, rptha's <code>make_line_interpolation_fun</code>).</li>
+    <li><b>Decide how many down-dip lines.</b> One per 50 km of trench, plus one: <code>desired_num_lines = ceil(trench_length / 50 + 1)</code>. On kermadectonga2 the trench (0 km contour) measures 3,604.2 km (on the WGS84 ellipsoid, as R's <code>sp</code> package measures it), so ceil(3604.2 / 50 + 1) = <b>74</b> lines, that is 73 columns.</li>
+    <li><b>Write every down-dip line as a list of <i>s</i> values</b>, one per contour: where the line crosses that contour. All lines together form the <b>s-matrix</b> (one row per contour, one column per line). Explained in the next section.</li>
+    <li><b>Optimise the s-matrix</b> so that the lines cross the contours at right angles and are evenly spaced. This is the least-squares problem of <a href="#quality">the quality measure</a>, solved with <a href="#lm-solver">Levenberg-Marquardt</a> on four grids of increasing size.</li>
+    <li><b>Turn each line into a 3D path</b>: its crossing points with their contour depths (lon, lat, depth).</li>
+    <li><b>Decide how many rows</b> from the mean 3D length of those paths and the desired width (<a href="#rows-width">rows and width</a>).</li>
+    <li><b>Cut every path into equal 3D pieces</b> (<code>interpolate_3D_path</code>): the path is densified along great circles, depth varies linearly between contours, and <code>rows</code> points are taken at equal 3D distances. Those points are the grid's nodes.</li>
+  </ol>
+  <p class="where">Where in the code: <code>contour_discretisation.py</code> <code>_build_interpolators()</code>, <code>_line_interpolator()</code>, <code>_optimise_s_matrix()</code>, <code>discretized_source_from_contours_orthogonal()</code>, <code>interpolate_3D_path()</code>. R originals: <code>rptha/R/downdip_3d_lines_on_source.R</code> (<code>create_downdip_lines_on_source_contours_improved</code>) and <code>discretized_source_from_source_contours</code>.</p>
+
+  <h3 id="s-matrix">The s-matrix: a down-dip line as a list of positions</h3>
+  <p>Instead of moving points around freely on a map, rptha describes each down-dip line by <i>where along each contour</i> it crosses it. That is one number per contour, <i>s</i>. A line that crosses the 0 km contour 10% of the way along it, the 5 km contour 11% of the way along, and so on, is the column (0.10, 0.11, ...). The optimiser only has to move numbers between 0 and 1, and every candidate line is guaranteed to lie on the contours.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 940 280" role="img" aria-label="Three contours with the same down-dip line crossing each at a different s value, and the matrix of s values with the first and last columns fixed at 0 and 1">
+      <g fill="none" stroke-width="2.2">
+        <path d="M40,60 C160,50 300,62 420,56" stroke="#fdd9b5"/>
+        <path d="M60,130 C170,120 300,132 410,126" stroke="#fb9f5a"/>
+        <path d="M80,200 C180,192 300,202 400,196" stroke="#8c2d04"/>
+      </g>
+      <text x="428" y="60" font-size="12">0 km (trench)</text>
+      <text x="418" y="130" font-size="12">5 km</text>
+      <text x="408" y="200" font-size="12">10 km</text>
+      <g fill="#2e9e6b"><circle cx="40" cy="60" r="5"/><circle cx="60" cy="130" r="5"/><circle cx="80" cy="200" r="5"/></g>
+      <g fill="#c43d3d"><circle cx="420" cy="56" r="5"/><circle cx="410" cy="126" r="5"/><circle cx="400" cy="196" r="5"/></g>
+      <path d="M200,56 L215,125 L230,197" stroke="#1d2433" stroke-width="2.4" fill="none"/>
+      <g fill="#1d2433"><circle cx="200" cy="56" r="4"/><circle cx="215" cy="125" r="4"/><circle cx="230" cy="197" r="4"/></g>
+      <text x="204" y="44" font-size="11.5">s = 0.42</text>
+      <text x="222" y="114" font-size="11.5">s = 0.44</text>
+      <text x="238" y="186" font-size="11.5">s = 0.47</text>
+      <text x="16" y="240" font-size="11.5" fill="#2e9e6b">s = 0 on every contour:</text>
+      <text x="16" y="256" font-size="11.5" fill="#2e9e6b">the first line is pinned here</text>
+      <text x="300" y="240" font-size="11.5" fill="#c43d3d">s = 1: the last line</text>
+      <text x="300" y="256" font-size="11.5" fill="#c43d3d">is pinned here</text>
+      <!-- matrix -->
+      <g font-size="12.5" font-family="Consolas, monospace">
+        <text x="520" y="40" font-family="Segoe UI, sans-serif" font-weight="700">s-matrix: rows = contours, columns = lines</text>
+        <rect x="520" y="56" width="400" height="150" rx="6" fill="#f6f7f9" stroke="#dde1e8"/>
+        <rect x="560" y="62" width="52" height="138" fill="#e4f5ec"/>
+        <rect x="852" y="62" width="52" height="138" fill="#fbeaea"/>
+        <rect x="690" y="62" width="60" height="138" fill="#fff" stroke="#1d2433"/>
+        <text x="528" y="88">0</text><text x="528" y="132">5</text><text x="528" y="176">10</text>
+        <text x="566" y="88">0.00</text><text x="626" y="88">0.21</text><text x="696" y="88">0.42</text><text x="768" y="88">...</text><text x="858" y="88">1.00</text>
+        <text x="566" y="132">0.00</text><text x="626" y="132">0.22</text><text x="696" y="132">0.44</text><text x="768" y="132">...</text><text x="858" y="132">1.00</text>
+        <text x="566" y="176">0.00</text><text x="626" y="176">0.23</text><text x="696" y="176">0.47</text><text x="768" y="176">...</text><text x="858" y="176">1.00</text>
+      </g>
+      <text x="560" y="228" font-size="11.5" fill="#2e9e6b">fixed</text>
+      <text x="630" y="228" font-size="11.5" fill="#1d2433">free: the optimiser moves these</text>
+      <text x="862" y="228" font-size="11.5" fill="#c43d3d">fixed</text>
+      <text x="520" y="256" font-size="11.5" fill="#5b6475">Each row must increase from left to right, or the lines would cross.</text>
+    </svg>
+    <figcaption><b>The s-matrix (schematic numbers).</b> Each column is one down-dip line; each row one contour. The first and last columns are fixed at 0 and 1 on every contour: the two edge lines always join the contours' own end points. This detail is the root of the folded-tip problem that <a href="discretizer.html#repairs">the repairs</a> address.</figcaption>
+  </figure>
+  <p>The real s-matrix of kermadectonga2 has 9 rows (0 to 40 km) and 74 columns. Its first five columns, and column 41, as computed by <code>make_step2.py</code>:</p>
+  <pre class="out">contour   line 1   line 2   line 3   line 4   line 5   ...  line 41
+ 0 km     0.0000   0.0137   0.0275   0.0476   0.0683   ...  0.5474
+ 5 km     0.0000   0.0143   0.0285   0.0440   0.0596   ...  0.5473
+10 km     0.0000   0.0135   0.0272   0.0421   0.0580   ...  0.5500
+ ...
+40 km     0.0000   0.0137   0.0272   0.0399   0.0520   ...  0.5477</pre>
+  <p>Each row increases, the first column is 0 everywhere, and a given line sits at nearly the same fraction of every contour (line 41 at 0.547 to 0.550), because on this zone the contours have similar lengths.</p>
+
+  <h3 id="lm-solver">Levenberg-Marquardt, simply</h3>
+  <p>The optimiser has one "badness" number per crossing point (defined in <a href="#quality">the next section</a>) and wants all of them as close to zero as possible. It minimises their sum of squares: a <b>least-squares</b> problem. Levenberg-Marquardt (LM) is the standard way to solve one:</p>
+  <ol class="steps">
+    <li>From the current s-matrix, measure how each badness changes when each free <i>s</i> is nudged a tiny bit (the <b>Jacobian</b>, here by finite differences: change one number, recompute).</li>
+    <li>Use that to predict the step that would lower the sum of squares most. LM blends two strategies: a bold jump to where a straight-line model says the minimum is, and a cautious step straight downhill. A "trust" parameter decides the blend.</li>
+    <li>Try the step. If the badness really went down, accept it and trust the model more next time. If not (or if the step made two lines cross, which counts as infinitely bad), reject it and step more cautiously.</li>
+    <li>Repeat until the improvement is tiny (relative change below <code>ftol</code> = 0.001) or after 50 Jacobians.</li>
+  </ol>
+  <p>rptha calls the MINPACK routine through R's <code>minpack.lm::nls.lm</code>. The Python code calls the same MINPACK code through <code>scipy.optimize.leastsq</code>, with the same settings, so it takes the same steps.</p>
+
+  <h3 id="multigrid">Multigrid: coarse first, then finer</h3>
+  <p>Optimising 74 lines at once from a flat start is slow and can get stuck. rptha first solves the problem with 1/8 of the lines, then 1/4, 1/2 and all of them, each time starting from the previous solution stretched to the new number of lines (levels with fewer than 3 lines are skipped). The very first start is evenly spaced: <i>s</i> = 0, 1/(n-1), 2/(n-1), ... 1 on every contour.</p>
+  <figure class="fig narrow">
+    <svg viewBox="0 0 620 170" role="img" aria-label="Four multigrid levels with 9, 18, 37 and 74 lines on kermadectonga2, and the LM iterations of each">
+      <defs><marker id="s2m-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker></defs>
+      <g font-size="12">
+        <rect x="10" y="30" width="120" height="80" rx="8" fill="#fff" stroke="#2e9e6b"/>
+        <rect x="165" y="30" width="120" height="80" rx="8" fill="#fff" stroke="#2e9e6b"/>
+        <rect x="320" y="30" width="120" height="80" rx="8" fill="#fff" stroke="#2e9e6b"/>
+        <rect x="475" y="30" width="135" height="80" rx="8" fill="#e4f5ec" stroke="#2e9e6b"/>
+        <g stroke="#1d2433" stroke-width="1.4">
+          <path d="M25,45 L25,95 M50,45 L50,95 M75,45 L75,95 M100,45 L100,95 M118,45 L118,95"/>
+        </g>
+        <g stroke="#1d2433" stroke-width="1">
+          <path d="M178,45 L178,95 M190,45 L190,95 M202,45 L202,95 M214,45 L214,95 M226,45 L226,95 M238,45 L238,95 M250,45 L250,95 M262,45 L262,95 M274,45 L274,95"/>
+        </g>
+        <g stroke="#1d2433" stroke-width="0.8">
+          <path d="M330,45 L330,95 M336,45 L336,95 M342,45 L342,95 M348,45 L348,95 M354,45 L354,95 M360,45 L360,95 M366,45 L366,95 M372,45 L372,95 M378,45 L378,95 M384,45 L384,95 M390,45 L390,95 M396,45 L396,95 M402,45 L402,95 M408,45 L408,95 M414,45 L414,95 M420,45 L420,95 M426,45 L426,95 M432,45 L432,95"/>
+        </g>
+        <g stroke="#1d2433" stroke-width="0.6">
+          <path d="M484,45 L484,95 M487,45 L487,95 M490,45 L490,95 M493,45 L493,95 M496,45 L496,95 M499,45 L499,95 M502,45 L502,95 M505,45 L505,95 M508,45 L508,95 M511,45 L511,95 M514,45 L514,95 M517,45 L517,95 M520,45 L520,95 M523,45 L523,95 M526,45 L526,95 M529,45 L529,95 M532,45 L532,95 M535,45 L535,95 M538,45 L538,95 M541,45 L541,95 M544,45 L544,95 M547,45 L547,95 M550,45 L550,95 M553,45 L553,95 M556,45 L556,95 M559,45 L559,95 M562,45 L562,95 M565,45 L565,95 M568,45 L568,95 M571,45 L571,95 M574,45 L574,95 M577,45 L577,95 M580,45 L580,95 M583,45 L583,95 M586,45 L586,95 M589,45 L589,95 M592,45 L592,95 M595,45 L595,95 M598,45 L598,95"/>
+        </g>
+        <text x="20" y="22" font-weight="700">9 lines</text>
+        <text x="175" y="22" font-weight="700">18 lines</text>
+        <text x="330" y="22" font-weight="700">37 lines</text>
+        <text x="485" y="22" font-weight="700">74 lines</text>
+        <text x="20" y="132" fill="#5b6475">16 iterations</text>
+        <text x="175" y="132" fill="#5b6475">16</text>
+        <text x="330" y="132" fill="#5b6475">21</text>
+        <text x="485" y="132" fill="#5b6475">18</text>
+        <text x="10" y="160" fill="#5b6475">74 x (1/8, 1/4, 1/2, 1), rounded down</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.8" marker-end="url(#s2m-ar)"><path d="M132,70 L162,70"/><path d="M287,70 L317,70"/><path d="M442,70 L472,70"/></g>
+    </svg>
+    <figcaption><b>The four levels on kermadectonga2</b>, with the number of Jacobians nls.lm computed at each (printed by <code>_optimise_s_matrix(verbose=True)</code>). The sum of squared badness at the 74-line level falls from 108.1 for evenly spaced lines to 8.10 after optimisation: from a typical 0.40 per crossing point to 0.11 (666 points = 9 contours x 74 lines).</figcaption>
+  </figure>
+  <p>One safeguard runs after each level. If LM stopped after its very first Jacobian (it did not move at all), rptha re-solves twice from a slightly shaken start: every free <i>s</i> is moved by +/- 0.2/(n-1), then by a quarter of that, with a tighter tolerance (<code>ftol</code> = 1e-6, up to 250 iterations). R draws the random signs without a seed; the Python code uses a seeded generator (seed 1234) so every run gives the same mesh.</p>
+
+  <details class="deep">
+    <summary>MINPACK fidelity: why the small details matter <span class="tag">for the curious</span></summary>
+    <div class="body">
+      <p>A least-squares optimiser that only approximately follows MINPACK (for example <code>scipy.optimize.least_squares</code>, whose "lm" method uses its own finite-difference steps and has no 50-iteration cap) ends in a slightly different optimum: down-dip lines 0.2 to 1.4 km away from rptha's. The Python code therefore reproduces the R call <code>nls.lm(par, fn, control = list(ftol = 1e-3))</code> step for step:</p>
+      <ul class="tight">
+        <li><b>Same algorithm.</b> <code>scipy.optimize.leastsq</code> is MINPACK itself (<code>lmder</code>, which runs the same iterations as nls.lm's <code>lmdif</code> when given the same Jacobian). Settings as nls.lm's defaults: <code>ftol</code> 1e-3, <code>xtol</code> = sqrt(machine epsilon), <code>gtol</code> 0, <code>factor</code> 100, automatic scaling.</li>
+        <li><b>Same Jacobian, bit for bit.</b> MINPACK's <code>fdjac2</code> perturbs one parameter at a time by h = sqrt(eps) x |s| and divides the change by h. Each badness value depends only on its own node and its four neighbours (a 5-point stencil), so the Python code colours the parameters with c = (i + 2j) mod 5 and perturbs all parameters of one colour together: 5 function calls instead of one per parameter, and the same numbers (<code>_stencil_colouring</code>, <code>_fd_jacobian</code>; test <code>test_coloured_jacobian_is_minpack_fdjac2_bit_for_bit</code>). If a grouped step makes a row non-monotone, that group is redone one parameter at a time, as fdjac2 would have seen it.</li>
+        <li><b>Same iteration cap.</b> nls.lm stops once the 50th Jacobian is computed (so at most 49 steps). The Python code reproduces the stop by handing MINPACK a zero Jacobian, which makes its gradient test stop it where it stands (<code>_nls_lm</code>; test <code>test_nls_lm_equals_true_lmdif</code>).</li>
+        <li><b>Same "impossible" value: infinity.</b> When a trial step makes a row of the s-matrix decrease (two lines crossing), R's <code>get_quality_matrix</code> returns Inf for every residual, and so does the Python code. A large finite number (1e100) instead would not be cosmetic: with Inf, MINPACK's norm of the rejected trial is NaN, its test <code>p1*fnorm1 &gt;= fnorm</code> is false and the trust region shrinks by a computed factor; with 1e100 the test is true and it always shrinks by 0.1. On makran2 the first step's sum of squares was 3.595 with 1e100 against R's 3.668; with Inf it is 3.66832243 against 3.66832247, and the same final optimum to 1e-9 (from the code comment on <code>_BAD</code>).</li>
+        <li><b>Same arithmetic.</b> Haversine distances are written in geosphere's exact expression order (<code>2 * atan2(sqrt(a), sqrt(1 - a)) * r</code>), interpolation follows R's <code>approx</code> including its handling of exact knot hits, and the residuals are flattened column-major like R's <code>c(q_matrix)</code>. The Jacobian amplifies last-digit differences by about 1e8, so these keep the iterations on R's path.</li>
+        <li><b>Geodesy as R.</b> rptha's <code>geosphere</code> calls are spherical (radius 6,378,137 m), so the interpolation along great circles uses a sphere (<code>_GEOD_SPHERE</code>). The trench length that sets the number of lines uses R's ellipsoidal <code>sp::SpatialLinesLengths</code>, matched with the WGS84 ellipsoid.</li>
+      </ul>
+      <p><b>Result.</b> On the same contours, the Python down-dip lines sit on rptha's R output: 0.00 m on puysegur2 and makran2, within 2 cm on cascadia, 11 cm on philippine, 7 m median on newhebrides2 (puysegur2 is checked by <code>test_downdip_lines_match_rptha_r_output</code>, which requires under 1 m; see <a href="validation.html">Validation</a>). One addition that is not in rptha, and can only matter on the shaken re-solve path: a level whose result is non-monotone, not finite, or worse than its own start is discarded in favour of that start, with a printed note.</p>
+    </div>
+  </details>
+</section>
+
+<section id="quality-sec">
+  <h2 id="quality">The quality ("badness") measure</h2>
+  <p>For every crossing point of a down-dip line with a contour, rptha computes one badness number. It is zero for a perfect crossing and grows as the crossing gets worse. It has two parts: <b>orthogonality</b> (does the line cross the contour at a right angle?) and <b>regularity</b> (is the line at an even distance from its two neighbours?).</p>
+  <figure class="fig narrow">
+    <svg viewBox="0 0 620 270" role="img" aria-label="A node on a contour with its four neighbours; v1 is the down-dip direction, v2 the along-contour direction, and the badness is small when they are perpendicular">
+      <defs><marker id="s2q-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2f6fdf"/></marker>
+      <marker id="s2q-ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d9822b"/></marker></defs>
+      <g fill="none" stroke-width="2">
+        <path d="M40,50 C150,44 260,52 380,46" stroke="#fdd9b5"/>
+        <path d="M40,130 C150,124 260,132 380,126" stroke="#fb9f5a"/>
+        <path d="M40,210 C150,204 260,212 380,206" stroke="#8c2d04"/>
+      </g>
+      <g stroke="#1d2433" stroke-width="1.6" fill="none">
+        <path d="M120,47 L110,127 L104,208"/>
+        <path d="M210,48 L205,128 L203,209"/>
+        <path d="M300,49 L310,129 L318,208"/>
+      </g>
+      <g fill="#1d2433"><circle cx="120" cy="47" r="4"/><circle cx="110" cy="127" r="4"/><circle cx="104" cy="208" r="4"/><circle cx="210" cy="48" r="4"/><circle cx="203" cy="209" r="4"/><circle cx="300" cy="49" r="4"/><circle cx="310" cy="129" r="4"/><circle cx="318" cy="208" r="4"/></g>
+      <circle cx="205" cy="128" r="7" fill="#c43d3d"/>
+      <path d="M210,56 L204,196" stroke="#2f6fdf" stroke-width="2.4" marker-end="url(#s2q-ar)"/>
+      <path d="M118,140 L300,140" stroke="#d9822b" stroke-width="2.4" marker-end="url(#s2q-ag)"/>
+      <text x="216" y="100" font-size="12" fill="#2f6fdf" font-weight="700">v1</text>
+      <text x="216" y="115" font-size="11" fill="#2f6fdf">down the line</text>
+      <text x="222" y="160" font-size="12" fill="#d9822b" font-weight="700">v2</text>
+      <text x="222" y="175" font-size="11" fill="#d9822b">along contour</text>
+      <text x="160" y="248" font-size="11.5" fill="#5b6475">node (i, j): contour i, down-dip line j</text>
+      <g font-size="12">
+        <text x="400" y="60" font-weight="700">orthogonality</text>
+        <text x="400" y="78" fill="#5b6475">cosine of the angle between</text>
+        <text x="400" y="94" fill="#5b6475">v1 and v2: 0 at 90 deg</text>
+        <text x="400" y="130" font-weight="700">regularity</text>
+        <text x="400" y="148" fill="#5b6475">gap to each neighbour, in units</text>
+        <text x="400" y="164" fill="#5b6475">of the even gap 1/(n-1): 1 is ideal</text>
+        <text x="400" y="200" font-weight="700">badness = both, added</text>
+        <text x="400" y="218" fill="#5b6475">one number per node; LM</text>
+        <text x="400" y="234" fill="#5b6475">minimises their sum of squares</text>
+      </g>
+    </svg>
+    <figcaption><b>What is measured at one node</b> (red). The blue arrow follows the down-dip line through the node; the orange arrow follows the contour through its two neighbouring lines. They should be perpendicular. At the first and last contour and at the two edge lines, the missing neighbour is replaced by the node itself.</figcaption>
+  </figure>
+  <div class="formula">q(i, j) = 0.25 |v1A &middot; v2| / (10<sup>-12</sup> + |v1A| |v2|) + |v1 &middot; v2| / (|v1| |v2|) + &frac12; (e<sup>e<sup>|ln sp<sub>next</sub>|</sup> - 1</sup> - 1) + &frac12; (e<sup>e<sup>|ln sp<sub>prev</sub>|</sup> - 1</sup> - 1)
+    <span class="where">v1 = P(i+1, j) - P(i-1, j): the down-dip direction through the node. v1A = P(i+1, j) - P(i, j): the next segment down dip only (a quarter weight). v2 = P(i, j+1) - P(i, j-1): the along-contour direction. All vectors in metres in a local flat projection centred on the node. |a &middot; b| / (|a| |b|) is the cosine of the angle between a and b: 0 at a right angle, 1 when parallel. sp<sub>next</sub> = |s(i, j+1) - s(i, j)| x (n - 1) and sp<sub>prev</sub> the same towards j - 1: the gap to each neighbour divided by the even gap (at the edge lines the missing gap counts as 1). n = number of lines.</span>
+  </div>
+  <p>The regularity term grows extremely fast when spacing becomes uneven. Its value for one gap (the formula's half term):</p>
+  <div class="tbl"><table>
+    <tr><th>gap / even gap (sp)</th><th class="n">1</th><th class="n">1.25</th><th class="n">1.5</th><th class="n">2 or 0.5</th><th class="n">3</th><th class="n">0.25</th></tr>
+    <tr><td>&frac12; (exp(exp(|ln sp|) - 1) - 1)</td><td class="n">0</td><td class="n">0.142</td><td class="n">0.324</td><td class="n">0.859</td><td class="n">3.195</td><td class="n">9.543</td></tr>
+  </table></div>
+  <p>For comparison, a crossing 10 degrees off square costs about 1.25 x cos(80 deg) = 0.22 in the orthogonality term. So the optimiser accepts some skew to keep columns evenly spaced, but never lets a gap double or halve. <b>Why both matter:</b> square crossings give cells close to rectangles, whose length, width and dip are well defined; even spacing gives cells of similar size, so that a scenario of a given magnitude covers a similar number of cells anywhere on the zone.</p>
+  <p>If a candidate s-matrix is not increasing along every row (two lines would cross), the whole badness vector is set to infinity and LM rejects the step.</p>
+  <p class="where">Where in the code: <code>contour_discretisation.py</code> <code>_quality_matrix()</code> (R: <code>get_quality_matrix</code>), with <code>_spherical_to_cartesian2d()</code> for the local projection. Test: <code>test_optimiser_reduces_badness</code>.</p>
+</section>
+
+<section id="rows">
+  <h2 id="rows-width">Rows and width</h2>
+  <p>The number of <b>columns</b> comes from the trench length (above). The number of <b>rows</b> comes from how long the down-dip lines are, and from the desired cell <b>width</b> (the down-dip size of a cell). rptha's rule, applied to the optimised lines:</p>
+  <div class="formula">node rows = max( round( L<sub>mean</sub> / W - 1 ), 0 ) + 2 &nbsp;&nbsp;&nbsp; so &nbsp; cell rows = node rows - 1
+    <span class="where">L<sub>mean</sub>: the mean 3D length (km) of all down-dip lines, from the trench to the deepest contour, following the depth. W: the desired width, km. Every column gets the same number of rows, so the real width varies from column to column.</span>
+  </div>
+  <figure class="fig narrow">
+    <svg viewBox="0 0 640 300" role="img" aria-label="How the down-dip row count is chosen: official row count with --ptha true if available, otherwise N_DOWNDIP_OVERRIDE if set, otherwise rptha's width rule with a minimum of 2 rows">
+      <defs><marker id="s2r-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker></defs>
+      <g font-size="12.5">
+        <rect x="10" y="20" width="210" height="50" rx="8" fill="#f0f2f5" stroke="#8a93a3"/>
+        <text x="22" y="41" font-weight="700">--ptha true and PTHA18</text>
+        <text x="22" y="58">published this zone's .nc?</text>
+        <rect x="300" y="20" width="330" height="50" rx="8" fill="#e8f0fd" stroke="#2f6fdf"/>
+        <text x="312" y="41" font-weight="700">use PTHA18's row count</text>
+        <text x="312" y="58" fill="#5b6475">n_downdip_rows(zone), read from the .nc</text>
+        <rect x="10" y="105" width="210" height="50" rx="8" fill="#f0f2f5" stroke="#8a93a3"/>
+        <text x="22" y="126" font-weight="700">N_DOWNDIP_OVERRIDE set</text>
+        <text x="22" y="143">in step2_build_grid.py?</text>
+        <rect x="300" y="105" width="330" height="50" rx="8" fill="#e8f0fd" stroke="#2f6fdf"/>
+        <text x="312" y="126" font-weight="700">use that number of cell rows</text>
+        <text x="312" y="143" fill="#5b6475">(default None: not set)</text>
+        <rect x="10" y="190" width="210" height="90" rx="8" fill="#e4f5ec" stroke="#2e9e6b"/>
+        <text x="22" y="211" font-weight="700">rptha's width rule</text>
+        <text x="22" y="229" fill="#5b6475">W = 50 km (--ptha false), or</text>
+        <text x="22" y="245" fill="#5b6475">the zone's width from</text>
+        <text x="22" y="261" fill="#5b6475">sourcezone_parameters.csv</text>
+        <rect x="300" y="190" width="330" height="90" rx="8" fill="#fdf6e3" stroke="#b7791f"/>
+        <text x="312" y="211" font-weight="700">fewer than 2 cell rows?</text>
+        <text x="312" y="229" fill="#5b6475">use 2 (MIN_DOWNDIP_ROWS = 2), as PTHA18</text>
+        <text x="312" y="245" fill="#5b6475">required (ReportPTHA p. 14). Printed</text>
+        <text x="312" y="261" fill="#5b6475">in the log whenever it applies.</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#s2r-ar)">
+        <path d="M220,45 L298,45"/><path d="M115,70 L115,103"/>
+        <path d="M220,130 L298,130"/><path d="M115,155 L115,188"/>
+        <path d="M220,235 L298,235"/>
+      </g>
+      <g font-size="11.5" font-weight="700"><text x="240" y="38" fill="#2e9e6b">yes</text><text x="122" y="92" fill="#c43d3d">no</text><text x="240" y="123" fill="#2e9e6b">yes</text><text x="122" y="177" fill="#c43d3d">no</text></g>
+    </svg>
+    <figcaption><b>Who decides the row count</b>, in the order step 2 checks. The first two boxes bypass the width rule entirely (<code>n_downdip</code> is passed to the discretiser). The minimum of 2 rows applies only to the width rule.</figcaption>
+  </figure>
+  <div class="tbl"><table>
+    <tr><th>setting</th><th>width W</th><th>row count</th></tr>
+    <tr><td><code>--ptha false</code> (all 8 examples)</td><td>50 km on every zone (PTHA18's documented target size)</td><td>rptha's rule, at least 2 rows</td></tr>
+    <tr><td><code>--ptha true</code> (default of <code>generate.py</code>)</td><td>the zone's <code>approx_unit_source_width</code> in PTHA18's <code>sourcezone_parameters.csv</code>: 50 km, except puysegur2 35 km</td><td>PTHA18's own count if its <code>unit_source_statistics_&lt;zone&gt;.nc</code> is present, otherwise the rule</td></tr>
+  </table></div>
+  <h3 id="rows-examples">Worked examples</h3>
+  <ul class="tight">
+    <li><b>kermadectonga2</b> (<code>--ptha false</code>): the 74 lines are 90.5 to 281.9 km long, mean 157.1 km. round(157.1 / 50 - 1) = round(2.14) = 2, plus 2 = 4 nodes, so <b>3 rows</b> of cells, the same as PTHA18. Because every column gets 3 rows, the cell widths range from 31.5 to 91.5 km (step 2's log).</li>
+    <li><b>puysegur2</b> (<code>--ptha false</code>): a steep, narrow zone, mean line 71 km. round(71 / 50 - 1) = round(0.42) = 0, so the rule gives 1 row. The log says: <code>down-dip rows: the 50 km width rule gives 1 on a 71 km mean transect; using 2 (PTHA18's minimum, ReportPTHA p.14)</code>. The final mesh is 13 x 2. With PTHA18's 35 km width the rule itself gives round(71 / 35 - 1) = 1, plus 2 = 3 nodes, the same 2 rows: that is why PTHA18 chose 35 km there.</li>
+  </ul>
+  <div class="callout"><span class="lbl">Why rows matter</span>Rows set how depth is resolved. A single row would give one dip for the whole width of the fault and make every scenario full-width. One row more or less changes the area only slightly (the rows share the same fault surface) but changes the cell sizes. The rule rounds, so a mean length close to a boundary (for example 2.5 x W) can land on either side between two similar zones.</div>
+  <p class="where">Where in the code: <code>discretized_source_from_contours_orthogonal()</code> (the rule and <code>min_downdip</code>), <code>templates/step2_build_grid.py.tmpl</code> (<code>DESIRED_LENGTH_KM</code> = 50, <code>DESIRED_WIDTH_KM</code>, <code>MIN_DOWNDIP_ROWS</code> = 2, <code>N_DOWNDIP_OVERRIDE</code> = None), <code>lib/official_geometry_params.py</code> <code>width_km()</code>, <code>n_downdip_rows()</code>. The same values are written into the input JSON by step 6, so the engine meshes with the same settings.</p>
+</section>
+
+<section id="columns-fan">
+  <h2 id="column-rule">How many columns: <code>--columns trench|average</code> (v8.2)</h2>
+  <p>Every row of an rptha mesh has the same number of cells. rptha counts them from the <b>trench</b> (above): the trench length divided by 50 km. On a straight zone every row is about as long as the trench, so every cell is about 50 km long. On a <b>tight arc</b> the deep rows are much shorter than the trench, so their cells are much shorter too: calabria2's trench is 980 km long and its 60 km contour 243 km, which gives 20 columns, cells of about 50 km at the trench and about 12 km at depth.</p>
+  <div class="formula">taper = median over columns of ( trench-row cell length / deepest-row cell length )
+    <span class="where">1 = the cells keep their length with depth. PTHA18's 43 published meshes: at most 1.17 (sandwich). calabria2: 3.04; antilles2 (Lesser Antilles): 1.76; caribbean2: 1.20.</span>
+  </div>
+  <div class="tbl"><table>
+    <tr><th><code>--columns</code></th><th>number of columns</th><th>use</th></tr>
+    <tr><td><code>trench</code> (default)</td><td><code>ceil(trench length / 50 km)</code>, rptha's and PTHA18's rule</td><td>every zone; it is the mesh PTHA18's method gives (fed PTHA18's contours, it reproduces PTHA18's column counts on 14/14 zones)</td></tr>
+    <tr><td><code>average</code></td><td><code>ceil(average row length / 50 km)</code>, the average taken in 3D over the cell rows of rptha's mesh</td><td>a zone whose taper is far outside PTHA18's range. <b>Not PTHA18's procedure.</b> It is the rule rptha already uses for rows (average width / 50 km), applied to the columns</td></tr>
+  </table></div>
+  <p>Only the column count changes: the down-dip lines are still rptha's optimised ones, the rows still have equal 3D width, and the grid is still rectangular. <code>--discretizer lm</code> and <code>mid</code> ignore the setting. The choice is written into step 2 as <code>COLUMN_RULE</code> and into the input JSON as <code>column_rule</code>, so steps 7, 7b and 9 mesh the rates on step 2's grid.</p>
+  <div class="tbl"><table>
+    <tr><th>zone</th><th class="n"><code>trench</code></th><th class="n"><code>average</code></th><th class="n">median cell length</th><th class="n">cells with both sides 30-70 km</th><th class="n">rates (Mw 7.2+ / 9.2+)</th></tr>
+    <tr><td>calabria2</td><td class="n">20 x 5</td><td class="n">12 x 5</td><td class="n">26 to 45 km</td><td class="n">26% to 42%</td><td class="n">-0.7% / -3.7%</td></tr>
+    <tr><td>antilles2 (<code>--clip 297,307,5,18.5</code>)</td><td class="n">24 x 6</td><td class="n">18 x 6</td><td class="n">36 to 48 km</td><td class="n">75% to 93%</td><td class="n">+0.3% / +0.3%</td></tr>
+    <tr><td>caribbean2</td><td class="n">47 x 4</td><td class="n">39 x 4</td><td class="n">39 to 48 km</td><td class="n">63% to 59%</td><td class="n">(no gain: keep <code>trench</code>)</td></tr>
+  </table></div>
+  <div class="callout"><span class="lbl">What neither rule can fix</span>A taper cannot be removed, only centred: with <code>average</code>, calabria2's trench cells are about 75 km long and its deep cells about 24 km, instead of 50 and 12. And a zone whose width changes along strike keeps uneven cells: caribbean2's fault is 97 km wide off Puerto Rico and 420 km in the southern Lesser Antilles, and every column must keep the same 4 rows. About 1,300 combinations of column count, row count and row placement were tried on it; none improves it.</div>
+  <p><b>The mesh-shape lines step 2 prints</b>, next to PTHA18's 43 meshes: the taper; the width ratio (widest / narrowest column, PTHA18 at most 3.26); the share of cells with both sides 30-70 km (85% or more on 38 of 43); the mean deviation from 50 x 50 (the mean over cells of max(|log2(L/50)|, |log2(W/50)|): 0 = every cell 50 x 50, 1 = a side of 25 or 100 km; PTHA18's median 0.21). With <code>trench</code> and a taper outside PTHA18's range it suggests <code>--columns average</code>; with a width ratio outside it, it says that no count can fix the cells.</p>
+  <p class="where">Where in the code: <code>contour_discretisation.py</code> <code>discretized_source_from_contours_optimal(column_rule=...)</code>, <code>mesh_shape()</code>, <code>PTHA18_MAX_TAPER</code>; <code>discretized_source_from_contours_orthogonal(n_alongstrike=...)</code>; <code>templates/step2_build_grid.py.tmpl</code> <code>COLUMN_RULE</code>. Test: <code>tests/test_column_rule.py</code>. The review behind it (every option tried, hazard comparison): <code>../html/mesh_50km_review.html</code>.</p>
+</section>
+
+
+
+
+
+
+<section id="cache-sec">
+  <h2 id="cache">One mesh for every step: the grid cache</h2>
+  <p>Three steps need the mesh: step 2 (which builds and checks it), step 7 (the rates) and step 9 (the report). Steps 7 and 9 read their settings from the input JSON, which you may have edited. The optimiser is deterministic, so rebuilding from the same settings gives the same mesh; the cache makes this explicit: the rates are computed on exactly the mesh step 2 checked when nothing changed, and on a fresh mesh when something did.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 940 220" role="img" aria-label="Step 2 saves the grid and its fingerprint; step 6 copies the same fields into the input JSON; steps 7 and 9 recompute the fingerprint from the JSON and reuse the saved grid if it matches">
+      <defs><marker id="s2c-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker></defs>
+      <g font-size="12.5">
+        <rect x="10" y="30" width="190" height="80" rx="9" fill="#e4f5ec" stroke="#2e9e6b"/>
+        <text x="22" y="54" font-weight="700">step 2</text>
+        <text x="22" y="72" fill="#5b6475">builds + checks the mesh</text>
+        <text x="22" y="90" fill="#5b6475">grid_cache.save()</text>
+        <rect x="245" y="20" width="210" height="100" rx="9" fill="#fff" stroke="#eb6834" stroke-width="1.6"/>
+        <text x="257" y="42" font-weight="700">unit_source_grid.npy</text>
+        <text x="257" y="62" font-weight="700">unit_source_grid.meta.json</text>
+        <text x="257" y="82" fill="#5b6475">SHA-256 of the contour</text>
+        <text x="257" y="98" fill="#5b6475">.shp/.dbf/.shx + every setting</text>
+        <rect x="10" y="150" width="190" height="60" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+        <text x="22" y="174" font-weight="700">step 6: input JSON</text>
+        <text x="22" y="192" fill="#5b6475">same settings, same path</text>
+        <path d="M580,40 L660,80 L580,120 L500,80 Z" fill="#fdf6e3" stroke="#b7791f"/>
+        <text x="580" y="77" text-anchor="middle" font-weight="700">fingerprints</text>
+        <text x="580" y="93" text-anchor="middle" font-weight="700">equal?</text>
+        <rect x="700" y="20" width="230" height="50" rx="9" fill="#e4f5ec" stroke="#2e9e6b"/>
+        <text x="712" y="42" font-weight="700">reuse the saved grid</text>
+        <text x="712" y="60" fill="#5b6475">"mesh: reusing step 2's grid"</text>
+        <rect x="700" y="95" width="230" height="60" rx="9" fill="#fdf6e3" stroke="#b7791f"/>
+        <text x="712" y="117" font-weight="700">rebuild from the contours</text>
+        <text x="712" y="135" fill="#5b6475">"... does not match ... rebuilding"</text>
+        <text x="420" y="190" fill="#5b6475">steps 7 and 9: run_logic_tree.build_grid() recomputes the fingerprint</text>
+        <text x="420" y="206" fill="#5b6475">from the input JSON's geometry block and compares</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#s2c-ar)">
+        <path d="M200,70 L243,70"/><path d="M455,70 L498,75"/>
+        <path d="M200,180 L420,180 L540,108"/>
+        <path d="M660,72 L698,50"/><path d="M660,88 L698,118"/>
+      </g>
+    </svg>
+    <figcaption><b>The cache.</b> Edit any meshing field of the input JSON (for example <code>desired_unit_source_width</code>) or the contour shapefile, and the fingerprint no longer matches: the engine rebuilds the mesh with the new settings. Steps 3 and 5 always read the saved <code>.npy</code> directly.</figcaption>
+  </figure>
+  <p>kermadectonga2's fingerprint (<code>kermadectonga2_v9/data/slab2/unit_source_grid.meta.json</code>), as written by step 2:</p>
+  <pre class="out">{
+ "contours_sha256": "555dac403c7dfd01851f2bf76f5d6e34d5d56f9fae31285334f7adcd565cce42",
+ "mesh_code_version": "v8.0",
+ "desired_unit_source_length": 50.0,
+ "desired_unit_source_width": 50.0,
+ "method": "optimal",
+ "min_downdip": 2.0,
+ "n_downdip": null,
+ "seed": 1234.0
+}</pre>
+  <p>Numbers are stored as floats, so <code>2</code> in the JSON and <code>2.0</code> here compare equal. <code>mesh_code_version</code> is bumped by hand whenever a code change would give a different mesh for the same inputs, which invalidates every saved grid. In every example's <code>run_final.log</code>, both step 7 and step 9 print <code>mesh: reusing step 2's grid (... fingerprint matches)</code>.</p>
+  <div class="callout warn"><span class="lbl">One exception: step 7b</span>The optional heterogeneous-slip step (<code>step7b_stochastic_slip.py</code>, <code>build_grid_from_geometry()</code>) rebuilds the mesh itself, without the cache and without passing <code>min_downdip</code>. On puysegur2 that gives rptha's 1-row mesh: its log says <code>n_unit_sources = 13</code> where step 7 used 26 (<code>puysegur2_v9/run_final.log</code>, lines 199 and 235). On zones where the minimum does not apply, the rebuild gives the same mesh as step 2. This affects only the HS/VAUS outputs, never the rates. See <a href="hs_vaus.html">7b. HS and VAUS slip</a>.</div>
+  <p class="where">Where in the code: <code>pyptha_v12/grid_cache.py</code> <code>fingerprint()</code>, <code>save()</code>, <code>load_if_match()</code>; <code>python_logic_tree_v12/run_logic_tree.py</code> <code>build_grid()</code>; <code>templates/step6_write_input.py.tmpl</code> (the geometry block: <code>desired_unit_source_length</code>, <code>desired_unit_source_width</code>, <code>n_downdip</code>, <code>min_downdip</code>, <code>seed</code>, <code>discretizer</code>, <code>unit_source_grid_npy</code>).</p>
+</section>
+
+<section id="stats-sec">
+  <h2 id="statistics">Cell properties (unit-source statistics)</h2>
+  <p>From the grid, rptha computes a table with one row per cell. This is what the rest of the pipeline actually uses: the rates need each cell's area, the convergence needs its dip and strike, the earthquake selection its position and depth. The Python <code>discretized_source_approximate_summary_statistics()</code> is a line-by-line port of the R function of the same name. The table is not written to a file by step 2; every step recomputes it from the saved grid when needed.</p>
+  <div class="tbl"><table>
+    <tr><th>column</th><th>meaning</th><th>how it is computed (cell corners: 1 top-left, 2 bottom-left, 3 bottom-right, 4 top-right)</th></tr>
+    <tr><td><code>lon_c</code>, <code>lat_c</code></td><td>cell centre</td><td>plain mean of the 4 corners' longitudes and latitudes</td></tr>
+    <tr><td><code>depth</code></td><td>centre depth, km below the trench</td><td>mean of the 4 corner depths</td></tr>
+    <tr><td><code>max_depth</code></td><td>deepest corner</td><td>max of the 4 corner depths</td></tr>
+    <tr><td><code>strike</code></td><td>direction of the top edge, degrees clockwise from north</td><td>bearing from the midpoint of the top edge (1-4) to corner 4. The midpoint is geosphere's <code>midPoint</code> on the WGS84 ellipsoid, the bearing is spherical</td></tr>
+    <tr><td><code>dip</code></td><td>slope of the cell, degrees (0 flat, 90 vertical)</td><td>angle-average of the slope of the left edge (1 to 2) and of the right edge (4 to 3): atan(depth change / surface distance), surface distance by haversine on a sphere</td></tr>
+    <tr><td><code>length</code></td><td>along-strike size, km</td><td>mean of the 3D lengths of the top and bottom edges (<code>distance_down_depth</code>: great circle, depth linear along it)</td></tr>
+    <tr><td><code>width</code></td><td>down-dip size, km</td><td>sloping area / length, where sloping area = spherical surface area of the 4 corners x sqrt(1 + tan<sup>2</sup>(dip))</td></tr>
+    <tr><td><code>area</code></td><td>km<sup>2</sup></td><td>length x width (a convenience column added by the Python code; R computes it the same way where it needs it)</td></tr>
+    <tr><td><code>rake</code>, <code>slip</code></td><td>slip direction and amount</td><td>constants: 90 degrees (pure thrust) and 1 m (unit slip), as rptha's defaults</td></tr>
+    <tr><td><code>alongstrike_number</code>, <code>downdip_number</code>, <code>subfault_number</code></td><td>cell numbering, from 1</td><td>columns outer loop, rows inner loop: cell 1 is column 1 row 1, cell 2 column 1 row 2, ...</td></tr>
+  </table></div>
+  <p>A worked example: kermadectonga2's column 34 (latitude about 28 S), its three cells from the trench down:</p>
+  <div class="tbl"><table>
+    <tr><th class="n">subfault</th><th class="n">row</th><th class="n">lon_c</th><th class="n">lat_c</th><th class="n">depth</th><th class="n">max_depth</th><th class="n">strike</th><th class="n">dip</th><th class="n">length</th><th class="n">width</th><th class="n">area</th></tr>
+    <tr><td class="n">100</td><td class="n">1</td><td class="n">183.926</td><td class="n">-28.083</td><td class="n">2.2</td><td class="n">4.5</td><td class="n">191.1</td><td class="n">5.5</td><td class="n">49.3</td><td class="n">46.1</td><td class="n">2,271</td></tr>
+    <tr><td class="n">101</td><td class="n">2</td><td class="n">183.480</td><td class="n">-27.990</td><td class="n">10.5</td><td class="n">16.6</td><td class="n">192.4</td><td class="n">15.3</td><td class="n">48.8</td><td class="n">46.0</td><td class="n">2,243</td></tr>
+    <tr><td class="n">102</td><td class="n">3</td><td class="n">183.065</td><td class="n">-27.900</td><td class="n">28.3</td><td class="n">40.0</td><td class="n">193.7</td><td class="n">30.6</td><td class="n">48.0</td><td class="n">46.3</td><td class="n">2,222</td></tr>
+  </table></div>
+  <p>The dip steepens with depth (5.5, 15.3, 30.6 degrees), as on a real subduction interface, and the deepest cell reaches the 40 km cutoff exactly. (Depths in km below the trench, lengths and widths in km, area in km<sup>2</sup>; computed from <code>kermadectonga2_v9/data/slab2/unit_source_grid.npy</code>.)</p>
+  <div class="formula">total area = &Sigma; length x width &nbsp;&nbsp;&nbsp;&nbsp; mean dip = atan2( mean sin(dip), mean cos(dip) )
+    <span class="where">The two numbers step 2 prints as "the two numbers that drive everything". Area scales the moment balance, and so the rates, almost linearly. The mean dip is angle-weighted (the mean of the dips as unit vectors), the convention of PTHA18's published mean_dip; step 2 also prints the arithmetic mean for contrast.</span>
+  </div>
+  <p><b>Fidelity.</b> On PTHA18's own grids, every column of this table agrees with PTHA18's published <code>unit_source_statistics_&lt;zone&gt;.nc</code> to 4e-10 on 9 zones (checked by <code>test_unit_source_statistics_match_ptha18_table</code>). The key detail is the strike: geosphere's <code>midPoint</code> works on the ellipsoid (its default <code>f</code> is WGS84's flattening); a spherical midpoint would move the strike by up to 4.5e-4 degrees.</p>
+  <p class="where">Where in the code: <code>pyptha_v12/unit_sources.py</code> <code>discretized_source_approximate_summary_statistics()</code>, <code>_midpoint()</code>, <code>_bearing()</code>, <code>_dist_haversine()</code>, <code>_area_polygon()</code>, <code>distance_down_depth()</code>; mean dip in <code>step2_build_grid.py</code> <code>angle_weighted_mean_dip()</code>.</p>
+</section>
+
+<section id="results-sec">
+  <h2 id="results">Results on the 8 examples</h2>
+  <p>All 8 examples were generated with <code>--ptha false --discretizer optimal</code>. In every <code>run_final.log</code> step 2 prints <code>optimal: rptha's own mesh has no folded, collapsed or overlapping cells -&gt; kept unchanged</code>: every final mesh is rptha's own, with 0 defects.</p>
+  <figure class="fig">
+    <img src="img/step2_final_meshes.png" alt="The 8 final meshes: kermadectonga2, southamerica, kurilsjapan, makran2, puysegur2, calabria2, caribbean2, antilles2">
+    <figcaption><b>The 8 final meshes</b>, drawn from each example's saved <code>data/slab2/unit_source_grid.npy</code>. Colour = depth below the trench, darker deeper, each panel scaled to its own cutoff. Different scales: southamerica spans 48 degrees of latitude, puysegur2 5. calabria2, caribbean2 and antilles2 are the strongly curved zones the mesh had to survive.</figcaption>
+  </figure>
+  <div class="tbl"><table>
+    <tr><th>folder</th><th class="n">contours</th><th class="n">mesh (columns x rows)</th><th class="n">defects</th><th>method used</th><th class="n">area, km<sup>2</sup></th><th class="n">mean dip</th><th class="n">PTHA18 mesh</th><th class="n">PTHA18 area</th><th class="n">PTHA18 dip</th></tr>
+    <tr class="hl"><td>kermadectonga2_v9</td><td class="n">0-40 km</td><td class="n">73 x 3 = 219</td><td class="n">0</td><td>rptha, unchanged</td><td class="n">542,559</td><td class="n">15.42&deg;</td><td class="n">72 x 3 = 216</td><td class="n">511,220</td><td class="n">16.01&deg;</td></tr>
+    <tr><td>southamerica_v9</td><td class="n">0-55 km</td><td class="n">118 x 4 = 472</td><td class="n">0</td><td>rptha, unchanged</td><td class="n">1,163,678</td><td class="n">16.62&deg;</td><td class="n">165 x 4 = 660</td><td class="n">1,681,297</td><td class="n">15.88&deg;</td></tr>
+    <tr><td>kurilsjapan_v9 (<code>--auto-clip</code>)</td><td class="n">0-55 km</td><td class="n">60 x 4 = 240</td><td class="n">0</td><td>rptha, unchanged</td><td class="n">593,269</td><td class="n">16.33&deg;</td><td class="n">61 x 4 = 244</td><td class="n">594,621</td><td class="n">16.68&deg;</td></tr>
+    <tr><td>makran2_v9</td><td class="n">0-40 km</td><td class="n">20 x 8 = 160</td><td class="n">0</td><td>rptha, unchanged</td><td class="n">382,203</td><td class="n">6.06&deg;</td><td class="n">20 x 8 = 160</td><td class="n">383,274</td><td class="n">6.10&deg;</td></tr>
+    <tr><td>puysegur2_v9</td><td class="n">0-40 km</td><td class="n">13 x 2 = 26</td><td class="n">0</td><td>rptha, unchanged; 2-row minimum applied</td><td class="n">43,468</td><td class="n">36.63&deg;</td><td class="n">14 x 2 = 28</td><td class="n">46,853</td><td class="n">36.18&deg;</td></tr>
+    <tr><td>calabria2_v9</td><td class="n">0-60 km</td><td class="n">20 x 5 = 100</td><td class="n">0</td><td>rptha, unchanged</td><td class="n">136,468</td><td class="n">14.95&deg;</td><td class="n" colspan="3">not a PTHA18 zone</td></tr>
+    <tr><td>caribbean2_v9</td><td class="n">0-45 km</td><td class="n">47 x 4 = 188</td><td class="n">0</td><td>rptha, unchanged</td><td class="n">399,747</td><td class="n">15.44&deg;</td><td class="n" colspan="3">not a PTHA18 zone</td></tr>
+    <tr><td>antilles2_v9 (<code>--clip 297,307,5,18.5</code>)</td><td class="n">0-45 km</td><td class="n">24 x 6 = 144</td><td class="n">0</td><td>rptha, unchanged</td><td class="n">249,217</td><td class="n">9.31&deg;</td><td class="n" colspan="3">no PTHA18 mesh to compare</td></tr>
+  </table></div>
+  <p>Source: step 2's section of each example's <code>run_final.log</code> (grid size, mesh check, total area, angle-weighted mean dip, and the comparison table against PTHA18's published mesh where it exists).</p>
+  <h3 id="results-reading">Reading the differences with PTHA18</h3>
+  <ul class="tight">
+    <li><b>makran2</b>: same mesh size, area within 0.28%, dip within 0.04 degrees. SLAB2.0 and PTHA18 cover the same stretch of trench.</li>
+    <li><b>kermadectonga2</b>: same row count, one more column, area +6.1%: SLAB covers a slightly longer stretch of trench than PTHA18's zone. <b>kurilsjapan</b>, cut with <code>--auto-clip</code> where step 3 found the Izu-Bonin tail: same row count, one column fewer, area -0.2% (without the cut, 65 columns and +6.3%, <a href="step3.html#plate-change">why</a>).</li>
+    <li><b>southamerica</b>: the SLAB1.0 model stops near 45 S and step 1's end cut stops the zone at 43 S, while PTHA18's zone goes further south: 47 fewer columns and 31% less area.</li>
+    <li><b>puysegur2</b>: one column fewer and -7.2% area: step 1 cut a crooked south end, where PTHA18 had extended the zone by hand beyond the SLAB data.</li>
+  </ul>
+  <p>The cell boundaries themselves never match exactly, because the contours differ: PTHA18 edited its own by hand, this package derives them from SLAB (step 1). Given PTHA18's contours, the mesh is PTHA18's (<a href="discretizer.html#lm">table above</a>). Judge a from-scratch mesh on total area and mean dip, the two mesh numbers the rates use. More per zone in <a href="examples.html">The 8 examples</a>.</p>
+</section>
+
+<section id="howto">
+  <h2 id="reproduce">Reproduce the figures and numbers</h2>
+  <div class="code"><pre><span class="cm"># from ptha18_logic_tree_test/: all figures and numbers of this page (about 10 min the first time)</span>
+.venv/Scripts/python.exe from_scratch_v12/html/docs/figures_src/make_step2.py
+<span class="cm"># the 14-zone mesh check against PTHA18 (about 5 min)</span>
+.venv/Scripts/python.exe from_scratch_v12/validation/validate_v9.py mesh
+<span class="cm"># build a zone with a different discretiser, to compare</span>
+.venv/Scripts/python.exe from_scratch_v12/generate.py kermadec --zone kermadectonga2 --folder kt2_lm --ptha false --discretizer lm</pre></div>
+  <p class="where"><code>make_step2.py</code> reads only the example folders and step 1's rasters, and caches the slow southamerica meshes in the folder named by the environment variable <code>STEP2_FIG_CACHE</code> (default: a folder in the system temp directory).</p>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>from_scratch_v12 documentation. Figures on this page are made by <code>html/docs/figures_src/make_step2.py</code> from the example folders' own files; every number is printed by that script, by <code>validate_v9.py</code>, or read from the examples' <code>run_final.log</code>.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

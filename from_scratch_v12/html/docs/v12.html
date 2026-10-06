@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What is new in v12 | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+figure.fig svg .b0{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+figure.fig svg .b1{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+figure.fig svg .b2{fill:var(--good-soft);stroke:var(--good);stroke-width:1.5}
+figure.fig svg .t1{font-size:14px;font-weight:600;fill:var(--ink)}
+figure.fig svg .t2{font-size:12px;fill:var(--muted)}
+figure.fig svg .mono{font-family:var(--mono);font-size:11px;fill:var(--ink)}
+figure.fig svg .ar{stroke:var(--muted);stroke-width:1.6}
+figure.fig svg .ah{fill:var(--muted)}
+figure.fig svg .cell{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.2}
+figure.fig svg .node{fill:var(--warn)}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Start</div>
+  <h1>What is new in v12: an external mesh as input</h1>
+  <p class="lead">v12 (2026-10-06) is v11 plus <code>generate.py --mesh-file FILE</code>: the unit sources are the cells of a mesh you already have, a text file with one line per subfault and its four corners as lon, lat, depth, instead of a mesh built from SLAB. Steps 3-9 (convergence, earthquake catalogue, logic tree, ruptures, rates, HS/VAUS, the comparison with PTHA18, the report) run on it unchanged. Without the option v12 is v11.</p>
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">312</div><div class="lbl">cells of the colleagues' alaskaaleutians file: 78 along strike x 4 down dip, PTHA18's own mesh</div></div>
+    <div class="card kpi"><div class="num">8.5e-12</div><div class="lbl">largest difference to PTHA18's rates when the file's trench is put at PTHA18's 0 km</div></div>
+    <div class="card kpi"><div class="num">0.07%</div><div class="lbl">largest rate change with the file as sent (its trench at 0.1 km)</div></div>
+    <div class="card kpi"><div class="num">187</div><div class="lbl">tests passing (8 new), plus validation/validate_v12_mesh.py</div></div>
+  </div>
+</section>
+
+<section id="how-sec">
+  <h2 id="how">How the file becomes the mesh</h2>
+  <figure class="fig"><svg viewBox="0 0 880 270" role="img" aria-label="From the mesh file to the pipeline">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah"/></marker></defs>
+    <rect x="10" y="20" width="250" height="110" rx="8" class="b0"/>
+    <text x="135" y="44" text-anchor="middle" class="t1">mesh file (.dat)</text>
+    <text x="22" y="68" class="mono">lon1 lat1 dep1  lon2 lat2 dep2</text>
+    <text x="22" y="84" class="mono">lon3 lat3 dep3  lon4 lat4 dep4</text>
+    <text x="22" y="104" class="t2">one line per cell, 4 corners round it,</text>
+    <text x="22" y="120" class="t2">any order; depth m or km, either sign</text>
+    <line x1="260" y1="75" x2="310" y2="75" class="ar" marker-end="url(#ah)"/>
+    <rect x="310" y="20" width="250" height="110" rx="8" class="b1"/>
+    <text x="435" y="44" text-anchor="middle" class="t1">pyptha_v12/mesh_file.py</text>
+    <text x="322" y="66" class="t2">top edge = shallowest edge of each cell</text>
+    <text x="322" y="84" class="t2">neighbours = cells sharing corners</text>
+    <text x="322" y="102" class="t2">rows x columns, dip to the right of strike</text>
+    <text x="322" y="120" class="t2">not structured: refused with a message</text>
+    <line x1="560" y1="75" x2="610" y2="75" class="ar" marker-end="url(#ah)"/>
+    <rect x="610" y="20" width="260" height="110" rx="8" class="b2"/>
+    <text x="740" y="44" text-anchor="middle" class="t1">node array, as from SLAB</text>
+    <g transform="translate(650,58)">
+      <rect x="0" y="0" width="40" height="20" class="cell"/><rect x="40" y="0" width="40" height="20" class="cell"/><rect x="80" y="0" width="40" height="20" class="cell"/><rect x="120" y="0" width="40" height="20" class="cell"/>
+      <rect x="0" y="20" width="40" height="20" class="cell"/><rect x="40" y="20" width="40" height="20" class="cell"/><rect x="80" y="20" width="40" height="20" class="cell"/><rect x="120" y="20" width="40" height="20" class="cell"/>
+      <circle cx="0" cy="0" r="3" class="node"/><circle cx="40" cy="0" r="3" class="node"/><circle cx="80" cy="0" r="3" class="node"/><circle cx="120" cy="0" r="3" class="node"/><circle cx="160" cy="0" r="3" class="node"/>
+      <circle cx="0" cy="40" r="3" class="node"/><circle cx="160" cy="40" r="3" class="node"/>
+      <text x="166" y="10" class="t2">trench</text>
+    </g>
+    <text x="622" y="122" class="t2">lon, lat, depth km at every node</text>
+    <line x1="740" y1="130" x2="740" y2="170" class="ar" marker-end="url(#ah)"/>
+    <rect x="310" y="170" width="560" height="80" rx="8" class="b0"/>
+    <text x="590" y="196" text-anchor="middle" class="t1">steps 3-9, unchanged</text>
+    <text x="590" y="218" text-anchor="middle" class="t2">convergence, GCMT, logic tree, ruptures (rptha or local), rates, HS/VAUS, variable mu (opt.), step 8, report</text>
+    <text x="590" y="236" text-anchor="middle" class="t2">step 1 does not use SLAB; step 6 writes "geometry": {"mode": "mesh_file", ...}</text>
+  </svg><figcaption>The reader works out the structure from the corners the cells share, so the order of the lines and of the corners within a line does not matter.</figcaption></figure>
+</section>
+
+<section id="use-sec">
+  <h2 id="use">How to use it</h2>
+<pre class="code"># from V9/ (venv ../.venv)
+../.venv/Scripts/python.exe from_scratch_v12/generate.py alaska --zone alaskaaleutians --folder alaskaaleutians_v12 --ptha false --rupture-size local --mesh-file alaskaaleutians_quadrilateral_coors.dat
+../.venv/Scripts/python.exe alaskaaleutians_v12/steps/step_total.py</pre>
+  <p>The zone name still matters: it gives the Berryman et al. (2015) parameters (coupling, b, largest magnitude), the plate convergence and the earthquake catalogue window, and PTHA18's official run for step 8 if the zone is one of PTHA18's. <code>--mesh-depth-units m|km</code> overrides the unit detection (metres if any |depth| &gt; 200).</p>
+</section>
+
+<section id="checks-sec">
+  <h2 id="checks">How it was checked</h2>
+  <div class="tbl"><table>
+    <tr><th>check</th><th>what</th><th>result</th></tr>
+    <tr><td>geometry</td><td>the colleagues' <code>alaskaaleutians_quadrilateral_coors.dat</code> read by <code>mesh_file.py</code> against PTHA18's unit-source table (<code>unit_source_statistics_alaskaaleutians.nc</code>)</td><td>it is PTHA18's mesh: centres and strikes to 1e-10 on all 312 cells; rows 2-4 identical in length, width, depth and dip; the trench row differs only because the file puts the trench at 0.1 km (PTHA18: 0 km): centre depth +0.05 km, dip -0.19 deg, area -0.008%</td></tr>
+    <tr><td>rates, trench at 0 km</td><td>the engine on PTHA18's official alaskaaleutians input with the file (trench moved to 0 km) in place of PTHA18's table</td><td>the same 4,111 scenarios, rates to 8.5e-12: the mesh path is exact</td></tr>
+    <tr><td>rates, file as sent</td><td>the same, file unchanged</td><td>rates within 0.07%; Mw &ge; 7.2 rate x0.99996</td></tr>
+    <tr><td>tests</td><td><code>tests/test_mesh_file.py</code>: one synthetic mesh written with shuffled lines, rotated or reversed corner rings, km or m, either depth sign, or dipping the wrong way</td><td>always read back as the same node array; bad files refused</td></tr>
+    <tr><td>full run</td><td><code>alaskaaleutians_v12</code>, steps 1-9</td><td>complete, with step 8's official comparison and step 7b's 58,022 HS and VAUS fields</td></tr>
+  </table></div>
+  <pre class="code">.venv/Scripts/python.exe V9/from_scratch_v12/validation/validate_v12_mesh.py   # from ptha18_logic_tree_test/</pre>
+</section>
+
+<section id="limits-sec">
+  <h2 id="limits">Known limitations</h2>
+  <ul>
+    <li>Only <b>structured quadrilateral</b> meshes (rows x columns sharing corners). Triangular meshes (e.g. NEAMTHM18-style) would need a different rupture builder, since the rupture rule and the HS generator work on rows and columns.</li>
+    <li>The mesh is used <b>as given</b>: if its trench is at 0.1 km (as this file) or its cells are uneven, the results follow it. For uneven cells use <code>--rupture-size local</code> (v10).</li>
+    <li>With <code>--mesh-file</code> the report's SLAB-specific parts (trench, contours, SLAB product) are left out.</li>
+  </ul>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>README sections "What v12 changes" and the options table (<code>--mesh-file</code>, <code>--mesh-depth-units</code>).</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

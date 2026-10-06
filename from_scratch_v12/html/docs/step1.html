@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1. Contours from SLAB | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Geometry: from SLAB to mesh</div>
+  <h1>1. Contours from SLAB</h1>
+  <p class="lead">Step 1 turns the USGS map of the depth of the sinking plate into the depth lines PTHA18 works with: the trench (0 km) and one line every 5 km below it, down to the depth where large earthquakes stop. "Below it" means below the <i>nearby</i> trench, which changes depth along the zone. This page follows kermadectonga2 through every stage.</p>
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">0.05&deg;</div><div class="lbl">SLAB2.0 cell size (about 5.5 km)</div></div>
+    <div class="card kpi"><div class="num">5-11 km</div><div class="lbl">trench depth along kermadectonga2</div></div>
+    <div class="card kpi"><div class="num">9</div><div class="lbl">contours on kermadectonga2: 0 to 40 km</div></div>
+    <div class="card kpi"><div class="num">1-3 km</div><div class="lbl">median distance to PTHA18's hand-edited contours</div></div>
+  </div>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 960 250" role="img" aria-label="Cross-section: the SLAB raster gives the depth of the plate below sea level; the trench depth is measured at the edge; each point's depth below its nearby trench point is contoured every 5 km">
+      <defs><marker id="s1-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6475"/></marker></defs>
+      <!-- sea -->
+      <rect x="30" y="40" width="560" height="26" fill="#e8f0fd"/>
+      <text x="40" y="58" font-size="11.5" fill="#2f6fdf">sea</text>
+      <line x1="30" y1="40" x2="590" y2="40" stroke="#2f6fdf"/>
+      <text x="598" y="44" font-size="11" fill="#2f6fdf">sea level</text>
+      <!-- plate surface: trench at x=520 depth 66 -->
+      <path d="M590,62 L520,74 C460,86 380,120 300,160 C230,195 160,222 90,240" fill="none" stroke="#1d2433" stroke-width="3"/>
+      <circle cx="520" cy="74" r="6" fill="#c2185b"/>
+      <text x="486" y="100" font-size="12" font-weight="700" fill="#c2185b">trench</text>
+      <!-- trench depth -->
+      <path d="M540,40 L540,74" stroke="#c2185b" stroke-width="1.6" marker-end="url(#s1-ar)"/>
+      <text x="548" y="94" font-size="11" fill="#c2185b">trench depth (datum)</text>
+      <!-- contour ticks -->
+      <g stroke="#1f3b73" stroke-width="1.4" stroke-dasharray="3 3">
+        <path d="M460,74 L460,92"/><path d="M405,74 L405,112"/><path d="M350,74 L350,135"/><path d="M300,74 L300,160"/>
+      </g>
+      <line x1="300" y1="74" x2="520" y2="74" stroke="#c2185b" stroke-width="1" stroke-dasharray="2 3"/>
+      <g font-size="11" fill="#1f3b73"><text x="446" y="106">5 km</text><text x="387" y="126">10</text><text x="334" y="149">15</text><text x="284" y="175">20</text></g>
+      <text x="190" y="242" font-size="12" fill="#1d2433">plate interface (SLAB depth)</text>
+      <!-- right panel: steps -->
+      <g font-size="12.5">
+        <text x="640" y="80" font-weight="700">What step 1 does</text>
+        <text x="640" y="102">1. read the SLAB raster, keep one block</text>
+        <text x="640" y="122">2. find the trench on the raster's edge</text>
+        <text x="640" y="142">3. measure the trench's depth along it</text>
+        <text x="640" y="162">4. D = depth - depth of the nearby trench</text>
+        <text x="640" y="182">5. draw D = 0, 5, 10 ... cutoff</text>
+        <text x="640" y="202">6. cut crooked or pointed ends square</text>
+        <text x="640" y="222">7. check, write the shapefile and figure</text>
+      </g>
+    </svg>
+    <figcaption><b>Step 1 in one picture.</b> A section across the zone. SLAB gives the depth of the plate below sea level. The trench (pink) is where the plate starts to dive. Every contour is a fixed depth <i>below the trench nearest to it</i>, so the 5 km line is 5 km below the trench here, whatever the trench's own depth. The cutoff (40 km on kermadectonga2) is the deepest line.</figcaption>
+  </figure>
+  <div class="io">
+    <div><b>Reads</b>the SLAB2.0 or SLAB1.0 raster of the region (downloaded once); the zone's cutoff from <code>lib/berryman_params.py</code>; optional clip window.</div>
+    <div><b>Writes</b><code>inputs/geometry/&lt;zone&gt;_slab2_contours.shp</code> (one line per level, column <code>level</code> in km below the trench), <code>figures/step1_trench_and_contours.png</code>, <code>data/step1_contours_info.json</code>.</div>
+  </div>
+  <p class="where">Where in the code: <code>steps/step1_fetch_slab2.py</code> (from <code>templates/step1_fetch_slab2.py.tmpl</code>) calls <code>lib/slab_contours.below_trench_contours()</code> and <code>check_contours()</code>.</p>
+</section>
+
+<section>
+  <div class="callout"><span class="lbl">v12: not with <code>--mesh-file</code></span>With <code>generate.py --mesh-file</code> this step does not use SLAB: it only records the mesh file and step 2 reads it (<a href="v12.html">What is new in v12</a>).</div>
+
+  <h2 id="slab">The SLAB raster</h2>
+  <p><a href="glossary.html#term-slab2">SLAB</a> is the USGS model of subducting plates: for each cell of a regular longitude-latitude grid, the depth of the top of the sinking plate. There are two versions, and step 1 uses PTHA18's rule to choose: a zone whose name ends in <code>2</code> (kermadectonga2, puysegur2, makran2 ...) uses <b>SLAB2.0</b> (Hayes et al. 2018, 0.05 deg cells); any other (southamerica, kurilsjapan ...) uses <b>SLAB1.0</b> (Hayes et al. 2012, 0.02 deg cells).</p>
+  <ol class="steps">
+    <li><b>Find or download.</b> Step 1 looks for the raster in the folder's own <code>data/slab2/</code> or <code>data/slab1/</code> first, then in the shared <code>from_scratch_v12/data/slab2/</code> or <code>slab1/</code> (only files you put there by hand), and otherwise downloads it into the folder's own one from USGS ScienceBase (SLAB2.0) or earthquake.usgs.gov (SLAB1.0). If either host blocks the download (a 403: Cloudflare on ScienceBase, USGS's own firewall on earthquake.usgs.gov), the error message itself prints the manual-download link and where to save the file: <a href="troubleshooting.html#step1">Troubleshooting</a>.</li>
+    <li><b>Read.</b> Depth becomes positive downwards, in km below sea level. kermadectonga2's log: <code>grid 381 x 601 at 0.05 deg, depth 4.8 to 701.2 km below MSL</code>.</li>
+    <li><b>Clip</b> (optional, <code>--clip</code>): cells outside the window are dropped. See <a href="#clip">--clip</a>.</li>
+    <li><b>One block.</b> Only the largest connected block of cells is kept, so a detached patch can never be taken for part of the zone.</li>
+  </ol>
+  <p><b>The seismogenic cutoff</b> is the deepest contour: below it, the plate is too hot for large earthquakes. It comes from Berryman et al. (2015), the source PTHA18 used: the zone's dominant segment's maximum down-dip depth minus its trench depth, rounded up to 5 km. kermadectonga2: 40 km (segment "Tonga"). If a zone has no Berryman mapping, step 1 stops and says so.</p>
+  <div class="callout"><span class="lbl">Crossing the 180 deg meridian</span>Kermadec-Tonga runs from about -175 deg to +171 deg longitude. The mesh code takes plain differences of longitude, so a line jumping from +180 to -180 would look like a 360 deg gap. Step 1 writes every longitude in 0 to 360 (kermadectonga2: 173.00 to 187.72), which is continuous across the meridian and changes nothing elsewhere.</div>
+</section>
+
+<section>
+  <h2 id="trench">Finding the trench</h2>
+  <p>SLAB does not say where the <a href="glossary.html#term-trench">trench</a> is. It is part of the edge of the data: the part where the plate is shallowest and gets deeper going inward. The rest of the edge is the deep end of the model or a side edge. Step 1 walks all around the edge of the block and classifies every point:</p>
+  <ol class="steps">
+    <li><b>Is it shallow?</b> The depth at the edge (nearest cell, 50 km running median) must be at most the shallowest 5% of the edge plus 12 km, and never less than 15 km. kermadectonga2: threshold 17.5 km.</li>
+    <li><b>Does it face up dip?</b> The large-scale depth gradient (smoothed over 20 km), measured 15 km inside the edge, must point inward: its cosine with the inward direction at least 0.5 (+1 means straight inward).</li>
+    <li><b>Longest run.</b> The trench is the longest continuous run of points that pass both tests. Gaps shorter than 250 km that are shallow but noisy (flat sediment prisms, as in Calabria) are bridged.</li>
+    <li><b>Trim the run's ends</b> until the cosine reaches 0.7: a side edge runs down dip, a trench runs along the zone.</li>
+    <li><b>Smooth</b> the line over 15 km (the cell staircase of the raster edge would otherwise show).</li>
+    <li><b>v10_q, ramp rule</b> (<code>--trench-ramp on</code>, the default): trim each end back, by at most 100 km, while it is more than 3 km deeper than the trench's normal depth there; such an end is the edge of the SLAB data, not trench (<a href="#ramp">below</a>).</li>
+  </ol>
+  <figure class="fig">
+    <img src="img/step1_ker_boundary_classes.png" alt="kermadectonga2: the raster's outer edge coloured by class, and the two tests plotted along the edge">
+    <figcaption><b>kermadectonga2, real data.</b> Left: the outer edge of the SLAB block, 9,032 km long; pink is the trench (926 edge points), grey the deep edge, yellow the few points trimmed at the run's ends. Right, top: depth along the edge, with the 17.5 km threshold; the shaded part is kept. Right, bottom: the up-dip score, near +1 all along the trench.</figcaption>
+  </figure>
+  <details class="deep"><summary>A harder case: Calabria's curved, noisy trench <span class="tag">bridging and trimming</span></summary><div class="body">
+    <figure class="fig">
+      <img src="img/step1_cal_boundary_classes.png" alt="calabria2: edge classes including bridged gaps and lateral edges">
+      <figcaption><b>calabria2.</b> The trench wraps round the flat Ionian accretionary prism, where the gradient is noisy: 111 edge points fail the up-dip test but are shallow and inside gaps under 250 km, so they are bridged (purple). 10 points are shallow side edges (orange). The kept trench is 1,125 km.</figcaption>
+    </figure>
+  </div></details>
+  <h3 id="trench-depth">The trench's own depth</h3>
+  <p>The nearest cell centre to an edge point lies up to one cell inside it, where the plate is already a little deeper. So the depth at each edge point is read from a plane fitted to the 5 x 5 cells around that centre, at the edge point itself, and then smoothed with a 50 km running median along the trench. On kermadectonga2 this makes the trench 0.13 km shallower (median) than the nearest cell centres.</p>
+  <figure class="fig">
+    <img src="img/step1_ker_trench_depth.png" alt="kermadectonga2: trench depth along the trench, from 5 to 13 km below sea level">
+    <figcaption><b>The trench is not at one depth.</b> kermadectonga2 from New Zealand (left) to Tonga (right): between 5 and 13 km below sea level (5th to 95th percentile 5.0 to 10.8 km). The dashed line is the single value a table like Berryman's gives for the whole zone (8 km): wrong by up to 5 km in places. The grey band at the south end is later removed by the <a href="clean_ends.html">end cut</a>.</figcaption>
+  </figure>
+  <p class="where">Where in the code: <code>slab_contours.find_trench()</code> (parameters <code>shallow_margin_km=12</code>, <code>updip_cos=0.5</code>, <code>end_cos=0.7</code>, <code>gap_km=250</code>, <code>ramp_rise_km</code> (v10_q; None = v9, 3.0 from step 1), <code>smooth_km=15</code>), <code>running_median()</code>. No rptha counterpart: PTHA18's trench lines were edited by hand.</p>
+</section>
+
+<section>
+  <h2 id="ramp">v10_q: a trench end that climbs like a ramp is not trench</h2>
+  <p>Everything below is measured from the trench nearest to it, so a wrong stretch of trench becomes a wrong datum for its whole neighbourhood. At hellenic's Kefalonia end the up-dip edge of the SLAB2 raster passes both tests above but is the edge of the data: 19.7 km below sea level, climbing to the trench's normal 11.5 km over about 150 km. As the datum of hellenic_west2's northern half, on a slab that is almost flat there, it piled the 25-35 km contours into one line and put a crease of sheared, twisted cells in the mesh.</p>
+  <figure class="fig"><img src="img/v10q_ramp_profile.png" alt="hellenic trench depth from the Kefalonia end and the ramp rule threshold">
+    <figcaption><b>The rule.</b> Each end is trimmed back, by at most 100 km, while its 50 km running-median depth is more than 3 km deeper than the trench's normal depth there: the larger of its median 100 to 200 km in from that end and the whole trench's median. hellenic: 11.6 + 3 = 14.6 km, reached 71 km in; the other end is shallower and kept.</figcaption></figure>
+  <p>Changes on the V9 rasters: hellenic 71 km (hellenic_west2's crease gone, area -7.5%), caribbean / antilles 68 km, kermadectonga2 11 km; calabria2, kurilsjapan, makran2, puysegur2 and southamerica identical. <code>--trench-ramp off</code> gives v9's trench. Mesh before and after, and the effect on the rates: <a href="v10_q.html#ramp">What is new in v10 and v10_q</a>.</p>
+  <p class="where">Where in the code: <code>slab_contours._ramp_trim()</code>, <code>find_trench(ramp_rise_km=, ramp_ref_km=(100, 200), ramp_max_km=100)</code>, <code>below_trench_contours(ramp_rise_km=)</code>; step 1's <code>TRENCH_RAMP_RISE_KM</code>. Logged as <code>ramp rule (...): start trimmed by N km, end by M km</code>; kept in <code>data/step1_contours_info.json</code> (<code>trench_ramp_rise_km</code>, <code>ramp_trim_km</code>). No rptha counterpart (PTHA18's trench lines were edited by hand). Tests: <code>test_trench_ramp.py</code>.</p>
+</section>
+
+<section>
+  <h2 id="datum">Depth below the nearby trench (the local datum)</h2>
+  <p>PTHA18's report (section 3.1) says the source zones were converted into "depth below the nearby trench". Sampling SLAB along PTHA18's published contours shows what that means: a point on the 5 km contour is 5 km deeper than the trench point nearest to it. So each cell gets its own reference depth, its <a href="glossary.html#term-local-datum">local datum</a>:</p>
+  <div class="formula">D = depth &minus; datum, &nbsp;&nbsp; datum = trench depth at the nearest trench point, smoothed with a 25 km Gaussian
+    <span class="where">depth: SLAB depth below sea level at the cell. The smoothing avoids a kink line where the nearest trench point jumps from one stretch of trench to another; only the datum is smoothed, never SLAB's depth. On kermadectonga2 the datum goes from 4.8 to 13.2 km.</span>
+  </div>
+  <figure class="fig">
+    <img src="img/step1_ker_datum_fields.png" alt="Three panels: SLAB depth, the datum field, and D contoured">
+    <figcaption><b>From depth to depth below the nearby trench</b>, kermadectonga2. 1: SLAB depth below sea level. 2: the datum, darker where the trench is deeper (the Tonga trench near 24 S). 3: D, with its contours every 5 km: every line runs the whole length of the zone.</figcaption>
+  </figure>
+  <h3 id="why-local">Why one depth for the whole zone does not work</h3>
+  <figure class="fig">
+    <img src="img/step1_ker_constant_vs_local.png" alt="Left: with a single datum of 8 km, the 0 km line is in 6 pieces; right: with the local datum, one line">
+    <figcaption><b>The same raster, two datums.</b> Left: with one datum of 8 km for the whole zone, "0 km below the trench" means 8 km below sea level, which does not exist wherever the trench is deeper than 8 km (it is the edge of the data there, not a line): the level comes out in 6 pieces, the 5 km level in 2. Right: with the local datum, the 0 km line is the trench and the 5 km line one unbroken line.</figcaption>
+  </figure>
+  <p class="where">Where in the code: <code>slab_contours.depth_below_trench()</code>.</p>
+</section>
+
+<section>
+  <h2 id="contours">The contours</h2>
+  <p>D is contoured at 5, 10, 15 ... km, down to the cutoff. The 0 km contour is not contoured: it is the trench line found above. If a level comes out in several pieces, the longest is kept and any other piece longer than 5% of it is reported. Then the zone's two ends are examined and, if needed, cut square: see <a href="clean_ends.html">Clean ends</a>.</p>
+  <pre class="out">  contours every 5 km below the NEARBY trench (PTHA18's convention):
+    trench: 3816 km of the raster's 9125 km outer edge; its depth below sea level p5/median/p95 = 5.0/8.5/10.8 km (this is the local datum)
+    clean ends (an artefact end is cut along a down-dip line; median width 140 km):
+      start: CUT, the zone narrows to a point there (34% of its median width at the tip): cut where it is back to 70%; ...
+      end  : CUT, its natural end is 77 deg off square: cut along the down-dip line from the trench's last point; ...
+    trench after the cuts: 3616 km
+      5.0 km below trench: one line, 3491 km, 847 points
+     10.0 km below trench: one line, 3432 km, 840 points
+     ...
+     40.0 km below trench: one line, 3333 km, 821 points</pre>
+  <p class="where">kermadectonga2_v9/run_final.log, step 1 (shortened). Contour spacing: <code>CONTOUR_SPACING_KM = 5.0</code> in step 1.</p>
+  <figure class="fig">
+    <img src="img/step1_kermadectonga2_trench_and_contours.png" alt="The step 1 figure of kermadectonga2">
+    <figcaption><b>The figure step 1 writes</b> (<code>figures/step1_trench_and_contours.png</code>). The SLAB depth in the background, the trench in pink, the contours in dark blue, the parts removed by the end cuts dotted, and the cut lines in orange. Look at it after every run: it shows at once whether the trench was found in the right place and whether the ends look reasonable.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="checks">The checks that stop a run</h2>
+  <p>Before writing anything, step 1 checks the contours and stops, with the reason, if any of these is true:</p>
+  <div class="tbl"><table>
+    <tr><th>Check</th><th>What it means</th></tr>
+    <tr><td>a level between 5 km and the cutoff is not in the raster at all</td><td>the SLAB model stops shallower than the cutoff</td></tr>
+    <tr><td>a level is shorter than 30% of the level 5 km above it</td><td>the model stops at that depth along most of the zone (compared level by level, because a zone may narrow gradually with depth: calabria2's deepest level is 30% of its trench, and that is fine)</td></tr>
+    <tr><td>a level is a closed loop</td><td>not a depth line across the zone</td></tr>
+    <tr><td>a level has a second piece longer than 10% of the main one</td><td>a gap in the model or a clip window breaks it; keeping only the longer piece would silently shorten that row</td></tr>
+    <tr><td>more than 5% of a level's interior runs along the edge of the data</td><td>the raster stops at that depth there, so the line is the edge of the model, not a real contour</td></tr>
+  </table></div>
+  <p class="where">Where in the code: <code>slab_contours.check_contours()</code>. The clean ends are only attempted when every level was found and none is closed.</p>
+</section>
+
+<section>
+  <h2 id="clip">--clip: using part of a raster</h2>
+  <p>Some SLAB regions cover more than one subduction zone: the "Caribbean" raster includes the Lesser Antilles, Puerto Rico and Hispaniola. <code>--clip LON_MIN,LON_MAX,LAT_MIN,LAT_MAX</code> (longitudes in the raster's own convention, 0 to 360 for this one) keeps only that window, before anything else is done. It is written into step 1 as <code>CLIP_BBOX</code>.</p>
+  <figure class="fig">
+    <img src="img/step1_antilles2_clip.png" alt="Two clip windows on the Caribbean raster">
+    <figcaption><b>Two windows on the same raster.</b> Left: <code>--clip 297,307,5,18.5</code>, the Lesser Antilles alone (the antilles2 example). Right: <code>--clip 283,307,5,18.5</code>: a strip of the Puerto Rico slab stays inside the window and is joined to the Antilles slab. No check flags it; here the north end's taper cut happens to remove it.</figcaption>
+  </figure>
+  <div class="callout"><span class="lbl">The window's own edge is never trench (2026-10-02)</span>Where the window cuts <em>through</em> the slab, its straight edge can be shallow enough and face up dip enough to pass both trench tests. Step 1 used to take such a stretch as trench, and every point near it was then measured from a datum that was too deep. hellenic_east2 (window 25.258E to 29.126E): 129 km of its 528 km "trench" were the 29.126E line, 14-22 km below sea level against 11-15 km for the real trench, so the northern half of the zone was measured from about 20 km instead of about 14 and, on its nearly flat slab, the 25-30 km contours looped and 4 cells folded. Now a boundary vertex next to a cell that is slab in the raster but outside the window is never trench (<code>slab_contours.find_trench(cut=...)</code>), and the log prints how many km of the edge are the window. hellenic_east2 with that window: 11 x 7, 58% of cells near 50 x 50, 4 folded &rarr; 8 x 7, 98%, none (the Hellenic zones have since dropped the window altogether: <a href="#trench-ends">--trench-ends</a>). antilles2: same grid, 75% &rarr; 84%; its north end is now cut as crooked instead of as a narrowing tip. Zones without a window are unchanged byte for byte, and so is kurilsjapan (<code>--auto-clip</code>).</div>
+  <h3 id="trench-ends"><code>--trench-ends</code>: a zone cut at published end points</h3>
+  <p>A clip window is a lon/lat rectangle, so it cuts the slab along straight meridians and parallels, which is not where a source zone ends. For the Hellenic arc, run as hellenic_west2 + hellenic_east2 or as one segmented hellenic2, the zones are defined by Berryman et al. (2015) Table 3.1, which gives each segment's two trench end points (western 19.912E 37.731N to 25.288E 34.202N, eastern 25.228E 34.202N to 28.726E 36.579N, where Cyprus begins). With <code>--trench-ends LON1,LAT1,LON2,LAT2</code> (default for those three zones, <code>berryman_params.ZONE_DEFAULT_TRENCH_ENDS</code>) step 1 builds the trench, the datum and the contours on the <em>whole</em> raster, so every point is measured from the real nearby trench, and then cuts every contour along the down-dip line through each point. Berryman's points lie on the bathymetric trench, 20-220 km down dip of SLAB2's up-dip edge, so the cut is the line of steepest descent that passes closest to the point (17-31 km for these zones); the cut is not moved afterwards, even when the end is more than 45 deg off square (hellenic_west2's north-west end: 58 deg). The two zones share the midpoint of 25.288E and 25.228E, so they tile exactly. The step 1 figure marks the two points with stars.</p>
+  <div class="callout warn"><span class="lbl">Always look at the step 1 figure when you clip</span>A window that cuts through a neighbouring slab is not detected automatically. The window's corners also make crooked ends, which the <a href="clean_ends.html">end cuts</a> then remove (antilles2: both ends cut).</div>
+
+  <h3 id="auto-clip"><code>--auto-clip</code>: the window derived from the mesh</h3>
+  <p>One clip case does not need any coordinates from you. When <a href="step3.html#plate-change">step 3's plate-boundary check</a> finds that the mesh runs past the end of its own subduction zone onto the next one, it records which along-strike columns are involved and the lon/lat box of the columns that remain. <code>--auto-clip</code> reads that finding and uses that box:</p>
+  <pre class="out">.venv/Scripts/python.exe &lt;folder&gt;/steps/step1_fetch_slab2.py --auto-clip
+.venv/Scripts/python.exe &lt;folder&gt;/steps/step_total.py      --auto-clip   # and re-runs everything</pre>
+  <p>It needs one ordinary run first, because the finding is made <em>from</em> the mesh: run the pipeline, read the report, then re-run with <code>--auto-clip</code>. It replaces any <code>CLIP_BBOX</code> already set in the step, and refuses (explaining why) when there is no finding, or when a lon/lat box cannot separate the flagged tail from the rest of the arc. The full worked case, the detection rule and the kurilsjapan numbers are in <a href="step3.html#plate-change">step 3</a>.</p>
+</section>
+
+<section>
+  <h2 id="accuracy">How close to PTHA18's hand-edited contours</h2>
+  <p>PTHA18 published its contours (NCI, <code>DATA/SOURCEZONE_CONTOURS.zip</code>). Measured along each of this run's lines, the median distance to PTHA18's line of the same level:</p>
+  <figure class="fig narrow">
+    <img src="img/step1_accuracy_vs_ptha18.png" alt="Median signed offset per contour level for five zones">
+    <figcaption><b>Median signed offset per level</b>, five zones with published contours. Positive: this run's line is on the trench side of PTHA18's. The deeper levels are within 0.6 to 3 km, in either direction; the 0 km line (the trench) is always 1.6 to 4.1 km on the sea side. With cells of about 50 km, these differences are small.</figcaption>
+  </figure>
+  <h3 id="trench-offset">Why the trench line sits a little seaward of PTHA18's</h3>
+  <p>Step 1 traces the trench on the outer boundary of the valid SLAB cells, which lies half a cell beyond the last cell centres (about 2.5 km for SLAB2.0's 0.05 deg cells). PTHA18's 0 km line lies on the edge cells themselves: 98% of it falls on valid cells, against 52% for this run's line.</p>
+  <figure class="fig narrow">
+    <img src="img/step1_ker_trench_offset.png" alt="Zoom on SLAB cells near 24.3 S with both 0 km lines">
+    <figcaption><b>A 70 km stretch of kermadectonga2</b> near 24.3 S. Dots: cell centres. Dotted: the outer boundary of the valid cells. Orange: this run's 0 km line, on that boundary. Blue: PTHA18's, on the edge cells.</figcaption>
+  </figure>
+  <p>On a real map (the <a href="report_guide.html#map">report's map</a>) both lines follow the trench; on kermadectonga2 this run's top edge lies a median 4 km seaward of PTHA18's.</p>
+</section>
+
+<section>
+  <h2 id="results">Results on the 8 examples</h2>
+  <div class="tbl"><table>
+    <tr><th>Folder</th><th>SLAB</th><th class="n">Cutoff</th><th class="n">Contours</th><th class="n">Trench before / after the end cuts</th><th class="n">Trench depth p5 / median / p95</th></tr>
+    <tr><td>kermadectonga2_v9</td><td>2.0</td><td class="n">40 km</td><td class="n">9</td><td class="n">3,816 / 3,616 km</td><td class="n">5.0 / 8.5 / 10.8 km</td></tr>
+    <tr><td>southamerica_v9</td><td>1.0</td><td class="n">55 km</td><td class="n">12</td><td class="n">6,149 / 5,914 km</td><td class="n">1.7 / 6.8 / 9.1 km</td></tr>
+    <tr><td>kurilsjapan_v9 (<code>--auto-clip</code>)</td><td>1.0</td><td class="n">55 km</td><td class="n">12</td><td class="n">2,968 / 2,968 km</td><td class="n">7.0 / 8.4 / 10.1 km</td></tr>
+    <tr><td>makran2_v9</td><td>2.0</td><td class="n">40 km</td><td class="n">9</td><td class="n">961 / 961 km</td><td class="n">3.1 / 5.6 / 7.0 km</td></tr>
+    <tr><td>puysegur2_v9</td><td>2.0</td><td class="n">40 km</td><td class="n">9</td><td class="n">694 / 629 km</td><td class="n">4.1 / 6.9 / 10.8 km</td></tr>
+    <tr><td>calabria2_v9</td><td>2.0</td><td class="n">60 km</td><td class="n">13</td><td class="n">1,050 / 981 km</td><td class="n">6.2 / 11.1 / 12.1 km</td></tr>
+    <tr><td>caribbean2_v9</td><td>2.0</td><td class="n">45 km</td><td class="n">10</td><td class="n">2,308 / 2,308 km</td><td class="n">7.2 / 9.0 / 11.2 km</td></tr>
+    <tr><td>antilles2_v9</td><td>2.0</td><td class="n">45 km</td><td class="n">10</td><td class="n">1,171 / 1,171 km</td><td class="n">7.3 / 8.8 / 14.5 km</td></tr>
+  </table></div>
+  <p>The decision taken at each end of each zone is on the <a href="clean_ends.html#results">clean ends</a> page, and every zone's figures are on <a href="examples.html">The 8 examples</a>.</p>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Figures: <code>html/docs/figures_src/make_step1.py</code>, which calls <code>lib/slab_contours.py</code> exactly as step 1 does, on the examples' rasters.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

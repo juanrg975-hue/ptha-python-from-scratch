@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Options, files, columns | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+.tree { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; font-family: var(--mono); font-size: 12.5px; line-height: 1.7; white-space: pre; overflow-x: auto; max-width: 900px; }
+.tree .d { color: var(--accent); font-weight: 600; }
+.tree .c { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Your own runs</div>
+  <h1>Options, files, columns</h1>
+  <p class="lead">The reference: every option of <code>generate.py</code> and <code>step_total.py</code>, the layout of the package and of an example folder, and every file the steps write, with its columns. The numbers in the examples are kermadectonga2_v9's; what a segmented run adds is listed in <a href="#segmented-files">Files a segmented run adds</a>, from kermadectonga2_v9seg.</p>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 960 190" role="img" aria-label="An example folder: steps, data, inputs, outputs, outputs_official, figures, report.html">
+      <g font-size="12.5">
+        <rect x="10" y="10" width="170" height="170" rx="10" fill="#fff" stroke="#2f6fdf" stroke-width="1.6"/><text x="22" y="34" font-weight="700">&lt;folder&gt;/</text><text x="22" y="56" fill="#5b6475">README.md, RUN.html</text><text x="22" y="76" fill="#5b6475">report.html</text><text x="22" y="96" fill="#5b6475">run_final.log (if</text><text x="22" y="114" fill="#5b6475">you save the log)</text>
+        <rect x="200" y="10" width="140" height="80" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/><text x="212" y="34" font-weight="700">steps/</text><text x="212" y="54" fill="#5b6475">the 9 scripts,</text><text x="212" y="72" fill="#5b6475">7b, step_total</text>
+        <rect x="200" y="100" width="140" height="80" rx="9" fill="#e4f5ec" stroke="#2e9e6b"/><text x="212" y="124" font-weight="700">data/</text><text x="212" y="144" fill="#5b6475">mesh, convergence,</text><text x="212" y="162" fill="#5b6475">GCMT, step 1 info</text>
+        <rect x="360" y="10" width="140" height="80" rx="9" fill="#fcf0e2" stroke="#d9822b"/><text x="372" y="34" font-weight="700">inputs/</text><text x="372" y="54" fill="#5b6475">contours shapefile,</text><text x="372" y="72" fill="#5b6475">the input JSONs</text>
+        <rect x="360" y="100" width="140" height="80" rx="9" fill="#fff" stroke="#8a93a3"/><text x="372" y="124" font-weight="700">figures/</text><text x="372" y="144" fill="#5b6475">mesh and step 1</text><text x="372" y="162" fill="#5b6475">figures</text>
+        <rect x="520" y="10" width="200" height="170" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/><text x="532" y="34" font-weight="700">outputs/</text><text x="532" y="56" fill="#5b6475">rate curves, percentiles,</text><text x="532" y="74" fill="#5b6475">scenario rates, branches,</text><text x="532" y="92" fill="#5b6475">summary, integrated slip,</text><text x="532" y="110" fill="#5b6475">figures/, and 7b's</text><text x="532" y="128" fill="#5b6475">hs_slip_fields/,</text><text x="532" y="146" fill="#5b6475">vaus_slip_fields/</text>
+        <rect x="740" y="10" width="210" height="170" rx="9" fill="#f0f2f5" stroke="#8a93a3" stroke-dasharray="5 4"/><text x="752" y="34" font-weight="700">outputs_official/</text><text x="752" y="56" fill="#5b6475">the same files for the</text><text x="752" y="74" fill="#5b6475">official PTHA18 run</text><text x="752" y="92" fill="#5b6475">(step 8)</text>
+      </g>
+    </svg>
+    <figcaption><b>One example folder.</b> Everything a run writes stays in its folder, including its SLAB raster and GCMT files; only PTHA18's session and tables (step 8) live outside it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="generate-options">generate.py options</h2>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:26%"><col style="width:56%"><col style="width:18%"></colgroup>
+    <tr><th>Option</th><th>What it does</th><th>Default</th></tr>
+    <tr><td><code>name</code> (positional)</td><td>the SLAB region, a word or phrase ("kermadec", "south america"); resolved against the 27 SLAB2.0 regions (<code>list_regions.py</code>)</td><td>required</td></tr>
+    <tr><td><code>--zone</code></td><td>PTHA18's zone name (a row of <code>sourcezone_parameters.csv</code>, or with <code>--ptha false</code> any name mapped in <code>lib/berryman_params.py</code>). Sets the SLAB version and the literature values</td><td>guessed from the name</td></tr>
+    <tr><td><code>--folder</code></td><td>the folder to create in <code>ptha18_logic_tree_test/</code>; an existing one is never overwritten (<code>_2</code>, <code>_3</code> ... appended)</td><td><code>&lt;name&gt;_v12</code></td></tr>
+    <tr><td><code>--ptha true|false</code></td><td><code>false</code>: steps 1 to 7, 7b and 9 read no file of PTHA18 or of rptha (<a href="#ptha-reads">what each step reads</a>); only step 8, the official run, does. Also allows zones PTHA18 never modelled. <code>true</code>: the steps may read PTHA18's files (cell width, row count, scaling). Never changes the contours nor the Bird table</td><td><code>true</code></td></tr>
+    <tr><td><code>--segmented true|false</code></td><td>v9, <a href="engine.html#level0">LEVEL 0</a>. <code>true</code>: split the zone along strike and run the full segmented tree (unsegmented 0.5, union of segments 0.5, segments summing within the union). Boundaries from <code>--segment-boundaries</code>, public data either way, so it stays public-data-only under <code>--ptha false</code>. <code>false</code>: the zone is run unsegmented, one source at weight 1, v8's model. The numbers equal v8's except on the zones whose Berryman values v9 changed (<a href="input_json.html">coupling and Mw max observed</a>). Every file and report block a segmented run adds: <a href="#segmented-files">below</a></td><td><code>false</code></td></tr>
+    <tr><td><code>--segment-boundaries berryman|bird</code></td><td>v9, with <code>--segmented true</code>: where the segments end. <code>berryman</code>: at the trench end points Berryman et al. (2015) Table 3.1 gives every segment, the segments PTHA18 used (<a href="segmentation.html#bird-vs-ptha18">how close</a>). <code>bird</code>: where Bird (2003)'s plate pair changes along the trench (misses a segment whose plate Bird does not have, such as Hikurangi)</td><td><code>berryman</code></td></tr>
+    <tr><td><code>--convergence bird|bird-griffin</code></td><td>which plate-boundary table step 3 reads, both in <code>from_scratch_v12/data/bird/</code>: <code>bird</code>, Bird (2003)'s public catalogue; <code>bird-griffin</code>, the table PTHA18 used (Bird plus Jonathan Griffin's traces). Same result where PTHA18 used Bird, very different where it used Griffin's traces (<a href="convergence_sources.html">per zone</a>). generate.py prints which case the zone is</td><td><code>bird</code></td></tr>
+    <tr><td><code>--discretizer optimal|lm|mid</code></td><td>the mesh method (<a href="discretizer.html">details</a>)</td><td><code>optimal</code></td></tr>
+    <tr><td><code>--columns trench|average</code></td><td>v8.2: how many columns the optimal mesh gets: <code>trench</code>, rptha's and PTHA18's rule (trench length / 50 km); <code>average</code>, the average row length / 50 km, for tight arcs such as calabria2; not PTHA18's procedure (<a href="step2.html#column-rule">details</a>)</td><td><code>trench</code></td></tr>
+    <tr><td><code>--clip LON_MIN,LON_MAX,LAT_MIN,LAT_MAX</code></td><td>step 1 uses only this window of the SLAB raster, longitudes in the raster's own convention (<a href="step1.html#clip">details</a>)</td><td>none</td></tr>
+    <tr><td><code>--id</code></td><td>a ScienceBase item id, to force the SLAB2.0 region</td><td>from the name</td></tr>
+    <tr><td><code>--rupture-size rptha|local</code></td><td>v10: how many cells each uniform-slip rupture gets. <code>rptha</code>: rptha's and PTHA18's rule, one block per magnitude from the zone's mean cell size. <code>local</code>: a block per placement from the real km of its cells; with it, v10_q also multiplies every conditional-probability weight by q. Not PTHA18's procedure. Written as <code>events.rupture_size</code> (<a href="v10_q.html#rupture-size">details</a>)</td><td><code>rptha</code></td></tr>
+    <tr class="hl"><td><code>--mesh-file FILE</code></td><td><b>v12</b>: use your own quadrilateral mesh (one line per unit source, its 4 corners as lon lat depth) instead of building one from SLAB. Steps 1-2 do not use SLAB; steps 3-9 run unchanged. Must be a structured mesh, rows x columns (<a href="v12.html">details</a>)</td><td>none (SLAB)</td></tr>
+    <tr><td><code>--mesh-depth-units auto|m|km</code></td><td>v12, with <code>--mesh-file</code>: the file's depth unit. <code>auto</code>: metres if any |depth| &gt; 200. The sign is detected</td><td><code>auto</code></td></tr>
+    <tr><td><code>--trench-ends LON1,LAT1,LON2,LAT2</code></td><td>the zone's two ends, for a zone that is one part of a SLAB region. Step 1 builds the trench, datum and contours on the whole raster and cuts every contour along the down-dip line through each end point. Default for hellenic_west2, hellenic_east2 and hellenic2: Berryman et al.'s end points (<a href="step1.html#trench-ends">details</a>)</td><td>none</td></tr>
+    <tr><td><code>--variable-mu on|off</code></td><td>v11: <code>on</code> runs step 7c, PTHA18's variable shear modulus rates (<code>variable_mu_*</code>) next to the constant ones (<a href="v11.html">details</a>); <code>off</code>: constant 30 GPa only</td><td><code>off</code></td></tr>
+    <tr><td><code>--trench-ramp on|off</code></td><td>v10_q: a trench end more than 3 km deeper than the trench's normal depth is the edge of the SLAB data and is trimmed (at most 100 km) before the datum is built. Step 1's <code>TRENCH_RAMP_RISE_KM</code> (3.0; <code>off</code>: None, v9's trench). Changes hellenic, caribbean/antilles and kermadectonga2 (<a href="step1.html#ramp">details</a>)</td><td><code>on</code></td></tr>
+  </table></div>
+  <p class="where">What generate.py writes: <code>steps/</code> (every template with the zone filled in), <code>RUN.html</code>, <code>README.md</code> (with the command used and the Berryman values), empty <code>data/</code>, <code>inputs/</code>, <code>outputs/</code>.</p>
+</section>
+
+<section>
+  <h2 id="ptha-reads">What each step reads, with --ptha false and --ptha true</h2>
+  <p>With <code>--ptha false</code> the run is built from public data only. No step except step 8 opens a file of PTHA18 (<code>inputs/</code>, <code>official_ptha_data/</code>, NCI) or of rptha (<code>rptha/</code>): the examples were run with a check that logs every such file any Python process opens (the engine included), and the only entries are step 8's.</p>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:12%"><col style="width:44%"><col style="width:44%"></colgroup>
+    <tr><th>Step</th><th><code>--ptha false</code> (public data only)</th><th><code>--ptha true</code></th></tr>
+    <tr><td>generate.py</td><td>zone name from <code>lib/berryman_params.py</code></td><td>zone name from PTHA18's <code>sourcezone_parameters.csv</code></td></tr>
+    <tr><td>1</td><td>SLAB raster, Berryman et al. (2015)</td><td>the same</td></tr>
+    <tr><td>2</td><td>50 km cells, rptha's row rule</td><td>PTHA18's width for the zone and its row count; prints the gap to PTHA18's mesh</td></tr>
+    <tr><td>3</td><td colspan="2">the table <code>--convergence</code> chose, from <code>from_scratch_v12/data/bird/</code> (<code>bird</code>: Bird's public catalogue; <code>bird-griffin</code>: a copy of PTHA18's table, the one PTHA18 input you can opt into). <code>--ptha true</code> only adds a line with step 8's convergence to the log</td></tr>
+    <tr><td>4, 5</td><td>the GCMT catalogue (segmented: also the Bird table, for the segment boundaries)</td><td>the same; step 5 also prints PTHA18's event count</td></tr>
+    <tr><td>6</td><td>Berryman values; Strasser et al. (2010) scaling and 30 GPa, written into the JSON</td><td>the same, with PTHA18's scaling row for the zone</td></tr>
+    <tr><td>7, 7b</td><td>only the input JSON</td><td>the same</td></tr>
+    <tr><td>8</td><td colspan="2">PTHA18's official run and everything the report compares with (<a href="official.html#reference">the list</a>), the only step that reads PTHA18</td></tr>
+    <tr><td>9</td><td colspan="2">this run's files, and PTHA18 only from <code>outputs_official/</code>, that is from step 8</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="step-total">step_total.py options</h2>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:34%"><col style="width:66%"></colgroup>
+    <tr><th>Option</th><th>What it does</th></tr>
+    <tr><td>(none)</td><td>runs steps 1 to 9 in order, each as its own process; stops at the first required step that fails; 7b and 8 are optional (a failure is reported and the run goes on)</td></tr>
+    <tr><td><code>--skip-official</code></td><td>does not try step 8 (no R needed)</td></tr>
+    <tr><td><code>--skip-hs</code></td><td>does not run step 7b</td></tr>
+    <tr><td><code>--auto-clip</code></td><td>passes <code>--auto-clip</code> to step 1, cutting the along-strike columns a previous run's <a href="step3.html#plate-change">step 3 check</a> flagged as sitting on a different plate boundary, using a window derived from the mesh (no lon/lat from you). Needs steps 1-3 to have run once first (a full run also does). Also passes <code>--force</code> to step 6, since the mesh changes, so it <b>discards hand edits</b> to the input JSON</td></tr>
+    <tr><td><code>--download-official-hs-vaus</code></td><td>passes <code>--download-hs</code> to step 8, which then fetches PTHA18's HS and VAUS catalogues from NCI and compares step 7b's fields with them</td></tr>
+  </table></div>
+  <p>To keep a log: <code>.venv/Scripts/python.exe &lt;folder&gt;/steps/step_total.py &gt; &lt;folder&gt;/run_final.log 2&gt;&amp;1</code>; the examples' logs are <code>run_final.log</code>. The single steps take their own options: <code>step6_write_input.py --force</code>, <code>step7b_stochastic_slip.py --max-placements-per-mw N --max-fields-per-mw N</code>, <code>step8_official.py --download-hs</code>.</p>
+</section>
+
+<section>
+  <h2 id="layout">Folder layout</h2>
+  <h3>The package</h3>
+  <div class="tree"><span class="d">from_scratch_v12/</span>
+  generate.py                 <span class="c"># makes an example folder</span>
+  list_regions.py             <span class="c"># the 27 SLAB regions</span>
+  README.md
+  <span class="d">templates/</span>                  <span class="c"># step1 ... step9, step7b, step7c (v11), step_total, RUN.html (copied per folder)</span>
+  <span class="d">lib/</span>
+    slab_contours.py          <span class="c"># step 1: trench, datum, contours, clean ends</span>
+    bird_convergence.py       <span class="c"># step 3 and 8: PTHA18's Bird model, on either Bird table</span>
+    berryman_params.py        <span class="c"># literature values per zone</span>
+    official_geometry_params.py, slab2_catalog.py, plot_meshes.py, hs_official_compare.py
+  <span class="d">pyptha_v12/</span>                  <span class="c"># the Python port of rptha</span>
+    contour_discretisation.py <span class="c"># step 2: the mesh (lm, optimal, mid)</span>
+    unit_sources.py, grid_cache.py, events.py, scaling.py, rates.py,
+    moment_balance.py, logic_tree.py, stochastic_slip.py, okada.py
+    hs_vaus_rates.py          <span class="c"># v10_q: HS/VAUS rates from the FAUS rates</span>
+    variable_mu.py            <span class="c"># v11: rigidity curve, variable_mu_Mw, conditional ECDF</span>
+    mesh_file.py              <span class="c"># v12: reads an external quadrilateral mesh (--mesh-file)</span>
+    <span class="d">tests/</span>                    <span class="c"># 187 tests (v12: test_mesh_file.py; v11: test_variable_mu.py; v10_q: test_hs_vaus_rates.py; v10 / v10_q: test_rupture_size.py, test_trench_ramp.py)</span>
+  <span class="d">python_logic_tree_v12/</span>
+    run_logic_tree.py         <span class="c"># the engine: LEVELs 0-5</span>
+  <span class="d">validation/</span>
+    validate_v9.py            <span class="c"># checks against PTHA18's published files</span>
+    validate_v11.py           <span class="c"># v11: variable shear modulus against PTHA18's published rates</span>
+    validate_v12_mesh.py      <span class="c"># v12: an external mesh (alaskaaleutians) against PTHA18's table and rates</span>
+    recover_peak_slip_weights.py  <span class="c"># v10_q/v11: PTHA18's HS/VAUS weight curves, recovered and checked</span>
+    <span class="d">ptha18_reference/</span>         <span class="c"># their cache</span>
+  <span class="d">data/</span>
+    <span class="d">bird/</span>                     <span class="c"># the two Bird tables of --convergence, and ptha18_convergence_sources.csv</span>
+    ptha18_peak_slip_quantile_weights.csv  <span class="c"># v10_q/v11: PTHA18's HS/VAUS weights (4 columns), recovered from its published rates</span>
+    <span class="d">slab1/</span>, <span class="d">slab2/</span>             <span class="c"># this run's SLAB raster (SLAB1.0 or SLAB2.0)</span>
+  <span class="d">html/docs/</span>                  <span class="c"># this documentation (figures_src/ makes its figures)</span></div>
+  <h3>An example folder (kermadectonga2_v9)</h3>
+  <div class="tree"><span class="d">kermadectonga2_v9/</span>
+  README.md, RUN.html, report.html, run_final.log
+  <span class="d">steps/</span>          step1_fetch_slab2.py ... step9_report.py, step7b_stochastic_slip.py, step7c_variable_mu.py (v11), step_total.py
+  <span class="d">data/</span>           step1_contours_info.json, convergence.txt, convergence_per_cell.npy, convergence_per_column.json
+    <span class="d">slab2/</span>        unit_source_grid.npy, unit_source_grid.meta.json   <span class="c"># (+ the raster, if downloaded here)</span>
+    <span class="d">gcmt/</span>         *.ndk, gcmt_catalogue_1976_present.csv, kermadectonga2_gcmt_subset.csv
+  <span class="d">inputs/</span>         input_kermadectonga2_scratch.json, input_kermadectonga2_official.json
+    <span class="d">geometry/</span>     kermadectonga2_slab2_contours.shp (+ .dbf .shx .prj .cpg)
+  <span class="d">figures/</span>        step1_trench_and_contours.png, scratch_mesh_map*.png, mesh_comparison_*.png, official_mesh_map.png
+  <span class="d">outputs/</span>        rate_curves.csv, exceedance_rate_percentiles.csv, scenario_rates_kermadectonga2.csv, ...
+    <span class="d">figures/</span>      fig_branch_fan, fig_moment_balance, fig_percentiles, ... (.png)
+    <span class="d">hs_slip_fields/</span>, <span class="d">vaus_slip_fields/</span>   <span class="c"># step 7b</span>
+  <span class="d">outputs_official/</span>  <span class="c"># the same, for step 8</span>
+    <span class="d">ptha18_reference/</span>  <span class="c"># everything of PTHA18 the report compares with (step 8)</span></div>
+  <p>A segmented folder has the same layout and the same files, plus those in <a href="#segmented-files">Files a segmented run adds</a> (kermadectonga2_v9seg: 61 more).</p>
+  <p class="where">Outside the folder: the engine's working copy <code>runs/python/&lt;run_name&gt;/</code> (step 7 copies it into <code>outputs/</code>), PTHA18's official input <code>inputs/input_&lt;zone&gt;.json</code> and cell tables <code>inputs/geometry/</code> (read only by step 8), and the shared <code>from_scratch_v12/data/slab1/</code>, <code>slab2/</code>: empty unless you put a SLAB raster there by hand, which every folder of that region then reuses.</p>
+</section>
+
+<section>
+  <h2 id="files">Every file, with its columns</h2>
+  <h3>Step 1</h3>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:32%"><col style="width:68%"></colgroup>
+    <tr><td><code>inputs/geometry/&lt;zone&gt;_slab2_contours.shp</code></td><td>one line per depth; attribute <code>level</code> = km below the nearby trench (0 = trench). Longitudes in 0-360 across the 180 deg meridian</td></tr>
+    <tr><td><code>data/step1_contours_info.json</code></td><td><code>zone</code>, <code>raster</code>, <code>clip_bbox</code>, <code>cutoff_km_below_trench</code>, <code>berryman_dominant_segment</code>, <code>berryman_trench_depth_km</code> (for reference only), <code>contour_spacing_km</code>, <code>trench_length_km</code>, <code>trench_length_untrimmed_km</code>, <code>trench_ramp_rise_km</code> and <code>ramp_trim_km</code> (v10_q), <code>trench_depth_below_msl_km</code> (p5, median, p95), <code>levels</code> (per level: found, length_km, n_points, extra_pieces_km, closed, edge_fraction), <code>ends</code> (start / end: cut, reason, trench_km, contours_km, deviation_deg, deviation_after_deg, tip_width_ratio)</td></tr>
+    <tr><td><code>figures/step1_trench_and_contours.png</code></td><td>the SLAB raster, the trench, the contours, the removed parts and the cut lines</td></tr>
+    <tr><td colspan="2" style="padding-top:10px"><b>Step 1 also accepts <code>--auto-clip</code></b>, which reads <code>data/plate_boundary_change.json</code> (written by step 3) and clips the raster to the columns that stay on this zone's own plate boundary. See <a href="step1.html#auto-clip">--clip</a>.</td></tr>
+  </table></div>
+  <h3>Step 2</h3>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:32%"><col style="width:68%"></colgroup>
+    <tr><td><code>data/slab2/unit_source_grid.npy</code></td><td>array of shape (rows+1, 3, columns+1): lon, lat, depth (km below the trench) of every node; kermadectonga2: (4, 3, 74)</td></tr>
+    <tr><td><code>data/slab2/unit_source_grid.meta.json</code></td><td>the fingerprint: <code>contours_sha256</code>, <code>mesh_code_version</code>, <code>desired_unit_source_length</code>, <code>desired_unit_source_width</code>, <code>method</code>, <code>min_downdip</code>, <code>n_downdip</code>, <code>seed</code> (<a href="step2.html#cache">cache</a>)</td></tr>
+  </table></div>
+  <h3>Step 3</h3>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:32%"><col style="width:68%"></colgroup>
+    <tr><td><code>data/convergence.txt</code></td><td>one number: the area-weighted horizontal convergence, mm/yr (99.3560146156)</td></tr>
+    <tr><td><code>data/convergence_per_column.json</code></td><td><code>bird_table</code> (<code>bird</code> or <code>bird-griffin</code>), <code>use_bird_convergence</code>, and per column: <code>alongstrike_number</code>, <code>div_mm_per_yr</code> (convergent part), <code>convergent_slip_mm_per_yr</code>, <code>distance_km</code> (to the matched Bird segment); <code>area_weighted_mean_mm_per_yr</code></td></tr>
+    <tr><td><code>data/convergence_per_cell.npy</code></td><td>convergent slip of every cell (219 values), for the maps</td></tr>
+    <tr><td colspan="2" style="padding-top:10px"><b>Step 8 also writes</b> <code>outputs_official/ptha18_reference/official_convergence_per_column.json</code>: the same Bird match per along-strike column on PTHA18's own mesh, which step 9 exports as <code>convergence_profile_official.csv</code>.</td></tr>
+  </table></div>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:32%"><col style="width:68%"></colgroup>
+    <tr><td><code>data/plate_boundary_change.json</code></td><td>written <b>only</b> when the <a href="step3.html#plate-change">plate-boundary check</a> finds the mesh runs past its own zone, and deleted when it does not: <code>end</code> (start/end), <code>columns</code>, <code>n_suspect</code>, <code>n_total</code>, <code>boundary_column</code>, <code>jump_mm_per_yr</code>, <code>div_inside</code>, <code>div_outside</code>, <code>mean_inside</code>, <code>mean_outside</code>, <code>mean_all</code>, <code>auto_clip_bbox</code>, <code>auto_clip_separable</code></td></tr>
+  </table></div>
+  <h3>Steps 4 and 5</h3>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:32%"><col style="width:68%"></colgroup>
+    <tr><td><code>data/gcmt/*.ndk</code></td><td>the GCMT files as downloaded (cached)</td></tr>
+    <tr><td><code>data/gcmt/gcmt_catalogue_1976_present.csv</code></td><td><code>date, lat, lon, depth_km, strike1, dip1, rake1, strike2, dip2, rake2</code></td></tr>
+    <tr><td><code>data/gcmt/&lt;zone&gt;_gcmt_subset.csv</code></td><td>the selected events: <code>date, hypo_lat, hypo_lon, cent_lat, cent_lon, depth_km, Mw, strike1, dip1, rake1, strike2, dip2, rake2</code></td></tr>
+    <tr><td><code>data/gcmt/&lt;zone&gt;_gcmt_subset_&lt;segment&gt;.csv</code></td><td>segmented only: the same columns, the events PTHA18's rule picks on that segment's own cells. A boundary event can be in two of them</td></tr>
+    <tr><td><code>data/gcmt/segments.json</code></td><td>segmented only: one entry per segment, <code>plate_pair</code> (Table 3.1's, or Bird's), <code>segment_key</code>, <code>berryman_rows</code> (Berryman boundaries), <code>alongstrike_slice</code> (first and last column, 1-based), <code>n_events</code></td></tr>
+  </table></div>
+  <h3>Step 6</h3>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:32%"><col style="width:68%"></colgroup>
+    <tr><td><code>inputs/input_&lt;zone&gt;_scratch.json</code></td><td>every input of the engine: <a href="input_json.html">every key</a></td></tr>
+  </table></div>
+  <h3>Step 7 (<code>outputs/</code>; step 8 writes the same in <code>outputs_official/</code>)</h3>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:32%"><col style="width:68%"></colgroup>
+    <tr><td><code>rate_curves.csv</code></td><td><code>Mw</code> (every 0.01 from 7.2), <code>exceedance_rate_unsegmented</code>: mean rate per year of earthquakes of at least that Mw; segmented: also one column per segment, <code>exceedance_rate_union_of_segments</code>, <code>exceedance_rate_source_zone</code></td></tr>
+    <tr><td><code>exceedance_rate_percentiles.csv</code></td><td><code>threshold_Mw</code> (7.2 to 9.8, every 0.1), <code>mean_exrate</code>, <code>p0.025, p0.16, p0.5, p0.84, p0.975</code>. Segmented: the whole zone's (unsegmented branch and segments sampled together, PTHA18's method), not the unsegmented branch's</td></tr>
+    <tr><td><code>scenario_rates_&lt;zone&gt;.csv</code></td><td>one row per scenario (3,075): <code>event_id, Mw, area_km2, slip_m, mean_depth_km, is_edge_touching, conditional_probability, rate_mean, rate_p0.025 ... rate_p0.975</code>; the rows are in rptha's order. Segmented: one such file per segment, on the same rows, and <code>scenario_rates_&lt;zone&gt;_source_zone.csv</code>, the zone's own rates (0.5 unsegmented + 0.5 the segments, PTHA18's partial-segmentation percentiles)</td></tr>
+    <tr><td><code>conditional_prob_&lt;zone&gt;.csv</code></td><td>per scenario: <code>Mw, ecp_raw</code> (share within its magnitude), <code>ecp_edge_corrected</code> (after LEVEL 4), <code>is_edge_touching</code></td></tr>
+    <tr><td><code>logic_tree_branches_&lt;zone&gt;.csv</code></td><td>one row per branch (32,000): <code>branch_id, coupling, slip_rate, b, Mw_min, Mw_max, Mw_frequency_distribution, a, prior_prob, posterior_prob, posterior_prob_with_Mw_error</code></td></tr>
+    <tr><td><code>logic_tree_summary.csv</code></td><td><code>level, item, value</code>: n_branches, mean_dip_deg, dip_factor, convergence_mm_per_yr, prior_mean_coupling, a_min, a_max, prior_posterior_tvd, edge_multiplier, total_integrated_slip, total_scenario_rate, copula, N_samples, segment weights. Items end in the source's name (<code>..._kermadectonga2</code>); segmented: the same 11 items again for every segment (<code>..._kermadectonga2_tonga</code>)</td></tr>
+    <tr><td><code>integrated_slip_&lt;zone&gt;.csv</code></td><td>per cell: <code>unit_source, alongstrike_number, downdip_number, lon_c, lat_c, depth_km, area_km2, target_convergence_shape, integrated_slip_no_edge_correction, integrated_slip</code> (LEVEL 4's check)</td></tr>
+    <tr><td><code>segmentation.csv</code></td><td><code>source_representation, role, weight</code>: <code>&lt;zone&gt;,unsegmented,1</code>; segmented: the zone at 0.5 and every segment at 0.5</td></tr>
+    <tr><td><code>figures/</code></td><td><code>fig_branch_fan</code>, <code>fig_branch_weights</code>, <code>fig_geometry</code>, <code>fig_moment_balance</code>, <code>fig_scenario_rates</code>, <code>fig_percentiles</code>, <code>fig_representation_curves</code>, <code>fig_segmentation</code></td></tr>
+    <tr><td colspan="2" class="where">Every file whose name carries <code>&lt;zone&gt;</code> is written once per source: the zone (the unsegmented branch) and, on a segmented run, every segment, named <code>&lt;zone&gt;_&lt;segment&gt;</code>. All of them have the zone's rows (3,075 scenarios, every cell), a segment's scenario rates falling to zero outside it.</td></tr>
+  </table></div>
+  <h3>Step 7b (<code>outputs/hs_slip_fields/</code>, <code>outputs/vaus_slip_fields/</code>)</h3>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:32%"><col style="width:68%"></colgroup>
+    <tr><td><code>summary.csv</code></td><td>one row per slip field: <a href="hs_vaus.html#outputs">every column</a></td></tr>
+    <tr><td><code>comparison_features.npz</code></td><td><code>mw</code> (one per field) and <code>features</code> (one row per field: peak slip, active cells, concentration, 16-bin spectrum): what step 8 needs to compare the fields with PTHA18's catalogue</td></tr>
+  </table></div>
+  <h3>Step 8 (<code>outputs_official/ptha18_reference/</code>)</h3>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:32%"><col style="width:68%"></colgroup>
+    <tr><td><code>unit_source_statistics_&lt;zone&gt;.nc</code></td><td>PTHA18's cell table (NCI), for the mesh figures</td></tr>
+    <tr><td><code>official_convergence_per_cell.npy</code></td><td>Bird convergent slip per cell of PTHA18's mesh, with PTHA18's Bird + Griffin table</td></tr>
+    <tr><td><code>official_grid_lonlat.npy</code></td><td>PTHA18's published cell outlines, shape (rows+1, 2, columns+1), for the map</td></tr>
+    <tr><td><code>official_gcmt.json</code></td><td><code>count</code>, <code>duration_years</code>: PTHA18's LEVEL 3 data</td></tr>
+    <tr><td><code>official_segments.json</code></td><td>segmented examples only: PTHA18's segments as step 8 ran them, each with <code>name</code>, <code>alongstrike_slice</code> (columns of PTHA18's mesh), <code>coupling_spreadsheet</code>, <code>mw_max_observed</code>, <code>gcmt_count</code>; the official run itself is in <code>runs/python/&lt;zone&gt;_official_segmented/</code>, copied to <code>outputs_official/</code></td></tr>
+    <tr><td><code>hs_comparison.csv</code>, <code>vaus_comparison.csv</code></td><td>per magnitude: <code>Mw, n_synthetic, n_official</code>, and mean peak slip, active cells and concentration of both sides, <code>spectral_distance</code> (only if step 7b ran and PTHA18's catalogues are downloaded)</td></tr>
+  </table></div>
+  <h3>Step 9</h3>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:32%"><col style="width:68%"></colgroup>
+    <tr><td><code>report.html</code></td><td><a href="report_guide.html">the report</a>; it also refreshes the figures in <code>figures/</code>, including <code>figures/mesh_profile.png</code> (depth along the arc, drawn on every run) and, on a segmented run, <code>figures/segments_map.png</code> (the cells coloured by segment, PTHA18's beside this run's)</td></tr>
+    <tr><td><code>outputs/exports/mesh_cells.csv</code></td><td><code>downdip_number, alongstrike_number, lon, lat, depth_km, convergent_slip_mm_per_yr</code>: one row per unit source; lon/lat are the cell centroid, depth_km its centroid depth, positive down. On a segmented run (v9) a last column <code>segment</code> names the segment the cell's column belongs to</td></tr>
+    <tr><td><code>outputs/exports/mesh_cells_official.csv</code></td><td>the same columns for PTHA18's published mesh (only with step 8)</td></tr>
+    <tr><td><code>outputs/exports/posterior_mean_rate_curve.csv</code></td><td><code>Mw, exceedance_rate_unsegmented</code>: the logic-tree mean with the weights <b>after</b> the LEVEL 3 Bayesian update (hence "posterior"). On a segmented run (v9) it has the same columns as <code>rate_curves.csv</code>: one per segment, <code>exceedance_rate_union_of_segments</code> and <code>exceedance_rate_source_zone</code> (the LEVEL 0 mix)</td></tr>
+    <tr><td><code>outputs/exports/posterior_mean_rate_curve_official.csv</code></td><td>the same for PTHA18's run, posterior in the same sense (only with step 8)</td></tr>
+    <tr><td><code>outputs/exports/convergence.csv</code></td><td><code>item, value, units</code>: <code>convergence_horizontal</code>, <code>mean_dip</code>, <code>slip_rate</code></td></tr>
+    <tr><td><code>outputs/exports/convergence_official.csv</code></td><td>the same three for PTHA18's run (only with step 8)</td></tr>
+    <tr><td><code>outputs/exports/convergence_profile.csv</code></td><td><code>alongstrike_number, div_mm_per_yr, convergent_slip_mm_per_yr, distance_to_bird_km</code>, plus <code>segment</code> on a segmented run (v9)</td></tr>
+    <tr><td><code>outputs/exports/convergence_profile_official.csv</code></td><td>the same columns on PTHA18's own mesh (only with step 8). <b>Row counts differ</b>: one row per column of each mesh, and the two meshes rarely have the same column count</td></tr>
+  </table></div>
+  <p class="where">The <code>exports/</code> files are plain CSV holding the numbers every figure in the report is drawn from, so they can be read or diffed without opening the HTML. Each <code>_official</code> file has identical columns to its twin, for a row-by-row comparison. See <a href="report_guide.html#exports">the report guide</a>.</p>
+</section>
+
+<section>
+  <h2 id="segmented-files">Files a segmented run adds</h2>
+  <p>A folder made with <code>--segmented true</code> writes every file above, with the same columns, and these on top. The segment names follow PTHA18's wherever it has the same Berryman segment (<code>tonga</code>, <code>kermadec</code>, <code>hikurangi</code> on kermadectonga2, in <code>outputs/</code> and <code>outputs_official/</code> alike); with <code>--segment-boundaries bird</code> this run's are Bird's plate pairs in lower case (<code>to_pa</code>, <code>ke_pa</code>). Counted on kermadectonga2_v9seg against kermadectonga2_v9: 64 more files.</p>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:12%"><col style="width:40%"><col style="width:48%"></colgroup>
+    <tr><th>Step</th><th>File</th><th>What it is</th></tr>
+    <tr><td>5</td><td><code>data/gcmt/segments.json</code></td><td>the segments: <code>plate_pair</code>, <code>segment_key</code>, <code>berryman_rows</code>, <code>alongstrike_slice</code>, <code>n_events</code></td></tr>
+    <tr><td>5</td><td><code>data/gcmt/&lt;zone&gt;_gcmt_subset_&lt;segment&gt;.csv</code></td><td>each segment's events (3 and 6 on kermadectonga2, against the zone's 9)</td></tr>
+    <tr><td>6</td><td>the input JSON's <code>segments</code> block</td><td>not a file: one entry per segment with its columns, convergence, coupling, Mw max observed and events (<a href="input_json.html">keys</a>)</td></tr>
+    <tr><td>7</td><td><code>outputs/scenario_rates_&lt;zone&gt;_&lt;segment&gt;.csv</code>, <code>conditional_prob_...</code>, <code>integrated_slip_...</code>, <code>logic_tree_branches_...</code></td><td>the same four files as the zone's, one set per segment</td></tr>
+    <tr><td>7</td><td><code>outputs/scenario_rates_&lt;zone&gt;_source_zone.csv</code></td><td>the zone's own scenario rates: 0.5 x unsegmented + 0.5 x every segment the scenario touches, with PTHA18's partial-segmentation percentiles. The file to take for a hazard calculation</td></tr>
+    <tr><td>7</td><td><code>outputs/figures/fig_*_&lt;zone&gt;_&lt;segment&gt;.png</code></td><td>per segment: branch fan, branch weights, geometry, moment balance, scenario rates (5 each)</td></tr>
+    <tr><td>7</td><td>changed, not added</td><td><code>rate_curves.csv</code> gains one column per segment, <code>exceedance_rate_union_of_segments</code> and <code>exceedance_rate_source_zone</code>; <code>exceedance_rate_percentiles.csv</code> becomes the zone's; <code>segmentation.csv</code> lists the zone at 0.5 and each segment at 0.5; <code>logic_tree_summary.csv</code> gains 11 rows per segment</td></tr>
+    <tr><td>7</td><td><code>outputs/exceedance_rate_percentiles_unsegmented.csv</code></td><td>the unsegmented branch's own band, the file an unsegmented run writes as <code>exceedance_rate_percentiles.csv</code> (same call, same seed, bit-identical: <code>validate_v9.py unseg_view</code>). Step 9 builds <code>report_unsegmented.html</code> on it</td></tr>
+    <tr><td>8</td><td>the same step 7 files in <code>outputs_official/</code>, for PTHA18's segments</td><td>PTHA18's segmented model through the same engine, run as <code>runs/python/&lt;zone&gt;_official_segmented/</code></td></tr>
+    <tr><td>8</td><td><code>outputs_official/ptha18_reference/official_segments.json</code></td><td>PTHA18's segments as step 8 ran them: <code>name</code>, <code>alongstrike_slice</code>, <code>coupling_spreadsheet</code>, <code>mw_max_observed</code>, <code>gcmt_count</code></td></tr>
+    <tr><td>9</td><td><code>figures/segments_map.png</code></td><td>the cells coloured by segment, PTHA18's mesh beside this run's</td></tr>
+    <tr><td>9</td><td><code>outputs/exports/scenario_rates_source_zone.csv</code>, <code>..._official.csv</code></td><td>copies of the two source-zone scenario tables</td></tr>
+    <tr><td>9</td><td>changed, not added</td><td><code>mesh_cells.csv</code> and <code>convergence_profile.csv</code> gain a <code>segment</code> column; <code>posterior_mean_rate_curve.csv</code> (and <code>_official</code>) the segment, union and source-zone columns</td></tr>
+    <tr><td>9</td><td><code>report.html</code></td><td>a LEVEL 0 section and three more series on the rate chart (<a href="report_guide.html#modes">what changes on the page</a>), and a switch at the top to the unsegmented view</td></tr>
+    <tr><td>9</td><td><code>report_unsegmented.html</code></td><td>the unsegmented branch alone: the report an unsegmented run of the zone gives, from this run's files (<a href="report_guide.html#unseg-view">the switch</a>)</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="caveats">Known limits</h2>
+  <ul class="tight">
+    <li><b>Segmentation follows Berryman, not PTHA18's own table.</b> v9 runs LEVEL 0 with <code>--segmented true</code> (without it, every zone is one unsegmented source at weight 1, as in v8). The boundaries come from Berryman et al. (2015) Table 3.1's segment end points, never from PTHA18's <code>sourcezone_parameters.csv</code>: within 0 to 2 columns of PTHA18's on PTHA18's own meshes, with different counts only where PTHA18 merged Berryman's segments (Patagonia, eastern Alaska) or added one (Arakan). The method is PTHA18's, checked scenario by scenario from PTHA18's own inputs (<code>validate_v9.py events_segmented</code>); step 8 of a segmented example runs PTHA18's segmented model for the comparison. See <a href="engine.html#level0">LEVEL 0</a>.</li>
+    <li><b>Automatic contours, not hand edits.</b> The contours are 1 to 3 km from PTHA18's (the trench line 1.6 to 4.1 km seaward), and the zone's ends are cut by a rule. Where PTHA18 extended a zone beyond the SLAB data by hand (puysegur2), this package does not.</li>
+    <li><b>SLAB coverage.</b> A zone can only be as long as its SLAB data: southamerica's SLAB1.0 stops near 43 deg S, PTHA18's zone continues to Tierra del Fuego.</li>
+    <li><b>--clip is not checked</b> for windows that cut through a neighbouring slab: look at the step 1 figure.</li>
+    <li><b>Puysegur's convergence.</b> Bird by default here (25.6 mm/yr); PTHA18 used a constant 35 mm/yr (<a href="customise.html#convergence">how to reproduce it</a>).</li>
+    <li><b>HS and VAUS</b> are random: compared with PTHA18 statistically, never field by field. They never change a rate. Their generator assumes equal cells inside a footprint (<a href="hs_vaus.html#cells">details</a>).</li>
+    <li><b>v10 / v10_q</b>: with <code>--rupture-size local</code> the event list no longer matches PTHA18's event by event; no rupture is smaller than one cell; the cells themselves are not reshaped (<a href="v10_q.html#limits">all limitations</a>).</li>
+    <li><b>The report's map</b> needs an internet connection (Leaflet and Esri tiles).</li>
+  </ul>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Columns read from kermadectonga2_v9's and kermadectonga2_v9seg's own files; options from <code>generate.py</code> and <code>templates/step_total.py.tmpl</code>.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

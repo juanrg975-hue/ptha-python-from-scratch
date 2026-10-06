@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4-5. Earthquake catalogue | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Rates</div>
+  <h1>4-5. Earthquake catalogue</h1>
+  <p class="lead">The logic tree proposes thousands of possible earthquake rates; the earthquakes that really happened say which ones are believable. Step 4 downloads the worldwide Global CMT catalogue, and step 5 keeps only the large earthquakes that happened on this zone's plate interface, using PTHA18's own rule. The result is a count and a time span that LEVEL 3 of the engine uses to re-weight the branches.</p>
+
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">47,689</div><div class="lbl">GCMT events worldwide in PTHA18's window</div></div>
+    <div class="card kpi"><div class="num">9</div><div class="lbl">of them selected on kermadectonga2 (Mw 7.16 to 8.00)</div></div>
+    <div class="card kpi"><div class="num">41.1636</div><div class="lbl">years, 1976-01-01 to 2017-03-01</div></div>
+    <div class="card kpi"><div class="num">8 / 8</div><div class="lbl">zones where the rule gives PTHA18's exact list on PTHA18's mesh</div></div>
+  </div>
+  <div class="io">
+    <div><b>Reads</b>Step 4: the GCMT catalogue files from <code>www.ldeo.columbia.edu/~gcmt</code> (internet, once). Step 5: those files and step 2's mesh <code>data/slab2/unit_source_grid.npy</code></div>
+    <div><b>Writes</b><code>data/gcmt/*.ndk</code> (the cached catalogue), <code>data/gcmt/gcmt_catalogue_1976_present.csv</code> (step 4), <code>data/gcmt/&lt;zone&gt;_gcmt_subset.csv</code> (step 5)</div>
+  </div>
+  <p class="where">Where in the code: <code>templates/step4_fetch_gcmt.py.tmpl</code>, <code>templates/step5_subset_gcmt.py.tmpl</code> (a port of PTHA18's <code>gcmt_subsetter.R</code>), <code>templates/step6_write_input.py.tmpl</code> <code>read_gcmt_subset()</code>, <code>python_logic_tree_v12/run_logic_tree.py</code> (LEVEL 3 inputs) and <code>pyptha_v12/rates.py</code> <code>compute_updated_logic_tree_weights()</code>.</p>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <p>A funnel: the whole world's catalogue goes in at the top, five tests remove every earthquake that is not a large thrust on this interface, and what remains (a count over a known time span) goes to the engine. The numbers are kermadectonga2_v9's.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 420" role="img" aria-label="Funnel from the worldwide GCMT catalogue to the nine events used by LEVEL 3 on kermadectonga2">
+      <defs>
+        <marker id="sgg-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+      </defs>
+      <text x="20" y="22" font-size="12" font-weight="700" fill="#5b6475">STEP 4: DOWNLOAD</text>
+      <text x="20" y="150" font-size="12" font-weight="700" fill="#5b6475">STEP 5: PTHA18'S RULE</text>
+      <text x="700" y="22" font-size="12" font-weight="700" fill="#5b6475">STEPS 6-7: THE ENGINE</text>
+
+      <path d="M40,36 L620,36 L600,74 L60,74 Z" fill="#f1eafb" stroke="#8a5cd1"/>
+      <text x="330" y="60" font-size="13" text-anchor="middle"><tspan font-weight="700">59,736</tspan> GCMT events parsed (1976 to now, worldwide)</text>
+      <path d="M60,82 L600,82 L580,120 L80,120 Z" fill="#f1eafb" stroke="#8a5cd1"/>
+      <text x="330" y="106" font-size="13" text-anchor="middle"><tspan font-weight="700">47,689</tspan> in the window 1976-01-01 to 2017-03-01</text>
+
+      <path d="M80,162 L580,162 L560,200 L100,200 Z" fill="#fff" stroke="#8a5cd1"/>
+      <text x="330" y="186" font-size="13" text-anchor="middle">1-2. depth &le; 71 km and Mw &ge; 7.15: <tspan font-weight="700">271</tspan> worldwide</text>
+      <path d="M100,208 L560,208 L540,246 L120,246 Z" fill="#fff" stroke="#8a5cd1"/>
+      <text x="330" y="232" font-size="13" text-anchor="middle">3. hypocentre or centroid within 0.4&deg; of a cell: <tspan font-weight="700">18</tspan></text>
+      <path d="M120,254 L540,254 L520,292 L140,292 Z" fill="#fff" stroke="#8a5cd1"/>
+      <text x="330" y="278" font-size="13" text-anchor="middle">4-5. a thrust-like plane aligned with the trench: <tspan font-weight="700">9</tspan></text>
+      <path d="M140,300 L520,300 L500,338 L160,338 Z" fill="#8a5cd1"/>
+      <text x="330" y="324" font-size="13" text-anchor="middle" fill="#fff" font-weight="700">kermadectonga2_gcmt_subset.csv: 9 events</text>
+
+      <g font-size="11.5" fill="#5b6475">
+        <text x="600" y="186">deep ones inside the sinking plate,</text>
+        <text x="600" y="201">and all smaller earthquakes, out</text>
+        <text x="576" y="236">other zones' earthquakes out</text>
+        <text x="556" y="276">no thrust-like plane (7) and</text>
+        <text x="556" y="291">misaligned thrusts (2) out</text>
+      </g>
+
+      <rect x="700" y="36" width="240" height="112" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="712" y="58" font-size="13" font-weight="700">step 6: observed_seismicity</text>
+      <text x="712" y="78" font-size="12" fill="#1d2433">count = 9</text>
+      <text x="712" y="96" font-size="12" fill="#1d2433">duration_years = 41.1636</text>
+      <text x="712" y="114" font-size="12" fill="#1d2433">threshold_Mw = 7.15</text>
+      <text x="712" y="132" font-size="12" fill="#1d2433">observed_Mw = the 9 magnitudes</text>
+      <rect x="700" y="236" width="240" height="102" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+      <text x="712" y="258" font-size="13" font-weight="700">LEVEL 3: Bayesian update</text>
+      <text x="712" y="278" font-size="12" fill="#1d2433">branches that predict about</text>
+      <text x="712" y="296" font-size="12" fill="#1d2433">9 events in 41 years gain weight,</text>
+      <text x="712" y="314" font-size="12" fill="#1d2433">the others lose it</text>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#sgg-ar)">
+        <path d="M500,319 C640,319 620,110 698,100"/>
+        <path d="M820,148 L820,234"/>
+        <path d="M330,120 L330,160"/>
+      </g>
+      <text x="20" y="378" font-size="12" fill="#5b6475">Counts: kermadectonga2_v9/run_final.log (59,736 and 47,689; 9) and figures_src/make_seismicity.py, which re-applies step 5's code to every</text>
+      <text x="20" y="396" font-size="12" fill="#5b6475">event of Mw &ge; 7.15 within 4&deg; of the mesh (271 and 18). The tests run in this order in the code; each count is what is left after it.</text>
+    </svg>
+    <figcaption><b>Steps 4-5 in one picture.</b> Purple is the catalogue (steps 4-5), blue the engine. The window is fixed to PTHA18's so the count and the time span match what PTHA18 used.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="gcmt">What GCMT is</h2>
+  <p>The <a href="glossary.html#term-gcmt">Global Centroid Moment Tensor (GCMT) project</a> analyses every earthquake of about magnitude 5 and above worldwide since 1976 and publishes, for each, how big it was, where, and how the fault moved. A few terms, in plain words:</p>
+  <div class="grid g2">
+    <div class="card">
+      <h4>Hypocentre</h4>
+      <p>The point where the rupture <b>started</b>, found from the first seismic waves to arrive. GCMT copies it from another catalogue (the PDE, line 1 of each record). Its depth is the one step 5 tests.</p>
+    </div>
+    <div class="card">
+      <h4>Centroid</h4>
+      <p>The <b>centre</b> of the whole rupture, where the slip was on average, found from the long-period waves. For a big earthquake it can be tens of km from the hypocentre. Step 5 uses it for the location test and to find the nearest cell.</p>
+    </div>
+    <div class="card">
+      <h4>Moment tensor and Mw</h4>
+      <p>Six numbers describing the forces of the earthquake. Their size gives the <a href="glossary.html#term-seismic-moment">seismic moment</a> M<sub>0</sub> (fault area x slip x rock stiffness), and from it the <a href="glossary.html#term-mw">moment magnitude</a> Mw.</p>
+    </div>
+    <div class="card">
+      <h4>Nodal planes</h4>
+      <p>The moment tensor fits <b>two</b> possible fault planes equally well, each with a <a href="glossary.html#term-strike">strike</a>, <a href="glossary.html#term-dip">dip</a> and <a href="glossary.html#term-rake">rake</a>. Only one was the real fault, and the data alone cannot say which, so step 5 accepts an earthquake if <b>either</b> plane passes.</p>
+    </div>
+  </div>
+  <figure class="fig">
+    <svg viewBox="0 0 960 300" role="img" aria-label="Hypocentre versus centroid on a fault, and the meaning of strike, dip and rake">
+      <defs>
+        <marker id="sgw-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1d2433"/></marker>
+        <marker id="sgw-ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5cd1"/></marker>
+      </defs>
+      <text x="20" y="22" font-size="12" font-weight="700" fill="#5b6475">HYPOCENTRE AND CENTROID (THE FAULT SEEN FROM ABOVE)</text>
+      <rect x="40" y="50" width="380" height="170" rx="8" fill="#fcecec" stroke="#c43d3d"/>
+      <text x="52" y="240" font-size="12" fill="#c43d3d">the area that slipped</text>
+      <circle cx="90" cy="180" r="7" fill="#1d2433"/>
+      <text x="104" y="196" font-size="12.5" fill="#1d2433">hypocentre: the rupture starts here</text>
+      <path d="M100,172 L220,138" stroke="#1d2433" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#sgw-ar)"/>
+      <text x="130" y="130" font-size="12" fill="#5b6475">rupture spreads</text>
+      <path d="M236,135 L246,125 L256,135 L246,145 Z" fill="#8a5cd1"/>
+      <text x="264" y="130" font-size="12.5" fill="#1d2433">centroid: the centre</text>
+      <text x="264" y="147" font-size="12.5" fill="#1d2433">of all the slip</text>
+      <text x="52" y="272" font-size="12" fill="#5b6475">2009-03-19 Tonga, Mw 7.65: hypocentre -23.05, -174.66, depth 34 km;</text>
+      <text x="52" y="288" font-size="12" fill="#5b6475">centroid -23.08, -174.23 (about 44 km apart)</text>
+
+      <text x="500" y="22" font-size="12" font-weight="700" fill="#5b6475">STRIKE, DIP, RAKE OF A NODAL PLANE</text>
+      <path d="M520,110 L900,110" stroke="#8a93a3"/>
+      <text x="880" y="102" font-size="12" fill="#5b6475" text-anchor="end">sea floor</text>
+      <path d="M560,110 L880,110 L800,240 L480,240 Z" fill="#f1eafb" stroke="#8a5cd1"/>
+      <path d="M580,96 L860,96" stroke="#8a5cd1" stroke-width="2" marker-end="url(#sgw-ap)"/>
+      <text x="600" y="86" font-size="12.5" fill="#1d2433"><tspan font-weight="700">strike</tspan>: direction of the fault's top line</text>
+      <path d="M880,110 A50,50 0 0 1 855,152" fill="none" stroke="#1d2433"/>
+      <text x="870" y="170" font-size="12.5" fill="#1d2433"><tspan font-weight="700">dip</tspan></text>
+      <path d="M640,210 L700,140" stroke="#1d2433" stroke-width="2.5" marker-end="url(#sgw-ar)"/>
+      <text x="520" y="268" font-size="12.5" fill="#1d2433"><tspan font-weight="700">rake</tspan>: direction the upper side slipped, measured in the plane.</text>
+      <text x="520" y="286" font-size="12.5" fill="#1d2433">90 = straight up the dip (a pure thrust), -90 = down (normal fault).</text>
+    </svg>
+    <figcaption><b>The words used by the selection rule.</b> Left: an earthquake starts at its hypocentre and spreads; its centroid is the centre of the slip. Right: each nodal plane is described by its strike, dip and rake. A subduction megathrust earthquake is a thrust (rake near 90) on a plane whose strike follows the trench.</figcaption>
+  </figure>
+  <p><b>Mw from GCMT, as PTHA18 does it.</b> Step 5 computes the magnitude from the moment tensor (NDK line 4), not from GCMT's own scalar moment:</p>
+  <div class="formula">
+    M<sub>0</sub> = &radic;( &Sigma; M<sub>ij</sub>&sup2; / 2 ) x 10<sup>exponent</sup> x 10<sup>-7</sup> &nbsp;&nbsp;(N m)<br>
+    Mw = 2/3 x ( log<sub>10</sub> M<sub>0</sub> - 9.05 )
+    <span class="where">The sum runs over the full symmetric tensor (the 3 diagonal terms once, the 3 off-diagonal terms twice). GCMT gives the tensor in dyne-cm; x 10<sup>-7</sup> converts to N m. 9.05 is rptha's <code>M0_2_Mw</code> constant (not the more common 9.1, which would add 0.033 to every magnitude). The step 5 docstring states that this reproduces all 122 magnitudes in PTHA18's list to machine precision, and that the NDK scalar moment does not.</span>
+  </div>
+  <p>Example, the 2009-03-19 Tonga event: exponent 27, M<sub>rr</sub> 3.280, M<sub>tt</sub> -0.196, M<sub>pp</sub> -3.090, M<sub>rt</sub> -0.245, M<sub>rp</sub> 0.190, M<sub>tp</sub> -1.150, so M<sub>0</sub> = 3.405 x 10<sup>20</sup> N m and Mw = 2/3 x (20.532 - 9.05) = <b>7.655</b>, the value in the subset file (7.654708).</p>
+</section>
+
+<section>
+  <h2 id="download">Step 4: download</h2>
+  <p>GCMT publishes its catalogue as plain-text <b>NDK</b> files: 5 fixed lines per earthquake. The real record of the 2009 Tonga event, from the cached <code>jan76_dec20.ndk</code>:</p>
+  <pre class="out">PDEW 2009/03/19 18:17:40.9 -23.05 -174.66  34.0 7.0 7.6 TONGA ISLANDS REGION
+C200903191817A   B:127  327  50 S:122  295  50 M:127  334 150 CMT: 1 TRIHD: 15.8
+CENTROID:     12.3 0.1 -23.08 0.01 -174.23 0.01  49.1  0.3 FREE S-20090615125906
+27  3.280 0.014 -0.196 0.008 -3.090 0.009 -0.245 0.031  0.190 0.028 -1.150 0.006
+V10   3.309 85 208   0.178  5  19  -3.493  1 109   3.401 205 44   98  14 46   82</pre>
+  <div class="tbl"><table>
+    <tr><th>line</th><th>what it holds</th><th>what the code reads</th></tr>
+    <tr><td>1 (hypocentre, from the PDE)</td><td>source, date, time, latitude, longitude, depth, two magnitudes, region</td><td>date, hypocentre lat/lon, depth (steps 4 and 5)</td></tr>
+    <tr><td>2 (CMT header)</td><td>event name, data used, inversion type</td><td>nothing</td></tr>
+    <tr><td>3 (centroid)</td><td>time shift, centroid lat, lon, depth, each with its error</td><td>centroid lat (token 4) and lon (token 6) (step 5)</td></tr>
+    <tr><td>4 (moment tensor)</td><td>exponent, then M<sub>rr</sub> M<sub>tt</sub> M<sub>pp</sub> M<sub>rt</sub> M<sub>rp</sub> M<sub>tp</sub>, each with its error</td><td>exponent and the 6 components, for Mw (step 5)</td></tr>
+    <tr><td>5 (derived)</td><td>eigenvalues, scalar moment, then the two nodal planes: strike dip rake, strike dip rake</td><td>the last 6 numbers: 205 44 98 and 14 46 82 (steps 4 and 5)</td></tr>
+  </table></div>
+  <ol class="steps">
+    <li><b>Files.</b> One large cumulative file, <code>jan76_dec20.ndk</code> (1976 to 2020, 23 MB), plus one monthly file per month from January 2021 to the current month, <code>NEW_MONTHLY/&lt;year&gt;/&lt;mon&gt;&lt;yy&gt;.ndk</code>, all from <code>https://www.ldeo.columbia.edu/~gcmt/projects/CMT/catalog/</code>. A month GCMT has not published yet gives an HTTP 404 and is skipped (the final kermadectonga2 run skipped June to September 2026).</li>
+    <li><b>Cache.</b> Each file is saved in <code>data/gcmt/</code> and never downloaded again; a re-run reads the copies (66 <code>.ndk</code> files in kermadectonga2_v9). To work offline, copy the <code>.ndk</code> files of another example into <code>data/gcmt/</code>. The download uses <code>certifi</code>'s certificate bundle, because some Windows Python installs do not complete the server's certificate chain (comment in the code).</li>
+    <li><b>Parse.</b> Every 5-line block becomes one row: date, hypocentre lat/lon/depth, and the two nodal planes (<code>parse_ndk()</code>). kermadectonga2_v9: 59,736 events.</li>
+    <li><b>Window and duplicates.</b> Keep the dates from 1976-01-01 to 2017-03-01, both included, and drop rows with the same date, position and depth (the files do not overlap today, the check is a safety net): 47,689 events.</li>
+    <li><b>Write</b> <code>data/gcmt/gcmt_catalogue_1976_present.csv</code> with the columns <code>date, lat, lon, depth_km, strike1, dip1, rake1, strike2, dip2, rake2</code>.</li>
+  </ol>
+  <div class="callout"><span class="lbl">Good to know</span>Step 5 does <b>not</b> read that CSV: it re-parses the <code>.ndk</code> files, because it also needs the centroid (line 3) and the moment tensor (line 4). The CSV is a readable export of the catalogue. The monthly files since 2021 lie outside PTHA18's window, so they do not change any result; they are fetched because the window is a setting that could be moved.</div>
+  <pre class="out">  parsing NDK records ...
+  59736 events parsed (worldwide, all magnitudes/depths)
+  47689 of 59736 fall in [1976-01-01, 2017-03-01] (deduplicated across the overlapping monthly/cumulative files)</pre>
+  <p class="where">Log from <code>kermadectonga2_v9/run_final.log</code>, step 4. Code: <code>templates/step4_fetch_gcmt.py.tmpl</code> <code>download_ndk()</code>, <code>parse_ndk()</code>.</p>
+</section>
+
+<section>
+  <h2 id="window">The window: 1976-01-01 to 2017-03-01</h2>
+  <p>LEVEL 3 compares a <b>count</b> of earthquakes with the rate each branch predicts over a <b>duration</b>. The two must belong together: the count must be the number of earthquakes that happened during exactly that duration.</p>
+  <ul class="tight">
+    <li><b>Start, 1976-01-01</b>: the GCMT catalogue begins in 1976.</li>
+    <li><b>End, 2017-03-01</b>: PTHA18's own cutoff (its report, section 3.7.3). With the same end, this run's count can be compared with PTHA18's; the official LEVEL 3 data (<code>official_gcmt_observations.csv</code>) uses this same duration.</li>
+    <li><b>Duration</b> = (2017-03-01 - 1976-01-01) in days / 365.25 = 15,035 / 365.25 = <b>41.1636 years</b>, computed the same way in steps 5 and 6.</li>
+  </ul>
+  <figure class="fig">
+    <svg viewBox="0 0 960 150" role="img" aria-label="Timeline from 1976 to 2026 with PTHA18's window shaded up to March 2017">
+      <line x1="40" y1="80" x2="920" y2="80" stroke="#8a93a3" stroke-width="1.5"/>
+      <rect x="40" y="62" width="724" height="36" fill="#f1eafb" stroke="#8a5cd1"/>
+      <text x="402" y="85" font-size="13" text-anchor="middle" fill="#1d2433" font-weight="700">the window used: 41.1636 years</text>
+      <rect x="764" y="62" width="156" height="36" fill="#f0f2f5" stroke="#8a93a3" stroke-dasharray="4 3"/>
+      <text x="842" y="85" font-size="12" text-anchor="middle" fill="#5b6475">downloaded, not used</text>
+      <g font-size="12" fill="#5b6475" text-anchor="middle">
+        <text x="40" y="120">1976-01-01</text><text x="216" y="120">1986</text><text x="392" y="120">1996</text><text x="568" y="120">2006</text><text x="764" y="120">2017-03-01</text><text x="920" y="120">2026</text>
+      </g>
+      <g fill="#8a5cd1">
+        <circle cx="40" cy="44" r="5"/><circle cx="41" cy="33" r="5"/><circle cx="42" cy="22" r="5"/><circle cx="62" cy="44" r="5"/><circle cx="162" cy="44" r="5"/><circle cx="383" cy="44" r="5"/><circle cx="574" cy="44" r="5"/><circle cx="624" cy="44" r="5"/><circle cx="670" cy="44" r="5"/>
+      </g>
+      <text x="690" y="48" font-size="12" fill="#1d2433">kermadectonga2's 9 selected events</text>
+    </svg>
+    <figcaption><b>The observation window</b> (years to scale; the three January 1976 events are stacked). The dots are the 9 events selected on kermadectonga2_v9, at their dates. Anything after 2017-03-01 is outside the window even though step 4 downloads it.</figcaption>
+  </figure>
+  <details class="deep">
+    <summary>Why not "until today"? <span class="tag">a v1 mistake</span></summary>
+    <div class="body">
+      <p>v1 of the pipeline used today's date as the end. That added almost a decade of earthquakes, so the count and the duration no longer matched PTHA18's pair (9 events in 41.16 years on kermadectonga2), and the from-scratch LEVEL 3 update could not be compared with the official one by construction. From v2 on, the end is PTHA18's (step 4's docstring).</p>
+      <p>To use a different window, change <code>WINDOW_START</code> and <code>WINDOW_END</code> in <b>all three</b> generated scripts, <code>step4_fetch_gcmt.py</code>, <code>step5_subset_gcmt.py</code> and <code>step6_write_input.py</code>: each has its own copy of the two constants (step 6 computes the duration from its own copy).</p>
+    </div>
+  </details>
+</section>
+
+<section>
+  <h2 id="selection">Step 5: PTHA18's selection rule</h2>
+  <p>A subduction zone has many kinds of earthquakes: deep ones inside the sinking plate, normal faults in the bending plate, sideways (strike-slip) ones, and the <b>interface thrusts</b> on the plate boundary itself, the ones the source model is about. PTHA18's rule (its <code>gcmt_subsetter.R</code>, reimplemented in step 5) keeps an earthquake only if it passes all of these tests, applied in this order in the code:</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 430" role="img" aria-label="Flowchart of the five tests of step 5, with the number of kermadectonga2 events rejected at each">
+      <defs>
+        <marker id="sgs-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+        <marker id="sgs-ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c43d3d"/></marker>
+      </defs>
+      <g font-size="13">
+        <rect x="40" y="20" width="470" height="56" rx="9" fill="#fff" stroke="#8a5cd1" stroke-width="1.5"/>
+        <text x="54" y="43" font-weight="700">1. Depth: hypocentre depth &le; 71 km?</text>
+        <text x="54" y="63" font-size="11.5" fill="#5b6475">NDK line 1 (PDE) depth, not the centroid depth</text>
+        <rect x="40" y="100" width="470" height="56" rx="9" fill="#fff" stroke="#8a5cd1" stroke-width="1.5"/>
+        <text x="54" y="123" font-weight="700">2. Size: Mw &ge; 7.15?</text>
+        <text x="54" y="143" font-size="11.5" fill="#5b6475">7.15 = 7.2 - 0.1 / 2, half a magnitude bin below the smallest scenario</text>
+        <rect x="40" y="180" width="470" height="56" rx="9" fill="#fff" stroke="#8a5cd1" stroke-width="1.5"/>
+        <text x="54" y="203" font-weight="700">3. Place: hypocentre OR centroid inside the 0.4&deg; zone?</text>
+        <text x="54" y="223" font-size="11.5" fill="#5b6475">every cell buffered by 0.4&deg; (plain lon/lat degrees), then joined</text>
+        <rect x="40" y="260" width="470" height="76" rx="9" fill="#fff" stroke="#8a5cd1" stroke-width="1.5"/>
+        <text x="54" y="283" font-weight="700">4-5. Mechanism: on at least ONE nodal plane,</text>
+        <text x="54" y="302" font-size="12">|rake - 90| &le; 50&deg; (a thrust) AND |strike - s| &le; 50&deg;,</text>
+        <text x="54" y="320" font-size="11.5" fill="#5b6475">s = strike of the cell nearest the CENTROID (haversine)</text>
+        <rect x="40" y="360" width="470" height="50" rx="9" fill="#8a5cd1"/>
+        <text x="54" y="390" font-weight="700" fill="#fff">counted: written to &lt;zone&gt;_gcmt_subset.csv</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#sgs-ar)">
+        <path d="M275,76 L275,98"/><path d="M275,156 L275,178"/><path d="M275,236 L275,258"/><path d="M275,336 L275,358"/>
+      </g>
+      <text x="285" y="92" font-size="11.5" fill="#5b6475">yes</text><text x="285" y="172" font-size="11.5" fill="#5b6475">yes</text><text x="285" y="252" font-size="11.5" fill="#5b6475">yes</text><text x="285" y="352" font-size="11.5" fill="#5b6475">yes</text>
+      <g stroke="#c43d3d" stroke-width="1.6" fill="none" marker-end="url(#sgs-ab)">
+        <path d="M510,48 L598,48"/><path d="M510,128 L598,128"/><path d="M510,208 L598,208"/><path d="M510,298 L598,298"/>
+      </g>
+      <g font-size="12.5" fill="#1d2433">
+        <text x="606" y="44"><tspan font-weight="700" fill="#c43d3d">no:</tspan> deep, inside the sinking plate</text>
+        <text x="606" y="62" font-size="11.5" fill="#5b6475">kermadectonga2: 14 of Mw &ge; 7.15 (79 to 645 km)</text>
+        <text x="606" y="124"><tspan font-weight="700" fill="#c43d3d">no:</tspan> too small to matter for LEVEL 3</text>
+        <text x="606" y="142" font-size="11.5" fill="#5b6475">most of the 47,689</text>
+        <text x="606" y="204"><tspan font-weight="700" fill="#c43d3d">no:</tspan> somewhere else</text>
+        <text x="606" y="222" font-size="11.5" fill="#5b6475">kermadectonga2: none within 4&deg; of the mesh</text>
+        <text x="606" y="286"><tspan font-weight="700" fill="#c43d3d">no:</tspan> normal fault, strike-slip, or a thrust</text>
+        <text x="606" y="304">that crosses the trench at an angle</text>
+        <text x="606" y="322" font-size="11.5" fill="#5b6475">kermadectonga2: 7 no thrust plane, 2 misaligned</text>
+        <text x="606" y="390"><tspan font-weight="700">kermadectonga2: 9</tspan></text>
+      </g>
+    </svg>
+    <figcaption><b>The rule as a flowchart.</b> Kermadectonga2 counts on the right come from re-applying step 5's own functions (<code>figures_src/make_seismicity.py</code>) to every event of Mw &ge; 7.15 within 4&deg; of the mesh; tests 1 and 2 are cheap and run first, as in the code.</figcaption>
+  </figure>
+
+  <h3>Each test, and why</h3>
+  <ol class="steps">
+    <li><b>Depth &le; 71 km</b> (<code>MAX_DEPTH_KM</code>). The plate interface where megathrust earthquakes happen is shallow; deeper earthquakes are inside the sinking plate and do not make interface tsunamis. The depth tested is the hypocentral (PDE) one of NDK line 1. The step 5 docstring notes that using the centroid depth instead adds a spurious event on kurilsjapan (not re-checked here).</li>
+    <li><b>Mw &ge; 7.15</b> (<code>THRESHOLD_MW</code>). The engine's scenarios start at Mw 7.2 in bins 0.1 wide, so the smallest bin covers 7.15 to 7.25. The same number is the engine's <code>Mw_min</code> (7.15) and the LEVEL 3 threshold; the engine refuses a threshold below <code>Mw_min</code>.</li>
+    <li><b>Within 0.4&deg; of a cell</b> (<code>BUFFER_DEG</code>). Every cell polygon of the mesh is enlarged by 0.4 degrees (in plain longitude/latitude degrees, about 44 km north-south) and the enlarged cells are joined into one zone (<code>buffered_cells()</code>, like <code>rgeos::gBuffer(width = 0.4, byid = TRUE)</code> in <code>rptha::lonlat_in_poly</code>; 5 segments per quarter circle, rgeos' default). The earthquake passes if its hypocentre <b>or</b> its centroid is inside. The margin absorbs location errors and the fact that the mesh is an approximation of the interface. Longitudes are first shifted by a multiple of 360 to the mesh's side (<code>near_lon()</code>), so a zone crossing 180 degrees works.</li>
+    <li><b>Thrust-like</b> (<code>RAKE_TOL_DEG</code>). On the plane being tested, the rake must be within 50 degrees of 90 (pure thrust). This removes normal faults (rake near -90) and strike-slip earthquakes (rake near 0 or 180).</li>
+    <li><b>Aligned with the trench</b> (<code>STRIKE_TOL_DEG</code>). On the <b>same</b> plane, the strike must be within 50 degrees of the strike of the cell whose centre is nearest the <b>centroid</b> (great-circle distance, sphere of radius 6378137 m, <code>nearest_unit_source_strike()</code>). A thrust on the interface dips the same way as the interface, so its strike follows the trench. Angles are compared on the circle (<code>angle_diff()</code>: 350 and 10 differ by 20).</li>
+  </ol>
+  <p>Tests 4 and 5 are made on nodal plane 1, then on plane 2; one plane passing both is enough (<code>qualifies()</code>).</p>
+  <p class="where">Where in the code: <code>templates/step5_subset_gcmt.py.tmpl</code>, <code>main()</code> (the loop and its order), <code>buffered_cells()</code>, <code>near_lon()</code>, <code>nearest_unit_source_strike()</code>, <code>angle_diff()</code>, <code>qualifies()</code>, <code>parse_ndk_full()</code>. Constants: <code>BUFFER_DEG = 0.4</code>, <code>RAKE_TOL_DEG = 50.0</code>, <code>STRIKE_TOL_DEG = 50.0</code>, <code>MAX_DEPTH_KM = 71.0</code>, <code>THRESHOLD_MW = 7.15</code>.</p>
+
+  <h3>Four real earthquakes near kermadectonga2</h3>
+  <div class="tbl"><table>
+    <tr><th>event</th><th>plane 1 (strike, dip, rake)</th><th>plane 2</th><th class="n">nearest cell's strike</th><th>result</th></tr>
+    <tr class="hl"><td>2009-03-19, Mw 7.65, depth 34 km</td><td>205, 44, 98</td><td>14, 46, 82</td><td class="n">207.8</td><td><span class="badge good">kept</span> plane 1: rake 8&deg; from 90, strike 2.8&deg; off</td></tr>
+    <tr><td>1977-04-02, Mw 7.31, depth 33 km</td><td>317, 41, 45</td><td>190, 62, 122</td><td class="n">185.9</td><td><span class="badge good">kept</span> plane 1 is thrust-like (45&deg; off) but its strike is 131&deg; off; plane 2 passes (32&deg; and 4.1&deg;)</td></tr>
+    <tr><td>2009-09-29, Mw 8.12, depth 18 km (the Samoa earthquake)</td><td>119, 38, -131</td><td>346, 62, -63</td><td class="n">166.8</td><td><span class="badge bad">rejected</span> both rakes negative: a normal fault in the bending plate</td></tr>
+    <tr><td>2016-11-13, Mw 7.85, depth 15 km (the Kaikoura earthquake)</td><td>226, 33, 141</td><td>350, 70, 63</td><td class="n">250.0</td><td><span class="badge bad">rejected</span> plane 1: rake 51&deg; from 90, just over the limit; plane 2 is thrust-like but its strike is 100&deg; off</td></tr>
+  </table></div>
+  <p class="where">Values from <code>kermadectonga2_v9/data/gcmt/</code> (the NDK files and the subset CSV); the nearest cell's strike recomputed with step 5's <code>nearest_unit_source_strike()</code> on kermadectonga2_v9's mesh. Samoa and Kaikoura are named from their date and place; the code does not name events.</p>
+
+  <figure class="fig">
+    <img src="img/seismicity_kermadectonga2_selection.png" alt="Map of kermadectonga2_v9's mesh with the 0.4 degree zone, the 9 selected earthquakes as purple stars joined to their hypocentres, deep earthquakes as grey circles, normal faults as red triangles and misaligned thrusts as gold diamonds; a timeline of the 9 selected events on the right">
+    <figcaption><b>Every Mw &ge; 7.15 earthquake of the window within 4&deg; of kermadectonga2_v9's mesh, and step 5's verdict.</b> Symbols sit at the centroid; each selected star is joined to its hypocentre (small black dot), which is often outside the mesh while the centroid is inside. The dashed purple line is the 0.4&deg; zone. Grey circles, west of the trench, are the deep earthquakes of the sinking plate; red triangles near the trench have no thrust-like plane, mostly normal faults (the Samoa earthquake is the one at the top right); the gold diamond at the bottom left is the Kaikoura earthquake. Five of the 9 selected events cluster near 29&deg; S, three of them in January 1976 (timeline, right). Made by <code>figures_src/make_seismicity.py</code>, which imports step 5's own functions and applies them in the code's order.</figcaption>
+  </figure>
+
+  <details class="deep">
+    <summary>Why every detail of the rule matters <span class="tag">tested on PTHA18's own meshes</span></summary>
+    <div class="body">
+      <p>Small simplifications change the list. Testing "within 0.4&deg; of the nearest cell <i>centre</i>" with a plain longitude/latitude distance, instead of buffering every cell and joining them as R does, and choosing the nearest cell by that plain distance instead of the great-circle distance, reproduces PTHA18's list on only 4 of the 8 zones (kermadectonga2 8 of 9, kurilsjapan 19 of 21, philippine 5 of 6, cascadia 0 of 1; from the step 5 docstring). The rule as coded reproduces all 8 (checked again below).</p>
+      <p>Three other details matter: the centroid is read from the right line of the NDK record, both the hypocentre and the centroid are tried (the hypocentre alone finds only 5 of kermadectonga2's 9 events), and the moment magnitude uses 9.05 in its formula (comments in <code>parse_ndk_full()</code>).</p>
+    </div>
+  </details>
+</section>
+
+<section>
+  <h2 id="written">What step 5 writes</h2>
+  <p><code>data/gcmt/&lt;zone&gt;_gcmt_subset.csv</code>, one row per selected earthquake, sorted by Mw (smallest first). If no earthquake qualifies (makran2, calabria2, caribbean2, antilles2), the file still has its header row, so step 6 reads it as zero events instead of failing.</p>
+  <div class="tbl"><table>
+    <tr><th>column</th><th>meaning</th></tr>
+    <tr><td><code>date</code></td><td>date of the earthquake (NDK line 1)</td></tr>
+    <tr><td><code>hypo_lat</code>, <code>hypo_lon</code></td><td>hypocentre (line 1)</td></tr>
+    <tr><td><code>cent_lat</code>, <code>cent_lon</code></td><td>centroid (line 3)</td></tr>
+    <tr><td><code>depth_km</code></td><td>hypocentral depth (line 1), the one tested</td></tr>
+    <tr><td><code>Mw</code></td><td>moment magnitude from the moment tensor (line 4), full precision</td></tr>
+    <tr><td><code>strike1, dip1, rake1, strike2, dip2, rake2</code></td><td>the two nodal planes (line 5)</td></tr>
+  </table></div>
+  <p>kermadectonga2_v9's file:</p>
+  <div class="tbl"><table>
+    <tr><th>date</th><th class="n">hypocentre</th><th class="n">centroid</th><th class="n">depth km</th><th class="n">Mw</th><th class="n">plane 1</th><th class="n">plane 2</th></tr>
+    <tr><td>1995-07-03</td><td class="n">-29.20, -177.61</td><td class="n">-29.13, -177.22</td><td class="n">33</td><td class="n">7.164</td><td class="n">197, 28, 95</td><td class="n">11, 62, 87</td></tr>
+    <tr><td>1976-01-01</td><td class="n">-28.61, -177.64</td><td class="n">-29.25, -176.96</td><td class="n">59</td><td class="n">7.289</td><td class="n">202, 30, 93</td><td class="n">18, 60, 88</td></tr>
+    <tr><td>1977-04-02</td><td class="n">-16.70, -172.10</td><td class="n">-16.77, -171.91</td><td class="n">33</td><td class="n">7.311</td><td class="n">317, 41, 45</td><td class="n">190, 62, 122</td></tr>
+    <tr><td>2011-10-21</td><td class="n">-28.99, -176.24</td><td class="n">-28.83, -175.72</td><td class="n">33</td><td class="n">7.415</td><td class="n">202, 37, 83</td><td class="n">31, 53, 96</td></tr>
+    <tr><td>1982-12-19</td><td class="n">-24.19, -175.77</td><td class="n">-24.31, -175.10</td><td class="n">33</td><td class="n">7.498</td><td class="n">198, 22, 101</td><td class="n">6, 68, 86</td></tr>
+    <tr><td>2009-03-19</td><td class="n">-23.05, -174.66</td><td class="n">-23.08, -174.23</td><td class="n">34</td><td class="n">7.655</td><td class="n">205, 44, 98</td><td class="n">14, 46, 82</td></tr>
+    <tr><td>1976-01-14</td><td class="n">-29.21, -177.89</td><td class="n">-29.69, -177.04</td><td class="n">69</td><td class="n">7.820</td><td class="n">200, 26, 95</td><td class="n">15, 64, 88</td></tr>
+    <tr><td>1976-01-14</td><td class="n">-28.43, -177.66</td><td class="n">-28.72, -176.75</td><td class="n">33</td><td class="n">7.909</td><td class="n">189, 11, 71</td><td class="n">28, 80, 93</td></tr>
+    <tr><td>2006-05-03</td><td class="n">-20.19, -174.12</td><td class="n">-20.39, -173.47</td><td class="n">55</td><td class="n">7.999</td><td class="n">226, 22, 123</td><td class="n">11, 72, 78</td></tr>
+  </table></div>
+  <p class="where">From <code>kermadectonga2_v9/data/gcmt/kermadectonga2_gcmt_subset.csv</code> (Mw rounded here to 3 decimals). The step's log:</p>
+  <pre class="out">  47689 events in the catalogue window [1976-01-01, 2017-03-01]
+  219 unit sources to match against
+
+  applying: buffer&lt;=0.4 deg, |rake-90|&lt;=50.0 deg, |strike diff|&lt;=50.0 deg, depth&lt;=71.0 km, Mw&gt;=7.15
+
+  9 event(s) above Mw 7.15 qualify
+  magnitudes: 7.164, 7.289, 7.311, 7.415, 7.498, 7.655, 7.820, 7.909, 7.999
+  duration: 41.1636 years</pre>
+  <p class="where">With <code>--ptha true</code>, and once step 8 has extracted PTHA18's selection, one more line compares the count: <code>official PTHA18 count for this zone (from step 8): 9 events in 41.1636 years</code>. With <code>--ptha false</code> that comparison is shown only in the report, from step 8's outputs.</p>
+</section>
+
+<section>
+  <h2 id="level3">How LEVEL 3 uses it</h2>
+  <p><b>Step 6</b> (<code>read_gcmt_subset()</code>) turns the CSV into the input file's <code>observed_seismicity</code> block. For kermadectonga2_v9 (<code>inputs/input_kermadectonga2_scratch.json</code>):</p>
+  <div class="code"><pre>"observed_seismicity": {
+  "threshold_Mw": 7.15,
+  "count": 9,
+  "duration_years": 41.163586584531146,
+  "observed_Mw": [7.1637, 7.2890, 7.3110, 7.4154, 7.4976, 7.6547, 7.8201, 7.9091, 7.9990]   <span class="cm"># full precision in the file</span>
+}</pre></div>
+  <p><b>The engine</b> (<a href="engine.html#level3">LEVEL 3</a>) then does a <a href="glossary.html#term-bayesian-update">Bayesian update</a> of the logic-tree weights: each branch keeps its prior weight multiplied by how likely the observations are under that branch.</p>
+  <ol class="steps">
+    <li><b>Predicted rate.</b> Each branch's magnitude-frequency curve (<a href="glossary.html#term-gr">Gutenberg-Richter</a>) gives its rate r of earthquakes above the threshold 7.15.</li>
+    <li><b>Count likelihood.</b> Over 41.1636 years the branch expects r x 41.1636 events; the probability of seeing exactly 9 is the Poisson probability P(9 | r x 41.1636) (<code>poisson.logpmf</code> in <code>compute_updated_logic_tree_weights()</code>).</li>
+    <li><b>Magnitude likelihood.</b> Because <code>observed_Mw</code> is given, each observed magnitude also contributes the density of that magnitude under the branch's curve: a branch whose curve makes Mw 8.0 very rare is penalised.</li>
+    <li><b>New weights.</b> Prior x likelihood, normalised. The rates, and their uncertainty (<a href="engine.html#level5">LEVEL 5</a>), use these posterior weights.</li>
+  </ol>
+  <div class="tbl"><table>
+    <tr><th class="n">branch's rate above Mw 7.15 (/yr)</th><th class="n">expected events in 41.16 yr</th><th class="n">P(exactly 9)</th></tr>
+    <tr><td class="n">0.05</td><td class="n">2.06</td><td class="n">0.0002</td></tr>
+    <tr><td class="n">0.10</td><td class="n">4.12</td><td class="n">0.015</td></tr>
+    <tr class="hl"><td class="n">0.219 (= 9 / 41.16)</td><td class="n">9.01</td><td class="n">0.132</td></tr>
+    <tr><td class="n">0.30</td><td class="n">12.35</td><td class="n">0.080</td></tr>
+    <tr><td class="n">0.50</td><td class="n">20.58</td><td class="n">0.002</td></tr>
+  </table></div>
+  <p class="where">Illustrative rates, computed with <code>scipy.stats.poisson</code>: only the count part of the likelihood. A branch predicting 0.219 events per year is about 9 times more likely, after seeing 9 events, than one predicting 0.10.</p>
+  <ul class="tight">
+    <li><b>Zero events is data too.</b> On makran2 (0 events, as in PTHA18) the update favours branches that predict few large earthquakes.</li>
+    <li><b>Threshold.</b> If <code>threshold_Mw</code> is missing the engine uses <code>Mw_min</code>, and it stops with an error if the threshold is below <code>Mw_min</code> (<code>run_logic_tree.py</code>).</li>
+    <li><b>Segments.</b> A segment may not reuse the whole zone's catalogue: the engine refuses to run a segment with the update switched on unless the segment has its own <code>observed_seismicity</code> block.</li>
+    <li><b>Switching it off.</b> <code>"update_logic_tree_weights_with_data": false</code> in the input file skips LEVEL 3 (the default written by step 6 is true).</li>
+  </ul>
+  <p class="where">Where in the code: <code>run_logic_tree.py</code> (the "LEVEL 3 inputs: observed seismicity" block builds <code>Mw_count_duration</code> and <code>Mw_obs_data</code>), <code>pyptha_v12/rates.py</code> <code>compute_updated_logic_tree_weights()</code>.</p>
+</section>
+
+<section>
+  <h2 id="results">Results on the 8 examples</h2>
+  <div class="tbl"><table>
+    <tr><th>folder</th><th>PTHA18 zone name</th><th class="n">this run</th><th class="n">PTHA18 official</th><th>notes</th></tr>
+    <tr><td>calabria2_v9</td><td>calabria2</td><td class="n">0</td><td class="n">not in the list</td><td>no PTHA18 LEVEL 3 data for this zone</td></tr>
+    <tr><td>caribbean2_v9</td><td>antilles2</td><td class="n">0</td><td class="n">not in the list</td><td>the Caribbean region is matched to PTHA18's zone <code>antilles2</code>, so its file is <code>antilles2_gcmt_subset.csv</code></td></tr>
+    <tr><td>antilles2_v9</td><td>antilles2</td><td class="n">0</td><td class="n">not in the list</td><td></td></tr>
+    <tr><td>southamerica_v9</td><td>southamerica</td><td class="n">24</td><td class="n">25</td><td>missing: 2016-12-25, Mw 7.60, centroid -43.41, -74.43 (Chiloe, southern Chile). This run's mesh ends at -42.99, and the event is outside its 0.4&deg; zone; PTHA18's mesh continues south to about -57.6</td></tr>
+    <tr class="hl"><td>kermadectonga2_v9</td><td>kermadectonga2</td><td class="n">9</td><td class="n">9</td><td>identical magnitudes</td></tr>
+    <tr><td>kurilsjapan_v9</td><td>kurilsjapan</td><td class="n">21</td><td class="n">21</td><td>identical magnitudes</td></tr>
+    <tr><td>makran2_v9</td><td>makran2</td><td class="n">0</td><td class="n">0</td><td></td></tr>
+    <tr><td>puysegur2_v9</td><td>puysegur2</td><td class="n">4</td><td class="n">4</td><td>identical magnitudes</td></tr>
+  </table></div>
+  <p class="where">This run: row count of each <code>data/gcmt/&lt;zone&gt;_gcmt_subset.csv</code>. Official: <code>official_ptha_data/trees/official_gcmt_observations.csv</code> (PTHA18's own LEVEL 3 data, read from its saved session). "Identical magnitudes": the sorted Mw lists agree within 1e-9. The southamerica event was found by <code>figures_src/make_seismicity.py</code> (<code>southamerica_missing()</code>).</p>
+  <p>On this run's own meshes the list can differ from PTHA18's only where the meshes' outlines differ, since the rule is the same. On PTHA18's meshes the rule gives PTHA18's list exactly:</p>
+
+  <h3>Validation: 8 of 8 zones identical</h3>
+  <p><code>validate_v9.py gcmt</code> meshes PTHA18's own contours with this package's discretiser (which reproduces PTHA18's published grid, see <a href="validation.html#mesh">validation</a>), applies step 5's rule to the catalogue, and compares the sorted magnitudes with PTHA18's list. Re-run for this page (from <code>ptha18_logic_tree_test/</code>). It needs PTHA18's selected events, <code>official_ptha_data/trees/official_gcmt_observations.csv</code>, which is extracted from the saved session: run <code>official_ptha_data/fetch_official_inputs.py puysegur2 kermadectonga2 kurilsjapan southamerica cascadia makran2 philippine izumariana</code> once first (it also extracts every segment's list; the check compares those too, PTHA18's rule applied to each segment's own cells) (R and the RData, as step 8), see <a href="validation.html">validation</a>.</p>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/validation/validate_v9.py gcmt --ndk kermadectonga2_v9/data/gcmt</pre></div>
+  <pre class="out">GCMT: step 5's rule on PTHA18's own mesh vs PTHA18's own selected events
+  kermadectonga2   official  9 events, step 5 rule  9  PASS (identical list)
+  puysegur2        official  4 events, step 5 rule  4  PASS (identical list)
+  kurilsjapan      official 21 events, step 5 rule 21  PASS (identical list)
+  southamerica     official 25 events, step 5 rule 25  PASS (identical list)
+  makran2          official  0 events, step 5 rule  0  PASS (identical list)
+  cascadia         official  1 events, step 5 rule  1  PASS (identical list)
+  izumariana       official  0 events, step 5 rule  0  PASS (identical list)
+  philippine       official  6 events, step 5 rule  6  PASS (identical list)
+
+SUMMARY: gcmt PASS</pre>
+  <p>So southamerica's missing event is a mesh difference, not a rule difference: on PTHA18's longer mesh the same code finds all 25. More on the checks in <a href="validation.html#gcmt">Validation and tests</a>; the zone-by-zone story in <a href="examples.html">The 8 examples</a>.</p>
+  <div class="callout"><span class="lbl">Next</span>The count and the duration go into the input file with the geometry and the <a href="step3.html">convergence</a>: <a href="engine.html">steps 6-7</a>.</div>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>from_scratch_v12 documentation. Figures come from the example folders in <code>ptha18_logic_tree_test/</code> or from <code>html/docs/figures_src/make_seismicity.py</code>.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

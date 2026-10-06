@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Validation and tests | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Results</div>
+  <h1>Validation and tests</h1>
+  <p class="lead">How do we know the Python code does what PTHA18 did? By feeding it PTHA18's own inputs and comparing the output with the files PTHA18 published. Nine checks do that on real zones (three of them for segmented zones), and 159 unit tests check the pieces. This page lists them all, with the results of the latest run.</p>
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">14 / 14</div><div class="lbl">meshes: same size as PTHA18, area within 0.004%</div></div>
+    <div class="card kpi"><div class="num">32 x 32,000</div><div class="lbl">branches: GR a within 3e-12 (4 zones, and 28 zone and segment trees)</div></div>
+    <div class="card kpi"><div class="num">4 + 7 zones</div><div class="lbl">every scenario's rate within 1e-10 (7 of them segmented)</div></div>
+    <div class="card kpi"><div class="num">8 + 12</div><div class="lbl">earthquake lists identical (zones + segments)</div></div>
+  </div>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 960 230" role="img" aria-label="The validation strategy: PTHA18's published inputs go into this code; its outputs are compared with PTHA18's published outputs at four points">
+      <defs><marker id="va-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker></defs>
+      <g font-size="12.5">
+        <text x="20" y="22" font-weight="700" fill="#5b6475">PTHA18'S PUBLISHED INPUTS (NCI)</text>
+        <text x="370" y="22" font-weight="700" fill="#5b6475">THIS CODE</text>
+        <text x="680" y="22" font-weight="700" fill="#5b6475">COMPARED WITH PTHA18'S OUTPUTS</text>
+        <rect x="20" y="34" width="290" height="40" rx="8" fill="#f0f2f5" stroke="#8a93a3"/><text x="32" y="59">contours (SOURCEZONE_CONTOURS)</text>
+        <rect x="20" y="84" width="290" height="40" rx="8" fill="#f0f2f5" stroke="#8a93a3"/><text x="32" y="109">official inputs (saved session, step 8)</text>
+        <rect x="20" y="134" width="290" height="40" rx="8" fill="#f0f2f5" stroke="#8a93a3"/><text x="32" y="159">PTHA18's own mesh + GCMT files</text>
+        <rect x="370" y="34" width="250" height="40" rx="8" fill="#e4f5ec" stroke="#2e9e6b"/><text x="382" y="59">the mesh builder (step 2)</text>
+        <rect x="370" y="84" width="250" height="40" rx="8" fill="#e8f0fd" stroke="#2f6fdf"/><text x="382" y="109">the engine (step 7)</text>
+        <rect x="370" y="134" width="250" height="40" rx="8" fill="#f1eafb" stroke="#8a5cd1"/><text x="382" y="159">the selection rule (step 5)</text>
+        <rect x="680" y="34" width="270" height="40" rx="8" fill="#fff" stroke="#2e9e6b"/><text x="692" y="59"><tspan font-weight="700">mesh</tspan>: the published grid</text>
+        <rect x="680" y="84" width="270" height="40" rx="8" fill="#fff" stroke="#2f6fdf"/><text x="692" y="109"><tspan font-weight="700">engine</tspan>: the 32,000 branches</text>
+        <rect x="680" y="134" width="270" height="40" rx="8" fill="#fff" stroke="#2f6fdf"/><text x="692" y="159"><tspan font-weight="700">events</tspan>: every scenario's rate</text>
+        <rect x="680" y="184" width="270" height="40" rx="8" fill="#fff" stroke="#8a5cd1"/><text x="692" y="209"><tspan font-weight="700">gcmt</tspan>: the selected earthquakes</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#va-ar)">
+        <path d="M310,54 L368,54"/><path d="M310,104 L368,104"/><path d="M310,154 L368,154"/>
+        <path d="M620,54 L678,54"/><path d="M620,104 L678,104"/><path d="M620,110 C650,120 650,150 678,154"/><path d="M620,154 C650,170 650,200 678,204"/>
+      </g>
+    </svg>
+    <figcaption><b>Same inputs, same outputs.</b> Every check gives this code exactly what PTHA18 had and compares with what PTHA18 published. v9 adds the same comparisons for segmented zones (checks 5 and 6), and three checks of its own (<code>segmentation</code>, <code>v8parity</code>, <code>unseg_view</code>). A check passes only if the dimensions match exactly and the numbers match to a tolerance far below any physical meaning.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="validate">Running the checks</h2>
+  <p><b>Before the first run.</b> <code>mesh</code> needs only internet: it downloads PTHA18's published meshes into <code>validation/ptha18_reference/</code> itself. <code>engine</code>, <code>events</code>, <code>gcmt</code>, <code>official_segments</code> and <code>events_segmented</code> compare against PTHA18's own input files and logic tree, which the package does not ship: extract them once from the saved session (needs R, rptha and the RData, as <a href="official.html">step 8</a> does). Without them the check stops and prints this command:</p>
+  <div class="code"><pre>.venv/Scripts/python.exe official_ptha_data/fetch_official_inputs.py puysegur2 kermadectonga2 kurilsjapan southamerica cascadia makran2 philippine izumariana ryuku sunda2 alaskaaleutians</pre></div>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/validation/validate_v9.py --ndk kermadectonga2_v9/data/gcmt   <span class="cm"># all 10 checks</span>
+.venv/Scripts/python.exe from_scratch_v12/validation/validate_v9.py mesh engine events gcmt --ndk kermadectonga2_v9/data/gcmt
+.venv/Scripts/python.exe from_scratch_v12/validation/validate_v9.py segmentation berryman_segments official_segments events_segmented v8parity unseg_view</pre></div>
+  <p class="where"><code>segmentation</code> reads the mesh of any <code>&lt;zone&gt;_v*</code> example folder; <code>v8parity</code> runs v9's engine on <code>kermadectonga2_v8</code>'s own input and compares with that folder's outputs (it is skipped without the folder); <code>unseg_view</code> compares the unsegmented branch of <code>kermadectonga2_v9seg</code> and <code>kurilsjapan_v9seg</code> (tables, rate curve, band, this run and official) with <code>kermadectonga2_v9</code> and <code>kurilsjapan_v9</code>, bit for bit, because <code>report_unsegmented.html</code> is built on it (skipped without the folders).</p>
+  <p class="where">The same applies to the few tests that compare against PTHA18's official inputs (for example <code>test_bird_convergence_reproduces_ptha18_convergence</code>): without <code>inputs/input_&lt;zone&gt;.json</code> they are skipped, not failed, and pytest reports them as <code>skipped</code>.</p>
+  <p>Each check prints one line per zone and a PASS or FAIL. The reference files are downloaded once from NCI's public server into <code>from_scratch_v12/validation/ptha18_reference/</code> (no account needed); <code>engine</code> and <code>events</code> need PTHA18's official inputs in <code>inputs/</code>, which step 8 writes; <code>gcmt</code> needs the GCMT files of any example folder. The whole run takes a few minutes. Latest run:</p>
+  <pre class="out">SUMMARY: mesh PASS, engine PASS, events PASS, gcmt PASS, segmentation PASS,
+         berryman_segments PASS, official_segments PASS, events_segmented PASS, v8parity PASS,
+         unseg_view PASS</pre>
+</section>
+
+<section>
+  <h2 id="mesh">Check 1: the mesh</h2>
+  <p>This code's mesh builder, given PTHA18's own contours (NCI <code>DATA/SOURCEZONE_CONTOURS.zip</code>), against PTHA18's published grid (<code>unit_source_grid/&lt;zone&gt;.shp</code>) and statistics table. With <code>--discretizer optimal</code>, as the pipeline runs.</p>
+  <div class="grid g2">
+    <figure class="fig" style="margin:0"><img src="img/validation_mesh_puysegur2.png" alt="puysegur2: this code's mesh on PTHA18's contours over PTHA18's published grid"><figcaption><b>puysegur2</b>: the orange mesh sits exactly on PTHA18's (blue); every node within 2 cm.</figcaption></figure>
+    <div class="tbl"><table>
+      <tr><th>zone</th><th class="n">cells</th><th class="n">area</th><th class="n">node offset median / max</th></tr>
+      <tr><td>puysegur2</td><td class="n">2 x 14</td><td class="n">+0.000%</td><td class="n">0.0 m / 0 m</td></tr>
+      <tr><td>cascadia</td><td class="n">3 x 22</td><td class="n">-0.002%</td><td class="n">0.0 m / 8,973 m</td></tr>
+      <tr><td>makran2</td><td class="n">8 x 20</td><td class="n">+0.000%</td><td class="n">0.0 m / 0 m</td></tr>
+      <tr><td>kermadectonga2</td><td class="n">3 x 72</td><td class="n">+0.000%</td><td class="n">0.1 m / 1 m</td></tr>
+      <tr><td>newhebrides2</td><td class="n">2 x 38</td><td class="n">+0.002%</td><td class="n">43.7 m / 858 m</td></tr>
+      <tr><td>philippine</td><td class="n">2 x 33</td><td class="n">+0.000%</td><td class="n">0.0 m / 0 m</td></tr>
+      <tr><td>izumariana</td><td class="n">2 x 70</td><td class="n">+0.000%</td><td class="n">0.1 m / 4 m</td></tr>
+      <tr><td>solomon2</td><td class="n">2 x 42</td><td class="n">-0.000%</td><td class="n">3.2 m / 31 m</td></tr>
+      <tr><td>newguinea2</td><td class="n">6 x 21</td><td class="n">+0.000%</td><td class="n">0.0 m / 0 m</td></tr>
+      <tr><td>mexico</td><td class="n">3 x 58</td><td class="n">+0.000%</td><td class="n">0.0 m / 3 m</td></tr>
+      <tr><td>kurilsjapan</td><td class="n">4 x 61</td><td class="n">+0.000%</td><td class="n">0.0 m / 0 m</td></tr>
+      <tr><td>alaskaaleutians</td><td class="n">4 x 78</td><td class="n">+0.004%</td><td class="n">0.2 m / 12,097 m</td></tr>
+      <tr><td>sunda2</td><td class="n">4 x 120</td><td class="n">+0.000%</td><td class="n">1.8 m / 72 m</td></tr>
+      <tr><td>southamerica</td><td class="n">4 x 165</td><td class="n">+0.001%</td><td class="n">29.8 m / 431 m</td></tr>
+    </table></div>
+  </div>
+  <p>On most zones the nodes coincide to the metre. On cascadia and alaskaaleutians a few nodes are 9 and 12 km apart while the median is under a metre and the area agrees to 0.004%: the cause of those few nodes has not been traced. Mean dips agree to 0.015 deg or better.</p>
+</section>
+
+<section>
+  <h2 id="engine">Check 2: the logic tree</h2>
+  <p>The engine on PTHA18's official input of each zone (written by step 8 from the saved R session) against PTHA18's official branch table: the Gutenberg-Richter <i>a</i> value, the prior and the posterior weight of each of the 32,000 branches.</p>
+  <div class="tbl"><table>
+    <tr><th>zone</th><th class="n">branches</th><th class="n">largest difference in a</th><th class="n">largest difference in posterior weight</th></tr>
+    <tr><td>puysegur2</td><td class="n">32,000 / 32,000</td><td class="n">8.0e-15</td><td class="n">6.0e-16</td></tr>
+    <tr><td>kermadectonga2</td><td class="n">32,000 / 32,000</td><td class="n">8.3e-13</td><td class="n">2.0e-15</td></tr>
+    <tr><td>kurilsjapan</td><td class="n">32,000 / 32,000</td><td class="n">2.9e-12</td><td class="n">1.4e-14</td></tr>
+    <tr><td>southamerica</td><td class="n">32,000 / 32,000</td><td class="n">1.8e-12</td><td class="n">2.6e-14</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="events">Check 3: every scenario's rate</h2>
+  <p>The rate of every earthquake scenario, its mean and its LEVEL 5 percentiles, against PTHA18's published <code>rate_annual</code> columns (<code>TSUNAMI_EVENTS/all_uniform_slip_earthquake_events_&lt;zone&gt;.nc</code>), on the zones PTHA18 did not segment. The check also requires the same scenarios in the same order, and zero rates in the same places. The Bird model is added exactly as step 8 adds it.</p>
+  <figure class="fig"><img src="img/validation_events_puysegur2.png" alt="Every scenario of puysegur2: this engine against PTHA18, and the relative difference by magnitude"><figcaption><b>puysegur2</b>: left, each dot is a scenario, on the 1:1 line; right, the relative difference of each, at most 7.8e-13, far below the pass threshold of 1e-7.</figcaption></figure>
+  <div class="tbl"><table>
+    <tr><th>zone</th><th>convergence model</th><th class="n">scenarios</th><th>same rows</th><th class="n">mean rate, largest relative difference</th><th class="n">percentiles</th></tr>
+    <tr><td>puysegur2</td><td>constant</td><td class="n">187 / 189</td><td>yes</td><td class="n">7.8e-13</td><td class="n">7.2e-13</td></tr>
+    <tr><td>cascadia</td><td>Bird</td><td class="n">793 / 795</td><td>yes</td><td class="n">1.1e-12</td><td class="n">1.2e-12</td></tr>
+    <tr><td>makran2</td><td>Bird</td><td class="n">2,209 / 2,211</td><td>yes</td><td class="n">1.9e-12</td><td class="n">1.9e-12</td></tr>
+    <tr><td>philippine</td><td>Bird</td><td class="n">624 / 626</td><td>yes</td><td class="n">9.2e-11</td><td class="n">7.6e-9</td></tr>
+  </table></div>
+  <p class="where">"187 / 189": the official input files (written by step 8) stop at Mw 9.6, the cap on Mw_max, while PTHA18's published table goes on to Mw 9.8 with a zero rate in those two rows on all four zones. (The from-scratch input files go to 9.8, so their tables have PTHA18's rows.) The percentiles come from 40,000 random samples, which is why they agree slightly less closely than the mean.</p>
+</section>
+
+<section>
+  <h2 id="gcmt">Check 4: the earthquake selection</h2>
+  <p>Step 5's rule applied to PTHA18's own mesh, against the list of earthquakes PTHA18 itself selected (<code>official_gcmt_observations.csv</code>). v9: also for every PTHA18 segment, the rule applied to the segment's own cells (<code>gcmt_subsetter.R</code> 106-142), where an event near a boundary counts in both neighbours.</p>
+  <div class="tbl"><table>
+    <tr><th>zone</th><th class="n">PTHA18</th><th class="n">this rule</th><th>result</th></tr>
+    <tr><td>kermadectonga2</td><td class="n">9</td><td class="n">9</td><td>identical list</td></tr>
+    <tr><td>puysegur2</td><td class="n">4</td><td class="n">4</td><td>identical list</td></tr>
+    <tr><td>kurilsjapan</td><td class="n">21</td><td class="n">21</td><td>identical list</td></tr>
+    <tr><td>southamerica</td><td class="n">25</td><td class="n">25</td><td>identical list</td></tr>
+    <tr><td>makran2, izumariana</td><td class="n">0</td><td class="n">0</td><td>identical</td></tr>
+    <tr><td>cascadia</td><td class="n">1</td><td class="n">1</td><td>identical list</td></tr>
+    <tr><td>philippine</td><td class="n">6</td><td class="n">6</td><td>identical list</td></tr>
+    <tr><td>kermadectonga2 _tonga / _kermadec / _hikurangi</td><td class="n">4 / 6 / 0</td><td class="n">4 / 6 / 0</td><td>identical lists (one event in both _tonga and _kermadec)</td></tr>
+    <tr><td>kurilsjapan _kurils / _japan</td><td class="n">13 / 8</td><td class="n">13 / 8</td><td>identical lists</td></tr>
+    <tr><td>southamerica, 5 segments</td><td class="n">0 / 4 / 8 / 8 / 5</td><td class="n">0 / 4 / 8 / 8 / 5</td><td>identical lists</td></tr>
+    <tr><td>izumariana _izubonin / _marianas</td><td class="n">0 / 0</td><td class="n">0 / 0</td><td>identical</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="official-segments">Check 5: PTHA18's segments (v9)</h2>
+  <p>The engine on PTHA18's own <b>segmented</b> input, exactly as step 8 builds it for a segmented example (PTHA18's segment rows of <code>sourcezone_parameters.csv</code>, the session's GCMT events per segment, PTHA18's Bird model on its mesh), against PTHA18's official tree of the zone and of every segment (<code>logic_tree_branches_&lt;zone&gt;_&lt;segment&gt;_OFFICIAL.csv</code>, extracted from the saved session). This covers what is specific to a segment: its own area, convergence, mean dip, Mw_max anchor, coupling and GCMT events.</p>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/validation/validate_v9.py official_segments</pre></div>
+  <div class="tbl"><table>
+    <tr><th>zone: representations</th><th class="n">branches</th><th class="n">largest difference in a</th><th class="n">largest difference in posterior weight</th></tr>
+    <tr><td>kermadectonga2: unsegmented, _tonga, _kermadec, _hikurangi</td><td class="n">32,000 / 32,000 each</td><td class="n">8.3e-13</td><td class="n">2.0e-15</td></tr>
+    <tr><td>kurilsjapan: unsegmented, _kurils, _japan</td><td class="n">32,000 / 32,000 each</td><td class="n">2.9e-12</td><td class="n">1.4e-14</td></tr>
+    <tr><td>izumariana: unsegmented, _izubonin, _marianas</td><td class="n">32,000 / 32,000 each</td><td class="n">1.2e-11</td><td class="n">1.1e-14</td></tr>
+    <tr><td>ryuku: unsegmented, _nankai, _ryuku</td><td class="n">32,000 / 32,000 each</td><td class="n">8.9e-15</td><td class="n">6.0e-16</td></tr>
+    <tr><td>sunda2: unsegmented, _java, _sumatra, _andaman, _arakan</td><td class="n">32,000 / 32,000 each</td><td class="n">2.4e-12</td><td class="n">1.2e-14</td></tr>
+    <tr><td>southamerica: unsegmented and 5 segments</td><td class="n">32,000 / 32,000 each</td><td class="n">1.8e-12</td><td class="n">2.5e-14</td></tr>
+    <tr><td>alaskaaleutians: unsegmented, _eastern, _western, _komandorski</td><td class="n">32,000 / 32,000 each</td><td class="n">2.7e-12</td><td class="n">4.1e-15</td></tr>
+  </table></div>
+  <p class="where">28 logic trees on 7 zones. It guards a real bug fixed with it: segments used the whole zone's convergence instead of their own area-weighted one (<a href="engine.html#level0">LEVEL 0</a>), so their slip rates could not match PTHA18's.</p>
+</section>
+
+<section>
+  <h2 id="events-segmented">Check 6: every scenario of a segmented zone (v9)</h2>
+  <p>What PTHA18 publishes for a segmented zone is one rate per scenario, 0.5 x the unsegmented model plus 0.5 x every segment the scenario touches (each in proportion to the part of it inside), with percentiles from PTHA18's partial-segmentation step. The engine on the same segmented input writes that as <code>scenario_rates_&lt;zone&gt;_source_zone.csv</code>; this check compares it with PTHA18's published <code>rate_annual</code> and its 5 percentile columns (NCI <code>all_uniform_slip_earthquake_events_&lt;zone&gt;.nc</code>).</p>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/validation/validate_v9.py events_segmented</pre></div>
+  <div class="tbl"><table>
+    <tr><th>zone</th><th class="n">segments</th><th class="n">scenarios</th><th class="n">mean rate, largest relative difference</th><th class="n">percentiles</th></tr>
+    <tr><td>kermadectonga2</td><td class="n">3</td><td class="n">2,947 / 2,949</td><td class="n">2.9e-12</td><td class="n">2.6e-11</td></tr>
+    <tr><td>kurilsjapan</td><td class="n">2</td><td class="n">3,335 / 3,339</td><td class="n">2.5e-12</td><td class="n">3.3e-11</td></tr>
+    <tr><td>izumariana</td><td class="n">2</td><td class="n">1,930 / 1,932</td><td class="n">7.5e-11</td><td class="n">3.1e-10</td></tr>
+    <tr><td>ryuku</td><td class="n">2</td><td class="n">1,238 / 1,240</td><td class="n">4.3e-11</td><td class="n">4.3e-11</td></tr>
+    <tr><td>sunda2</td><td class="n">4</td><td class="n">7,454 / 7,574</td><td class="n">2.2e-12</td><td class="n">4.5e-11</td></tr>
+    <tr><td>southamerica</td><td class="n">5</td><td class="n">9,911 / 10,117</td><td class="n">5.7e-11</td><td class="n">7.6e-11</td></tr>
+    <tr><td>alaskaaleutians</td><td class="n">3</td><td class="n">4,111 / 4,125</td><td class="n">1.3e-12</td><td class="n">2.3e-11</td></tr>
+  </table></div>
+  <p class="where">Every scenario, with zero rates in the same places. The rows missing from the engine's table are PTHA18's magnitudes above 9.6, the Mw_max cap, which carry a zero rate. Before 2026-09-30 this could not be checked: a segment was a slice of the mesh with its own scenarios, so a rupture across a boundary had no rate from either segment.</p>
+</section>
+
+<section>
+  <h2 id="berryman-segments">Check 7: where the segment boundaries fall (v9)</h2>
+  <p>A segmented run places its boundaries at Berryman et al. (2015) Table 3.1's segment end points (<a href="segmentation.html#bird-vs-ptha18">why</a>). PTHA18 took its segments from the same table and typed their columns into <code>sourcezone_parameters.csv</code>. This check places Berryman's end points on <b>PTHA18's own published mesh</b> with the same code a run uses (<code>segmentation.berryman_segments</code>) and compares every boundary the two share with PTHA18's index. It passes when all are within 2 columns.</p>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/validation/validate_v9.py berryman_segments</pre></div>
+  <div class="tbl"><table>
+    <tr><th>zone</th><th class="n">columns</th><th class="n">Berryman / PTHA18 segments</th><th>shared boundaries (Berryman vs PTHA18)</th><th class="n">worst</th></tr>
+    <tr><td>kermadectonga2</td><td class="n">72</td><td class="n">3 / 3</td><td>22 vs 24, 57 vs 58</td><td class="n">2</td></tr>
+    <tr><td>kurilsjapan</td><td class="n">61</td><td class="n">2 / 2</td><td>45 vs 45</td><td class="n">0</td></tr>
+    <tr><td>izumariana</td><td class="n">70</td><td class="n">2 / 2</td><td>26 vs 27</td><td class="n">1</td></tr>
+    <tr><td>ryuku</td><td class="n">40</td><td class="n">2 / 2</td><td>13 vs 13</td><td class="n">0</td></tr>
+    <tr><td>sunda2</td><td class="n">120</td><td class="n">3 / 4</td><td>38 vs 39, 67 vs 67 (PTHA18's Arakan is not in Table 3.1)</td><td class="n">1</td></tr>
+    <tr><td>southamerica</td><td class="n">165</td><td class="n">6 / 5</td><td>34, 60, 88, 137, all identical (PTHA18 merges Patagonia North and South)</td><td class="n">0</td></tr>
+    <tr><td>alaskaaleutians</td><td class="n">78</td><td class="n">6 / 3</td><td>29, 67 identical (PTHA18 merges four eastern segments)</td><td class="n">0</td></tr>
+    <tr><td>newhebrides2</td><td class="n">38</td><td class="n">4 / 4</td><td>9, 20, 30 vs 9, 20, 29</td><td class="n">1</td></tr>
+    <tr><td>solomon2</td><td class="n">42</td><td class="n">3 / 3</td><td>19, 28 vs 19, 29</td><td class="n">1</td></tr>
+  </table></div>
+  <p class="where">18 shared boundaries: 12 on PTHA18's exact column, 5 one column away, 1 two columns. A boundary next to a segment PTHA18 merged is matched under the name of the Berryman segment on that side (PTHA18's <code>_patagonia</code> as Patagonia North, <code>_eastern</code> as Shumagin). The end points were transcribed from the rendered pages of the report and checked two ways by <code>test_segmentation.py</code>: every segment starts where its neighbour ends, and each zone's outer ends are its Whole Margin row's.</p>
+</section>
+
+<section>
+  <h2 id="tests">The 187 tests</h2>
+  <div class="code"><pre>.venv/Scripts/python.exe -m pytest from_scratch_v12/pyptha_v12/tests -q     <span class="cm"># 187 passed, 15 skipped here (the skipped ones need files the extraction above writes)</span></pre></div>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:30%"><col style="width:8%"><col style="width:62%"></colgroup>
+    <tr><th>File</th><th class="n">tests</th><th>What it proves</th></tr>
+    <tr class="hl"><td><code>test_v8_fidelity.py</code></td><td class="n">23</td><td>the Jacobian is MINPACK's bit for bit; the optimiser is MINPACK's <code>lmdif</code>; the down-dip lines match rptha's R output (under 1 m); the mesh reproduces PTHA18's grid; the cell table matches PTHA18's (4e-10); step 1 on synthetic plates (contour positions under 0.3 km, a slanted end cut square and a clean one kept, a pointed end cut); the scenario table is row-identical to PTHA18's; the convergent-slip formula; Bird's convergence reproduces PTHA18's on 7 zones with PTHA18's table, and on 5 zones with Bird's public catalogue read from the package's own data (<code>--ptha false</code>); step 7b's saved features give step 8 the same HS/VAUS comparison as the whole fields</td></tr>
+    <tr><td><code>test_orthogonal_discretisation.py</code></td><td class="n">6</td><td>the optimiser lowers the badness, beats the simple method, gives equal-length pieces, matches rptha's puysegur depths, is reproducible</td></tr>
+    <tr><td><code>test_contour_discretisation.py</code></td><td class="n">3</td><td>a real mesh is physical: grid shape, depths, dip increasing with depth</td></tr>
+    <tr><td><code>test_unit_sources.py</code></td><td class="n">8</td><td>on a planar fault, the cell properties recover the known dip, strike, sizes and area</td></tr>
+    <tr><td><code>test_official_rptha_suite.py</code></td><td class="n">9</td><td>rptha's own test cases ported: <code>mean_angle</code>, <code>distance_down_depth</code>, <code>interpolate_gc_path</code>, <code>spherical_to_cartesian2d</code>, and rptha's Alaska example</td></tr>
+    <tr><td><code>test_events.py</code></td><td class="n">6</td><td>scenarios have the exact moment of their magnitude, sizes within the scaling bounds, the packed cell strings round-trip</td></tr>
+    <tr><td><code>test_scaling.py</code>, <code>test_r_parity.py</code></td><td class="n">21</td><td>magnitude and moment, Strasser sizes and slip against values from R; Okada tables</td></tr>
+    <tr><td><code>test_rates.py</code></td><td class="n">9</td><td>Gutenberg-Richter curves, shares summing to 1, the moment balance recovering the slip rate, the Bayesian update moving weights</td></tr>
+    <tr><td><code>test_moment_balance.py</code></td><td class="n">15</td><td>edge scenarios, the integrated slip, the edge fit, the coupling prior, R's <code>approx</code>, the dip factor, the scenario rates</td></tr>
+    <tr><td><code>test_logic_tree.py</code></td><td class="n">19</td><td>segmentation weights, the edge correction, R's <code>weighted_percentile</code> and <code>quantile(type = 6)</code>, the percentile sampling</td></tr>
+    <tr><td><code>test_stochastic_slip.py</code></td><td class="n">8</td><td>the HS generator keeps the mean slip, is non-negative, centres its peak, is reproducible with a seed</td></tr>
+    <tr><td><code>test_okada.py</code></td><td class="n">5</td><td>sea-floor deformation against Okada's 1985 tables (a port not used by the pipeline)</td></tr>
+    <tr><td><code>test_berryman_zone.py</code></td><td class="n">2</td><td>v9: the zone's coupling is Berryman's Whole Margin row where there is one; its Mw max observed floor is the largest of its rows, not the dominant one; b unchanged</td></tr>
+    <tr><td><code>test_column_rule.py</code></td><td class="n">5</td><td><code>--columns trench|average</code>: the default is rptha's rule, <code>average</code> counts columns from the average row, an unknown rule is refused</td></tr>
+    <tr class="hl"><td><code>test_rupture_size.py</code></td><td class="n">11</td><td>v10 / v10_q: the default is rptha's rule; with <code>local</code> every block fits, every cell is in a rupture of every magnitude, no duplicates, exact moment, areas follow Strasser on an uneven mesh (rptha off by more than 2.5 times there), never worse than rptha on a uniform mesh, the full-length case, the event table; <code>coverage_weights</code> by hand, equal on rptha's interior, evening out the coverage</td></tr>
+    <tr class="hl"><td><code>test_trench_ramp.py</code></td><td class="n">4</td><td>v10_q: a synthetic trench ramping from 20 to 8 km at one end is trimmed there only; None = v9; no ramp, nothing trimmed; the depth below the trench near the ramp is measured from the real trench</td></tr>
+    <tr class="hl"><td><code>test_segmentation.py</code></td><td class="n">20</td><td>v9: Berryman's Table 3.1 end points chain from segment to segment and match each zone's Whole Margin row; a mesh along Berryman's Hikurangi-Kermadec-Tonga trench gets PTHA18's three segments in order, each with its own row; a segment beyond the mesh is dropped (Patagonia on a SLAB1.0 southamerica); Bird segments tile the mesh, short runs are merged, repeated plate pairs get distinct keys, PTHA18's indices are rescaled for the comparison; step 8's official segments block keeps PTHA18's rows; the Bird-to-Berryman table names real plate pairs and Berryman rows; the engine reproduces PTHA18's official tree of kermadectonga2's <code>_hikurangi</code> segment and keeps it on the zone's scenario table (skipped without the extraction)</td></tr>
+  </table></div>
+  <p class="where">23 in <code>test_v8_fidelity.py</code> because the two Bird convergence tests run once per zone. Test data (PTHA18's puysegur2 contours, grid and scenario table; rptha's R output) are in <code>pyptha_v12/tests/data/</code>.</p>
+</section>
+
+<section>
+  <h2 id="v12-checks">Checks of v12 (external mesh)</h2>
+  <div class="code"><pre>.venv/Scripts/python.exe V9/from_scratch_v12/validation/validate_v12_mesh.py     <span class="cm"># from ptha18_logic_tree_test/</span></pre></div>
+  <ul class="tight">
+    <li><b>geometry:</b> the colleagues' alaskaaleutians mesh read by <code>mesh_file.py</code> against PTHA18's unit-source table: centres and strikes to 1e-10 on all 312 cells; rows 2-4 identical in length, width, depth and dip; the trench row differs because the file puts the trench at 0.1 km (PTHA18: 0 km).</li>
+    <li><b>rates:</b> the engine on PTHA18's official input with the file in place of PTHA18's table: with the trench at 0 km the same 4,111 scenarios, rates to 8.5e-12; as sent, within 0.07%.</li>
+    <li><b>tests:</b> <code>test_mesh_file.py</code> (8): shuffled lines, rotated or reversed corner rings, km or m, either depth sign, a mesh dipping the wrong way, bad files refused.</li>
+  </ul>
+
+  <h2 id="v11-checks">Checks of v11 (variable shear modulus)</h2>
+  <div class="code"><pre>.venv/Scripts/python.exe V9/from_scratch_v12/validation/validate_v11.py     <span class="cm"># from ptha18_logic_tree_test/; mu_Mw engine hs_vaus</span></pre></div>
+  <ul class="tight">
+    <li><b>mu_Mw:</b> every published <code>variable_mu_Mw</code> of puysegur2 and kermadectonga2 (FAUS, HS, VAUS; 101,000+ scenarios) to 4e-15, from PTHA18's unit-source table.</li>
+    <li><b>engine:</b> the v11 engine on PTHA18's puysegur2 input with PTHA18's own HS catalogue: <code>variable_mu_rate_annual</code> and its 5 percentiles to 7e-13, every zero rate in place; the constant <code>rate_annual</code> unchanged (8e-13).</li>
+    <li><b>hs_vaus:</b> PTHA18's 4 DART weight curves recovered from its published rates (fitted on puysegur2 alone, kermadectonga2 reproduced to 2e-14; each passes the report's Section 3.6 cubic check), and every published HS and VAUS rate of both zones, both rigidities, to 4e-12.</li>
+    <li><b>calabria2_v11:</b> every file of steps 1-7b byte-identical to calabria2_v10_q's; step 7c refuses to copy if the engine's constant rates differ from step 7's.</li>
+  </ul>
+
+  <h2 id="v10q-checks">Checks of v10 and v10_q</h2>
+  <ul class="tight">
+    <li><b>Rupture areas</b> within a factor 1.5 of Strasser at Mw 7.2-8.7 on 31 PTHA18 meshes (official statistics) and 4 of ours: rptha 46-100%, local 85-100%; worst rupture better or equal on 30 of the 31; no cell left out of every rupture of a magnitude.</li>
+    <li><b>Same inputs, one rule changed:</b> calabria2_v9 / _v10 / _v10_q and caribbean2_v9 / _v10 / _v10_q have byte-identical meshes, convergence and GCMT files; the control zones kermadectonga2 and kurilsjapan are their v9 inputs run with each rule (<code>V9/html/v10q_rationale/src/run_controls.py</code>), and the "classic" run reproduces the v9 folder exactly.</li>
+    <li><b>Rates per magnitude</b> identical to rptha's rule on all 12 runs (exceedance tables and rate curves to 3e-13); moment identity (sum of weight x slip x area = M0 / rigidity) to 1e-14.</li>
+    <li><b>PTHA18's misfit</b> (integrated slip vs convergence, final model), v10_q / rptha: calabria2 0.85, caribbean2 0.70, kermadectonga2 0.72, kurilsjapan 0.91.</li>
+    <li><b>Ramp rule</b>: run on every raster the V9 folders use; it trims only hellenic (71 km), caribbean / antilles (68 km) and kermadectonga2 (11 km). <code>runs/python/hellenic_west2_v10q_geometry_classic</code> separates its effect from the rupture rule's.</li>
+  </ul>
+  <p class="where">Numbers and figures: <a href="v10_q.html">What is new in v10 and v10_q</a>, <code>V9/html/v10q_rationale.html</code>.</p>
+</section>
+
+<section>
+  <h2 id="limits">What is not validated</h2>
+  <ul class="tight">
+    <li><b>Segmented zones</b>: v9 runs LEVEL 0 (<code>--segmented true</code>) with the boundaries at Berryman et al. (2015) Table 3.1's segment end points, never from PTHA18's <code>sourcezone_parameters.csv</code>. On PTHA18's own meshes they land within 2 columns of PTHA18's (<a href="#berryman-segments">check 7</a>); on this run's own mesh they can move a little more, because the mesh differs, and the counts differ where PTHA18 merged Berryman's segments or added one. <code>validate_v9.py segmentation</code> prints Bird's alternative boundaries beside PTHA18's and checks only that they tile the mesh. What IS checked: given PTHA18's segments, the engine reproduces PTHA18's segment trees and every published scenario rate of 7 segmented zones (<a href="#official-segments">checks 5</a> and <a href="#events-segmented">6</a>), which is the official run step 8 builds for a segmented example; PTHA18's rule gives PTHA18's own GCMT list on every segment (check 4); and v9's engine reproduces v8 bit for bit from v8's own input (<code>validate_v9.py v8parity</code>). So what a segmented v9 run differs by is its inputs (Bird's boundaries, and the Berryman rows that follow from them), never its method.</li>
+    <li><b>The automatic contours</b> cannot be "equal" to PTHA18's, which were edited by hand: they are compared by distance (1 to 3 km per level, <a href="step1.html#accuracy">step 1</a>) and by their effect on the rates (<a href="examples.html">the examples</a>).</li>
+    <li><b>HS and VAUS</b> are random: compared as distributions (<a href="hs_vaus.html#official-comparison">comparison</a>).</li>
+    <li><b>v10 / v10_q against observations</b>: PTHA18 calibrated its HS / VAUS families against DART records with rptha's ruptures; nobody has done that with <code>--rupture-size local</code>. Its checks are internal (scaling, moment, slip budget, control zones).</li>
+    <li><b>Zones PTHA18 never modelled</b> (calabria2, caribbean2, antilles2) have nothing to compare with; they run on the same, validated code.</li>
+  </ul>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Results: <code>validate_v9.py</code> (all 9 checks, 2026-09-30) and the test suite, run while writing this page. Figures: <code>figures_src/make_validation.py</code>.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

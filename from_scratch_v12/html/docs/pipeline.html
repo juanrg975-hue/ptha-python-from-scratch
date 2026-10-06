@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The pipeline, step by step | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+.node { cursor: pointer; }
+.node rect { transition: stroke-width .15s; }
+.node:hover rect { stroke-width: 3; }
+.node.sel rect { stroke-width: 3.5; }
+#pl-detail { min-height: 150px; }
+#pl-detail h3 { margin-top: 0; }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Start</div>
+  <h1>The pipeline, step by step</h1>
+  <p class="lead">Nine small scripts, run in order, each reading only what the previous ones wrote to disk. This page shows how they fit together: what each one reads, does and writes, where every number of the final result comes from, what can go wrong at each step and how long it takes.</p>
+</section>
+
+<section>
+  <h2 id="diagram">The diagram</h2>
+  <p><b>Click a box</b> to see what that step reads, does and writes. The three input lanes on the left are the three kinds of evidence PTHA18 combines: the <a href="glossary.html#term-mesh">geometry</a> of the fault, the plate <a href="glossary.html#term-convergence">convergence</a>, and the observed earthquakes.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 980 360" role="img" aria-label="Pipeline diagram of the nine steps; click a box for details">
+      <defs>
+        <marker id="pl-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+      </defs>
+      <text x="20" y="20" font-size="12" fill="#2e9e6b" font-weight="700">GEOMETRY</text>
+      <text x="20" y="135" font-size="12" fill="#d9822b" font-weight="700">CONVERGENCE</text>
+      <text x="20" y="250" font-size="12" fill="#8a5cd1" font-weight="700">SEISMICITY</text>
+      <g stroke="#8a93a3" stroke-width="2" fill="none" marker-end="url(#pl-ar)">
+        <path d="M170,58 L198,58"/>
+        <path d="M275,86 L275,143"/>
+        <path d="M350,58 C390,58 385,160 418,163"/>
+        <path d="M350,171 L418,171"/>
+        <path d="M170,288 L198,288"/>
+        <path d="M350,288 C390,288 385,182 418,180"/>
+        <path d="M495,86 L495,141"/>
+        <path d="M570,171 L608,171"/>
+        <path d="M685,199 L685,236"/>
+        <path d="M760,171 L798,171"/>
+        <path d="M760,286 C800,286 830,240 850,201" stroke-dasharray="5 4"/>
+        <path d="M612,192 C588,200 592,250 572,258" stroke-dasharray="5 4"/>
+      </g>
+      <text x="282" y="120" font-size="11" fill="#5b6475">mesh</text>
+      <text x="598" y="228" font-size="11" fill="#5b6475">FAUS</text>
+
+      <g class="node" data-step="1"><rect x="20" y="30" width="150" height="56" rx="9" fill="#e4f5ec" stroke="#2e9e6b" stroke-width="1.5"/><text x="95" y="53" text-anchor="middle" font-size="13" font-weight="700">1  SLAB contours</text><text x="95" y="72" text-anchor="middle" font-size="11" fill="#5b6475">depth raster to lines</text></g>
+      <g class="node" data-step="2"><rect x="200" y="30" width="150" height="56" rx="9" fill="#e4f5ec" stroke="#2e9e6b" stroke-width="1.5"/><text x="275" y="53" text-anchor="middle" font-size="13" font-weight="700">2  Unit sources</text><text x="275" y="72" text-anchor="middle" font-size="11" fill="#5b6475">the mesh</text></g>
+      <g class="node" data-step="3"><rect x="200" y="145" width="150" height="56" rx="9" fill="#fcf0e2" stroke="#d9822b" stroke-width="1.5"/><text x="275" y="168" text-anchor="middle" font-size="13" font-weight="700">3  Convergence</text><text x="275" y="187" text-anchor="middle" font-size="11" fill="#5b6475">Bird (2003), per column</text></g>
+      <g class="node" data-step="4"><rect x="20" y="260" width="150" height="56" rx="9" fill="#f1eafb" stroke="#8a5cd1" stroke-width="1.5"/><text x="95" y="283" text-anchor="middle" font-size="13" font-weight="700">4  GCMT download</text><text x="95" y="302" text-anchor="middle" font-size="11" fill="#5b6475">worldwide catalogue</text></g>
+      <g class="node" data-step="5"><rect x="200" y="260" width="150" height="56" rx="9" fill="#f1eafb" stroke="#8a5cd1" stroke-width="1.5"/><text x="275" y="283" text-anchor="middle" font-size="13" font-weight="700">5  GCMT subset</text><text x="275" y="302" text-anchor="middle" font-size="11" fill="#5b6475">events on this zone</text></g>
+      <g class="node" data-step="B"><rect x="420" y="30" width="150" height="56" rx="9" fill="#ffffff" stroke="#8a93a3" stroke-width="1.5" stroke-dasharray="4 3"/><text x="495" y="53" text-anchor="middle" font-size="13" font-weight="700">Berryman (2015)</text><text x="495" y="72" text-anchor="middle" font-size="11" fill="#5b6475">coupling, b, Mw_max</text></g>
+      <g class="node" data-step="6"><rect x="420" y="143" width="150" height="56" rx="9" fill="#e8f0fd" stroke="#2f6fdf" stroke-width="1.5"/><text x="495" y="166" text-anchor="middle" font-size="13" font-weight="700">6  Input JSON</text><text x="495" y="185" text-anchor="middle" font-size="11" fill="#5b6475">everything in one file</text></g>
+      <g class="node" data-step="7"><rect x="610" y="143" width="150" height="56" rx="9" fill="#e8f0fd" stroke="#2f6fdf" stroke-width="1.5"/><text x="685" y="166" text-anchor="middle" font-size="13" font-weight="700">7  Logic tree</text><text x="685" y="185" text-anchor="middle" font-size="11" fill="#5b6475">LEVELs 0-5, rates</text></g>
+      <g class="node" data-step="7b"><rect x="420" y="238" width="150" height="52" rx="9" fill="#f0f2f5" stroke="#8a93a3" stroke-width="1.5" stroke-dasharray="5 4"/><text x="495" y="260" text-anchor="middle" font-size="13" font-weight="700">7b  HS / VAUS</text><text x="495" y="278" text-anchor="middle" font-size="11" fill="#5b6475">optional, no rates</text></g>
+      <g class="node" data-step="8"><rect x="610" y="238" width="150" height="56" rx="9" fill="#f0f2f5" stroke="#8a93a3" stroke-width="1.5" stroke-dasharray="5 4"/><text x="685" y="261" text-anchor="middle" font-size="13" font-weight="700">8  Official run</text><text x="685" y="280" text-anchor="middle" font-size="11" fill="#5b6475">optional, needs R</text></g>
+      <g class="node" data-step="9"><rect x="800" y="143" width="160" height="56" rx="9" fill="#e8f0fd" stroke="#2f6fdf" stroke-width="1.5"/><text x="880" y="166" text-anchor="middle" font-size="13" font-weight="700">9  report.html</text><text x="880" y="185" text-anchor="middle" font-size="11" fill="#5b6475">this run vs official</text></g>
+      <text x="20" y="348" font-size="11.5" fill="#5b6475">Solid boxes: required steps. Dashed: literature values and optional steps. step_total.py runs them all in this order and stops at the first required step that fails.</text>
+    </svg>
+    <div class="legend">
+      <span style="--c:#2e9e6b">geometry</span>
+      <span style="--c:#d9822b">convergence</span>
+      <span style="--c:#8a5cd1">seismicity</span>
+      <span style="--c:#2f6fdf">assembly, engine, report</span>
+      <span style="--c:#8a93a3">optional / literature (dashed)</span>
+    </div>
+  </figure>
+  <div class="card" id="pl-detail"></div>
+</section>
+
+<section>
+  <h2 id="flow">Data flow: who reads what</h2>
+  <p>Every step writes to the example folder (for example <code>kermadectonga2_v9/</code>) and the next steps read those files back. Nothing is passed in memory, so any step can be re-run alone after editing its inputs. Paths are relative to the example folder.</p>
+  <div class="tbl"><table>
+    <tr><th>Step</th><th>Reads</th><th>Does</th><th>Writes</th><th>Used by</th></tr>
+    <tr><td><b>1</b></td><td>SLAB raster (downloaded once into the folder's <code>data/slab1/</code> or <code>data/slab2/</code>)</td><td>finds the trench, measures depth below it, draws contours every 5 km to the cutoff, cuts crooked or tapering ends</td><td><code>inputs/geometry/&lt;zone&gt;_slab2_contours.shp</code>, <code>data/step1_contours_info.json</code>, <code>figures/step1_trench_and_contours.png</code></td><td>2</td></tr>
+    <tr><td><b>2</b></td><td>the contours</td><td>builds the unit-source mesh (<code>--discretizer</code>), checks it for broken cells, computes cell statistics</td><td><code>data/slab2/unit_source_grid.npy</code> (+ <code>.meta.json</code> fingerprint), mesh figures</td><td>3, 5, 6, 7, 9</td></tr>
+    <tr><td><b>3</b></td><td>the mesh, Bird's plate boundaries (in the repository)</td><td>matches each column's top edge to its nearest Bird segment</td><td><code>data/convergence.txt</code>, <code>data/convergence_per_cell.npy</code>, <code>data/convergence_per_column.json</code></td><td>6, 9</td></tr>
+    <tr><td><b>4</b></td><td>globalcmt.org</td><td>downloads the worldwide GCMT catalogue for 1976-01-01 to 2017-03-01</td><td><code>data/gcmt/*.ndk</code>, <code>data/gcmt/gcmt_catalogue_1976_present.csv</code></td><td>5</td></tr>
+    <tr><td><b>5</b></td><td>the catalogue, the mesh</td><td>keeps the thrust events on this interface (PTHA18's rule); segmented: the same rule on each segment's own cells</td><td><code>data/gcmt/&lt;zone&gt;_gcmt_subset.csv</code> (+ <code>_&lt;segment&gt;.csv</code>, <code>segments.json</code>)</td><td>6, 9</td></tr>
+    <tr><td><b>6</b></td><td>steps 2, 3, 5 and <code>lib/berryman_params.py</code></td><td>assembles the engine's input; segmented: the <code>segments</code> block (Berryman's segments, their GCMT events and their own Berryman rows)</td><td><code>inputs/input_&lt;zone&gt;_scratch.json</code></td><td>7, 7b, 9</td></tr>
+    <tr><td><b>7</b></td><td>the input JSON</td><td>runs LEVELs 0-5 on all 32,000 branches (per segment too, each on the zone's scenario table)</td><td><code>outputs/*.csv</code> (segmented: + one set per segment and <code>scenario_rates_&lt;zone&gt;_source_zone.csv</code>, <a href="reference.html#segmented-files">the list</a>), <code>outputs/figures/*.png</code></td><td>9</td></tr>
+    <tr><td>7b</td><td>the input JSON</td><td>heterogeneous and variable-area slip versions of every scenario, with PTHA18's rates for them</td><td><code>outputs/hs_slip_fields/</code>, <code>outputs/vaus_slip_fields/</code></td><td>9</td></tr>
+    <tr><td>1-2 (v12, <code>--mesh-file</code>)</td><td>your mesh file</td><td>no SLAB: the unit sources are the cells of the file, used as given (<a href="v12.html">v12</a>)</td><td><code>data/slab2/unit_source_grid.npy</code></td><td>3</td></tr>
+    <tr><td>7c (v11)</td><td>steps 7 and 7b</td><td>the variable shear modulus rates (PTHA18's <code>variable_mu</code>): FAUS, HS, VAUS, curves, percentiles</td><td><code>outputs/*_variable_mu*.csv</code>, new columns in the HS/VAUS <code>summary.csv</code></td><td>9</td></tr>
+    <tr><td>8</td><td>PTHA18's saved R session and NCI files</td><td>runs PTHA18's official input through the same engine; segmented example: PTHA18's own segmented model</td><td><code>inputs/input_&lt;zone&gt;_official.json</code>, <code>outputs_official/</code> (segmented: + <code>ptha18_reference/official_segments.json</code>)</td><td>2 (comparison print), 9</td></tr>
+    <tr><td><b>9</b></td><td>everything above</td><td>writes the report; nothing is recomputed (segmented: + the LEVEL 0 section and three more series on the rate chart, <a href="report_guide.html#modes">what changes</a>)</td><td><code>report.html</code>, <code>figures/*.png</code> (segmented: + <code>segments_map.png</code>)</td><td>you</td></tr>
+  </table></div>
+  <p class="where">Where in the code: each step is <code>from_scratch_v12/templates/stepN_*.py.tmpl</code>, copied into the example's <code>steps/</code> by <code>generate.py</code> with the zone's name filled in. The engine is <code>python_logic_tree_v12/run_logic_tree.py</code>; step 7 copies its output from <code>runs/python/&lt;run_name&gt;/</code> into <code>outputs/</code>.</p>
+
+  <details class="deep"><summary>Why the mesh is built three times but is always the same mesh <span class="tag">steps 2, 7, 9</span></summary><div class="body">
+    <p>Step 7 (the engine) and step 9 (the report) rebuild the mesh from the geometry block of the input JSON, because a user may have edited that block by hand after step 6 (for example to force a number of rows). To avoid two different meshes, the grid is cached: step 2 saves <code>unit_source_grid.npy</code> with a fingerprint of the exact inputs (contours, lengths, rows, discretiser). Later steps reuse the saved grid only if the fingerprint matches, and rebuild it otherwise. The log line <code>mesh: reusing step 2's grid (... fingerprint matches)</code> says which happened. Details: <a href="step2.html#cache">the grid cache</a>.</p>
+  </div></details>
+</section>
+
+<section>
+  <h2 id="numbers">Where every number comes from</h2>
+  <p>The engine needs a handful of physical numbers for each zone. This table lists each one, where this package takes it from, and the step that does it. "Derived" means computed from public data; "declared" means read from the literature because no data set can give it.</p>
+  <div class="tbl"><table>
+    <tr><th>Quantity</th><th>Source</th><th>Kind</th><th>Step</th></tr>
+    <tr><td>Fault surface (plate interface depth)</td><td>SLAB2.0 if the zone's name ends in <code>2</code>, else SLAB1.0 (PTHA18's rule, report Fig. 3)</td><td>derived</td><td>1</td></tr>
+    <tr><td>Trench depth (the datum of the contours)</td><td>measured on the SLAB raster itself, point by point along the trench (the local datum)</td><td>derived</td><td>1</td></tr>
+    <tr><td>Seismogenic depth cutoff</td><td>Berryman et al. (2015) Table 3.1, the zone's dominant segment</td><td>declared</td><td>1</td></tr>
+    <tr><td>Unit-source grid, total area, mean dip</td><td>rptha's own discretiser on step 1's contours</td><td>derived</td><td>2</td></tr>
+    <tr><td>Unit-source width</td><td>50 km, or PTHA18's per-zone value with <code>--ptha true</code> (35 km on puysegur2)</td><td>declared</td><td>2</td></tr>
+    <tr><td>Plate convergence, per column and area-weighted</td><td>Bird (2003) PB2002, its public catalogue (or PTHA18's Bird + Griffin table with <code>--convergence bird-griffin</code>), matched to the top edge exactly as PTHA18 does</td><td>derived</td><td>3</td></tr>
+    <tr><td>Observed earthquakes (count, magnitudes, years)</td><td>GCMT, 1976-01-01 to 2017-03-01, PTHA18's selection rule</td><td>derived</td><td>4, 5</td></tr>
+    <tr><td>Coupling (min / preferred / max), b-value range, largest observed Mw</td><td>Berryman et al. (2015), via <code>lib/berryman_params.py</code></td><td>declared</td><td>6</td></tr>
+    <tr><td>Tree resolution: 20 coupling x 20 b x 40 Mw_max x 2 GR types</td><td>PTHA18's own resolution</td><td>fixed</td><td>6</td></tr>
+    <tr><td>Scenario magnitudes 7.2 to 9.8 in steps of 0.1, Strasser scaling, rigidity 3e10 Pa</td><td>PTHA18's settings, written into the input by step 6</td><td>fixed</td><td>6, 7</td></tr>
+  </table></div>
+  <div class="callout"><span class="lbl">Measured, not typed</span>The trench depth is not taken from a table: it is measured on the SLAB raster, point by point, because the real trench depth changes along the zone (5 to 11 km below sea level on kermadectonga2). See <a href="step1.html#datum">the local datum</a>.</div>
+</section>
+
+<section>
+  <h2 id="failures">What each step checks, and what it prints when something is wrong</h2>
+  <p>Every required step stops with a clear message instead of passing a bad result on. The main checks:</p>
+  <div class="tbl"><table>
+    <tr><th>Step</th><th>Check</th><th>What you see</th></tr>
+    <tr><td>1</td><td>no trench-like edge on the raster; a contour level missing, closed, or much shorter than the level above it</td><td>the step stops and names the level; the step 1 figure shows the contours it found</td></tr>
+    <tr><td>1</td><td>an end is crooked or tapers</td><td>not an error: the end is cut, and the log says <code>CUT, ...; the new end is N deg off square</code></td></tr>
+    <tr><td>2</td><td>folded (bow-tie), collapsed or overlapping cells</td><td><code>mesh check: 0 folded (bow-tied) cells, 0 collapsed cells, 0.00% overlapping area</code>; with <code>optimal</code>, a broken mesh is repaired and the log says which repair was used</td></tr>
+    <tr><td>3</td><td>no Bird segment near the zone, even in Bird's untrimmed catalogue</td><td>the step stops: <code>no Bird segments found near this zone ...</code></td></tr>
+    <tr><td>4</td><td>a monthly GCMT file that is not published</td><td>not an error: <code>skipped (HTTP Error 404)</code>; the window ends in 2017, so these months are not used</td></tr>
+    <tr><td>3, 5, 6, 9</td><td>a file from an earlier step is missing</td><td>the step stops and names the step to run first, for example <code>missing .../convergence.txt Run step3_convergence.py first.</code></td></tr>
+    <tr><td>generate.py</td><td>no Berryman et al. (2015) mapping for a zone PTHA18 never modelled</td><td>the missing values are marked <code>NOT AVAILABLE</code> and step 1 stops (it needs the seismogenic cutoff). Add the zone to <code>ZONE_TO_BERRYMAN_SEGMENTS</code> and <code>ZONE_DOMINANT_SEGMENT</code> in <code>lib/berryman_params.py</code>, then run <code>generate.py</code> again</td></tr>
+    <tr><td>7</td><td>the convergence profile has no positive value</td><td>the step stops: <code>no tectonic moment on this source</code></td></tr>
+    <tr><td>8</td><td>R missing, or a zone PTHA18 never modelled</td><td>optional: step_total prints why and continues; the report leaves out the comparison</td></tr>
+  </table></div>
+  <p>The exact messages and what to do about them are in <a href="troubleshooting.html">troubleshooting</a>.</p>
+</section>
+
+<section>
+  <h2 id="runtime">How long it takes</h2>
+  <p>Measured on the author's runs (the <code>Done in ... min</code> line at the end of each <code>run_final.log</code>), with the SLAB raster, the GCMT files and PTHA18's saved session already downloaded, step 8 included. Times depend on the machine; what matters is the order of magnitude.</p>
+  <div class="tbl"><table>
+    <tr><th>Example</th><th class="n">Cells</th><th class="n">Steps 1-9, minutes</th><th>Step 7b</th></tr>
+    <tr><td>makran2_v8</td><td class="n">160</td><td class="n">0.9</td><td>skipped</td></tr>
+    <tr><td>kurilsjapan_v8</td><td class="n">260</td><td class="n">1.8</td><td>skipped</td></tr>
+    <tr><td>southamerica_v8</td><td class="n">472</td><td class="n">3.0</td><td>skipped</td></tr>
+    <tr><td>puysegur2_v8</td><td class="n">26</td><td class="n">2.3</td><td>included</td></tr>
+    <tr><td>kermadectonga2_v8</td><td class="n">219</td><td class="n">4.0</td><td>included</td></tr>
+  </table></div>
+  <div class="callout warn"><span class="lbl">First run on a new machine</span>The first time, step 1 downloads the SLAB data (tens of MB per region), step 4 downloads the GCMT catalogue, and step 8 downloads PTHA18's saved R session (1.34 GB, once for all zones; loading it into R takes minutes). Step 7b on a big zone generates one slip field per scenario and can take much longer than the rest; skip it with <code>--skip-hs</code> when you only need the rates.</div>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Sources: the step templates in <code>from_scratch_v12/templates/</code> and the example logs <code>&lt;folder&gt;/run_final.log</code>.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+<script>
+(function () {
+  var S = {
+    "1": ["1. SLAB contours", "step1_fetch_slab2.py", "step1.html",
+      "the SLAB2.0 or SLAB1.0 depth raster of the region (downloaded from USGS ScienceBase once) and the zone's seismogenic cutoff (Berryman et al. 2015)",
+      "finds the trench on the raster's edge, measures every point's depth below its nearest trench point, draws a contour every 5 km from the trench (0 km) to the cutoff, and cuts an end square where the data ends crookedly or the zone narrows to a point",
+      "inputs/geometry/&lt;zone&gt;_slab2_contours.shp, data/step1_contours_info.json, figures/step1_trench_and_contours.png"],
+    "2": ["2. Unit sources (the mesh)", "step2_build_grid.py", "step2.html",
+      "step 1's contours and the width rule (--ptha)",
+      "cuts the surface into cells of about 50 x 50 km with rptha's own method; with --discretizer optimal, keeps that mesh unless it has folded, collapsed or overlapping cells, and repairs it only then; computes area and mean dip",
+      "data/slab2/unit_source_grid.npy and its fingerprint, figures/scratch_mesh_map.png (and comparison figures when PTHA18's mesh is available)"],
+    "3": ["3. Convergence", "step3_convergence.py", "step3.html",
+      "the mesh and Bird's (2003) plate-boundary table shipped in the repository",
+      "matches the top of every column to its nearest Bird segment, turns its velocities into a convergent slip rate, and area-weights the result (PTHA18's method, reproduced to machine precision); also checks whether the mesh runs past its own plate boundary onto the next one, and reports it without trimming anything",
+      "data/convergence.txt (horizontal rate, mm/yr), data/convergence_per_cell.npy, data/convergence_per_column.json, and data/plate_boundary_change.json when that check finds something"],
+    "4": ["4. GCMT download", "step4_fetch_gcmt.py", "seismicity.html",
+      "globalcmt.org",
+      "downloads and parses the worldwide Global CMT catalogue from 1976-01-01 to 2017-03-01, PTHA18's observation window",
+      "data/gcmt/*.ndk and data/gcmt/gcmt_catalogue_1976_present.csv"],
+    "5": ["5. GCMT subset", "step5_subset_gcmt.py", "seismicity.html",
+      "the catalogue and the mesh",
+      "keeps the events on this interface with PTHA18's rule: near a cell, thrust-like, aligned with the nearest cell, shallow enough, Mw 7.15 or more",
+      "data/gcmt/&lt;zone&gt;_gcmt_subset.csv"],
+    "B": ["Berryman et al. (2015)", "lib/berryman_params.py", "engine.html#input-json",
+      "Table 3.1 of the GEM subduction-interface report",
+      "gives the values no data set can: coupling range, b-value range, the largest observed magnitude and the seismogenic cutoff",
+      "read by steps 1 and 6"],
+    "6": ["6. Input JSON", "step6_write_input.py", "engine.html#input-json",
+      "the mesh settings (step 2), the convergence and its per-column profile (step 3), the observed events (step 5), the Berryman values",
+      "assembles the single input file of the engine, with a provenance note on every derived value",
+      "inputs/input_&lt;zone&gt;_scratch.json"],
+    "7": ["7. Logic tree, LEVELs 0-5", "step7_run.py", "engine.html",
+      "the input JSON",
+      "lists every earthquake scenario, balances each of the 32,000 branches against the plate motion, re-weights them with the observed events, fits the edge correction and computes percentiles",
+      "outputs/rate_curves.csv, exceedance_rate_percentiles.csv, scenario_rates_&lt;zone&gt;.csv, logic_tree_*.csv, outputs/figures/"],
+    "7b": ["7b. HS and VAUS slip (optional)", "step7b_stochastic_slip.py", "hs_vaus.html",
+      "the input JSON",
+      "turns every uniform-slip scenario into a realistic uneven slip pattern (HS) and its variable-area version (VAUS); never changes a rate",
+      "outputs/hs_slip_fields/, outputs/vaus_slip_fields/"],
+    "8": ["8. Official run (optional, needs R)", "step8_official.py", "official.html",
+      "PTHA18's saved R session (1.34 GB) and NCI files",
+      "extracts PTHA18's official input for the zone and runs it through the same engine as step 7, with PTHA18's Bird model",
+      "inputs/input_&lt;zone&gt;_official.json, outputs_official/"],
+    "9": ["9. report.html", "step9_report.py", "report_guide.html",
+      "everything the other steps wrote",
+      "writes one HTML page with every number, figure, the rupture explorer, the mesh on a real map and the comparison with the official run, plus the CSV files those figures are drawn from",
+      "report.html, figures/, and outputs/exports/*.csv (the mesh as lon/lat/depth, the mean rate curve and the convergence, each with an _official twin when step 8 ran)"]
+  };
+  var box = document.getElementById("pl-detail");
+  var nodes = document.querySelectorAll(".node");
+  function show(k) {
+    var s = S[k];
+    nodes.forEach(function (n) { n.classList.toggle("sel", n.getAttribute("data-step") === k); });
+    box.innerHTML = "<h3>" + s[0] + " <code style='font-size:12px'>" + s[1] + "</code></h3>" +
+      "<div class='io'><div><b>Reads</b>" + s[3] + "</div><div><b>Writes</b>" + s[5] + "</div></div>" +
+      "<p><b>Does:</b> " + s[4] + ".</p><p><a href='" + s[2] + "'>Read this step in depth</a></p>";
+  }
+  nodes.forEach(function (n) { n.addEventListener("click", function () { show(n.getAttribute("data-step")); }); });
+  show("1");
+})();
+</script>
+</body>
+</html>

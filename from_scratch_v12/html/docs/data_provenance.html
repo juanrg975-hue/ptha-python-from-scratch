@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data provenance</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Results</div>
+  <h1>Data provenance: what comes from where</h1>
+  <p class="lead">With <code>--ptha false</code> and the default <code>--convergence bird</code>, every number in steps 1 to 7, 7b and 9 is derived from public sources: SLAB, Bird (2003), GCMT, and Berryman et al. (2015). PTHA18's own files are read nowhere in that path. The one PTHA18 input you can opt into is <code>--convergence bird-griffin</code>, which makes step 3 read PTHA18's own plate-boundary table (a copy shipped in <code>data/bird/</code>, see <a href="#bird-griffin">below</a>). The only place PTHA18 is read at all is step 8, the optional official run built purely for comparison, and step 9 shows that comparison only from step 8's own output, never by reading PTHA18 directly. This page states that claim precisely and shows how it was checked, not just how it is meant to work.</p>
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">1</div><div class="lbl">step that ever opens a PTHA18 or rptha file (step 8)</div></div>
+    <div class="card kpi"><div class="num">0</div><div class="lbl">PTHA18/rptha file opens measured in a from-zero run of steps 1-7, 9</div></div>
+    <div class="card kpi"><div class="num">5</div><div class="lbl">independent public data sources feeding the pipeline</div></div>
+    <div class="card kpi"><div class="num">3</div><div class="lbl">guards in code (steps 2, 5, 6) that keep --ptha true's extra reads out</div></div>
+  </div>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 960 310" role="img" aria-label="Public sources feed steps 1 to 7, 7b and 9 directly; the optional Bird+Griffin table is a CSV copied from rptha; PTHA18's own files are read only inside step 8, whose output step 9 may show as a comparison">
+      <defs><marker id="dp-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+        <marker id="dp-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b7791f"/></marker></defs>
+      <g font-size="12.5">
+        <text x="20" y="20" font-weight="700" fill="#5b6475">PUBLIC SOURCES</text>
+        <rect x="20" y="32" width="230" height="36" rx="8" fill="#e4f5ec" stroke="#2e9e6b"/><text x="32" y="55">SLAB1.0 / SLAB2.0 (USGS)</text>
+        <rect x="20" y="74" width="230" height="36" rx="8" fill="#e4f5ec" stroke="#2e9e6b"/><text x="32" y="97">Bird (2003) (--convergence bird)</text>
+        <rect x="20" y="116" width="230" height="54" rx="8" fill="#fdf6e3" stroke="#b7791f" stroke-dasharray="5 3"/>
+        <text x="32" y="134">or Bird+Griffin (opt-in)</text>
+        <text x="32" y="149" font-size="11" fill="#8a5a12">--convergence bird-griffin</text>
+        <text x="32" y="163" font-size="11" fill="#8a5a12">PTHA18's CSV, copied from rptha</text>
+        <rect x="20" y="178" width="230" height="36" rx="8" fill="#e4f5ec" stroke="#2e9e6b"/><text x="32" y="201">GCMT catalogue</text>
+        <rect x="20" y="220" width="230" height="36" rx="8" fill="#e4f5ec" stroke="#2e9e6b"/><text x="32" y="243">Berryman et al. (2015)</text>
+        <rect x="20" y="262" width="230" height="36" rx="8" fill="#e4f5ec" stroke="#2e9e6b"/><text x="32" y="285">Strasser et al. (2010)</text>
+
+        <text x="340" y="20" font-weight="700" fill="#5b6475">STEPS 1-7, 7b, 9</text>
+        <rect x="340" y="100" width="230" height="110" rx="10" fill="#e8f0fd" stroke="#2f6fdf" stroke-width="1.6"/>
+        <text x="352" y="126">mesh, convergence,</text>
+        <text x="352" y="146">rates, HS/VAUS,</text>
+        <text x="352" y="166">report.html</text>
+        <text x="352" y="190" fill="#5b6475" font-size="11">reads only outputs_official/</text>
+        <text x="352" y="204" fill="#5b6475" font-size="11">for the comparison section</text>
+
+        <text x="690" y="20" font-weight="700" fill="#5b6475">STEP 8 ONLY</text>
+        <rect x="690" y="100" width="240" height="70" rx="10" fill="#fdf6e3" stroke="#b7791f" stroke-width="1.6"/>
+        <text x="702" y="126">PTHA18's saved session</text>
+        <text x="702" y="146">(rptha, official_ptha_data,</text>
+        <text x="702" y="164">inputs/)</text>
+        <rect x="690" y="190" width="240" height="50" rx="10" fill="#fff" stroke="#8a93a3"/>
+        <text x="702" y="212">writes outputs_official/</text>
+        <text x="702" y="228">ptha18_reference/</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#dp-ar)">
+        <path d="M250,50 L338,140"/><path d="M250,92 L338,148"/>
+        <path d="M250,196 L338,162"/><path d="M250,238 L338,168"/><path d="M250,280 L338,174"/>
+        <path d="M570,170 C620,170 640,170 688,170"/>
+        <path d="M810,170 C850,170 850,185 810,190"/>
+        <path d="M690,215 C640,215 610,205 570,185"/>
+      </g>
+      <path d="M250,143 L338,155" stroke="#b7791f" stroke-width="1.8" stroke-dasharray="5 3" fill="none" marker-end="url(#dp-ar2)"/>
+    </svg>
+    <figcaption><b>Two independent paths.</b> Steps 1-7, 7b and 9 read only public sources, unless you choose <code>--convergence bird-griffin</code> (dashed amber box): then step 3 reads PTHA18's own plate table, a plain CSV copied from rptha into <code>data/bird/</code>, used directly without R or rptha. Step 8 (optional) reads PTHA18's saved session and writes its own comparison files inside the example folder; step 9 reads those, never PTHA18 directly.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="sources">Every input, and where it comes from</h2>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:20%"><col style="width:42%"><col style="width:38%"></colgroup>
+    <tr><th>Input</th><th>Source</th><th>Used by</th></tr>
+    <tr><td>Interface geometry (mesh)</td><td>SLAB1.0 or SLAB2.0 depth grids (USGS / ScienceBase), downloaded once and cached locally</td><td>step 1 (contours), step 2 (mesh)</td></tr>
+    <tr><td>Plate convergence</td><td>Bird (2003)'s public catalogue, <code>data/bird/PB2002_steps.dat.txt.zip</code> (default, <code>--convergence bird</code>)</td><td>step 3; see <a href="convergence_sources.html">Bird or Bird + Griffin, per zone</a> for which table matches PTHA18 on which zone</td></tr>
+    <tr><td>Plate convergence, opt-in</td><td><b>From rptha, not an independent public source.</b> PTHA18's own plate-boundary table (Bird plus Jonathan Griffin's traces, Davies and Griffin 2018), only with <code>--convergence bird-griffin</code>. The file this package reads, <code>from_scratch_v12/data/bird/bird_griffin_traces_table.csv.zip</code>, is a byte-identical copy of rptha's<br><code>rptha/R/examples/austptha_template/DATA/BIRD_PLATE_BOUNDARIES/sourcezone_traces_table_merged.csv.zip</code><br>from <a href="https://github.com/GeoscienceAustralia/ptha">github.com/GeoscienceAustralia/ptha</a> (BSD-3), the table PTHA18's rate scripts read (<code>EVENT_RATES/config.R</code>), built there by <code>reformat_edited_Bird_convergence.R</code> and <code>combine_traces.R</code> in the same folder. It is a plain CSV: this package reads it directly with pandas, no R and no rptha install needed.</td><td>step 3 when chosen; step 8 always</td></tr>
+    <tr><td>Observed seismicity</td><td>the Global CMT catalogue (public, downloaded once)</td><td>steps 4-5</td></tr>
+    <tr><td>Coupling, b-value range, Mw_max_observed, seismogenic cutoff</td><td>Berryman et al. (2015), the paper PTHA18 itself cites, read directly rather than from PTHA18's own derived table</td><td>step 1 (cutoff), step 6 (JSON)</td></tr>
+    <tr><td>Rupture scaling relation, rigidity</td><td>Strasser et al. (2010), 30 GPa: the general-purpose values, written by step 6 into the input JSON</td><td>step 6, engine (step 7), step 7b</td></tr>
+    <tr><td>Logic-tree method, rate formulas</td><td>PTHA18's own published method (fixed constants and formulas in the code, not a file it publishes): the same computation, applied to public inputs</td><td>the engine (step 7)</td></tr>
+    <tr><td>PTHA18's own mesh, convergence, GCMT count, and published rates</td><td><b>read only in step 8</b>, from PTHA18's saved R session and NCI files, for comparison</td><td>step 8 only; step 9 shows the comparison from step 8's own output</td></tr>
+  </table></div>
+  <p class="where">Full option reference, file by file: <a href="reference.html#ptha-reads">What each step reads, with --ptha false and --ptha true</a>.</p>
+</section>
+
+<section>
+  <h2 id="bird-griffin">The one opt-in PTHA18 input: the Bird+Griffin table</h2>
+  <p><code>data/bird/bird_griffin_traces_table.csv.zip</code> is a byte-identical copy of rptha's <code>DATA/BIRD_PLATE_BOUNDARIES/sourcezone_traces_table_merged.csv.zip</code>: the plate-boundary table PTHA18 itself used. It merges 1060 of Bird's steps that PTHA18 kept, 2645 source-zone traces with plate rates put together by Jonathan Griffin (eastern Indonesia, New Guinea and others) and 100 rows added by Gareth Davies. So it is PTHA18's work, published openly with rptha (BSD-3), not an independent public dataset like Bird (2003).</p>
+  <p>It is copied into <code>data/bird/</code> so that no step has to open the <code>rptha/</code> folder, which is why the audit below sees no <code>rptha/</code> read. Being a copy does not change where it comes from: a run with <code>--convergence bird-griffin</code> uses a PTHA18 input in step 3. The default, <code>--convergence bird</code>, does not, and gives the same convergence wherever PTHA18 itself used Bird's steps (<a href="convergence_sources.html">zone by zone</a>). Step 8 always uses the Bird+Griffin table, since it reproduces PTHA18's own run.</p>
+</section>
+
+<section>
+  <h2 id="proof">Checked from zero, not just read from the code</h2>
+  <p>Reading the code shows the intent; running it shows the fact. A file-open hook (a Python <code>sys.addaudithook</code>, loaded by every process including subprocesses) was pointed at the three folders that hold anything of PTHA18 or rptha (<code>rptha/</code>, <code>official_ptha_data/</code>, <code>inputs/</code>), and at every connection to NCI. Then a zone PTHA18 never modelled (<code>calabria2</code>, so no cached PTHA18 file for it exists anywhere in the package to begin with) was generated from nothing and run end to end, steps 1 through 9, <em>without</em> <code>--skip-official</code>:</p>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py calabria --zone calabria2 --folder _audit_test --ptha false --discretizer optimal --convergence bird
+.venv/Scripts/python.exe _audit_test/steps/step_total.py --skip-hs</pre></div>
+  <p>The complete log of every file the run opened inside those three folders:</p>
+  <pre class="out">fetch_official_inputs.py	calabria2	open .../rptha/r/examples/austptha_template/data/sourcezone_parameters/sourcezone_parameters.csv</pre>
+  <p><b>One line, and it is step 8's.</b> <code>step_total.py</code> tried step 8 (it was not skipped), which launched <code>official_ptha_data/fetch_official_inputs.py calabria2</code>, which opened rptha's zone table to look calabria2 up, found nothing (since PTHA18 never modelled it), and step 8 failed cleanly. <code>step_total.py</code> reported that and moved straight on to step 9, which built a complete report from steps 1-7 alone:</p>
+  <pre class="out">step8_official.py failed (exit 1) -- this step is optional (needs R + rptha, and needs this zone to be one PTHA18 modelled), so continuing to the next step. The final report will be complete for steps 1-7, just without an official-run comparison.
+  ...
+  note: no official run found at .../outputs_official
+  the report will cover steps 1-7 only, with no comparison section. Run step8_official.py first for the full report.
+  ...
+Steps 1-7 and 9 complete (step 8 skipped).</pre>
+  <p>Zero opens from steps 1 through 7, 7b or 9. The single hit traces to the one process that is meant to touch PTHA18, doing exactly what it is meant to do.</p>
+  <p class="where">The hook did not watch <code>runs/</code>, where step 8 writes its engine output. A later code review found that step 6 read that folder's summary, when step 8 had already run, to quote PTHA18's convergence in the input JSON's text note. It is now behind <code>USE_PTHA</code> like the other two (<a href="#guards">below</a>); on calabria2 it could not have fired, since step 8 found no PTHA18 zone to run.</p>
+</section>
+
+<section>
+  <h2 id="proof-v9">Checked again on v9, on a zone PTHA18 did model</h2>
+  <p>calabria2 proves that nothing is read when there is nothing to read. The harder case is a zone whose PTHA18 files <b>are</b> in the package, run with the most v9 machinery: kermadectonga2, <b>segmented</b> (Berryman's segment end points, per-segment GCMT and Berryman rows), generated from nothing and run through steps 1 to 7 and 9 (step 8, the comparison, skipped). The same kind of hook watched every open of <code>rptha/</code>, <code>official_ptha_data/</code>, the package-root <code>inputs/</code>, <code>validation/ptha18_reference/</code>, any <code>sourcezone_parameters</code>, <code>*_official.json</code>, <code>outputs_official</code>, <code>runs/python/kermadectonga2_official*</code> and <code>ReportPTHA</code>, and every request to NCI:</p>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py kermadec --zone kermadectonga2 --folder _audit_seg --ptha false --segmented true
+.venv/Scripts/python.exe _audit_seg/steps/step_total.py --skip-official --skip-hs</pre></div>
+  <pre class="out">(empty: zero opens, zero NCI requests)</pre>
+  <p>To be sure the hook was live in every subprocess, the same hook with one public file added to its list (Bird's <code>PB2002_steps.dat.txt.zip</code>) logged step 3's read of it. The run's results equal <code>kermadectonga2_v9seg</code>'s to the last digit (25 tables). Step 7b, run on the same folder afterwards, opens nothing either. (2026-09-30.)</p>
+  <p class="where">One latent path remains, and now says so: an input JSON <b>without</b> <code>events.scaling_relation</code> and <code>shear_modulus_Pa</code> makes the engine and step 7b read them from PTHA18's <code>sourcezone_parameters.csv</code>, which is what an official input needs. Step 6 always writes both, so a from-scratch run never takes it; if it ever does, the log prints a note.</p>
+</section>
+
+<section>
+  <h2 id="guards">Why steps 2, 5 and 6 could read PTHA18, and why they do not</h2>
+  <p>Three steps have a code path that <em>can</em> read an official file, for the <code>--ptha true</code> case (comparing your run's mesh, GCMT count or convergence against PTHA18's while building it). Both are behind an explicit guard on <code>USE_PTHA</code>, which <code>generate.py --ptha false</code> sets to <code>False</code>:</p>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:10%"><col style="width:45%"><col style="width:45%"></colgroup>
+    <tr><th>Step</th><th>What it could read</th><th>The guard</th></tr>
+    <tr><td>2</td><td><code>official_area_and_dip()</code>: PTHA18's published mesh area and dip, for the printed comparison table</td><td><code>off = official_area_and_dip(...) if USE_PTHA else None</code>, and the fallback branch is <code>elif USE_PTHA:</code>, so with <code>USE_PTHA = False</code> neither branch ever calls it</td></tr>
+    <tr><td>5</td><td><code>read_official_gcmt_count()</code>: PTHA18's own selected-event count for this zone, from step 8's extraction</td><td><code>off_count, off_duration = read_official_gcmt_count() if USE_PTHA else (None, None)</code></td></tr>
+    <tr><td>6</td><td><code>read_official_convergence()</code>: PTHA18's convergence from step 8's engine run (<code>runs/python/&lt;zone&gt;_official/logic_tree_summary.csv</code>), only quoted in the input JSON's provenance note, never used in a number</td><td><code>official_convergence = read_official_convergence() if USE_PTHA else None</code></td></tr>
+  </table></div>
+  <p>All three functions also start with <code>if not os.path.exists(...): return None</code>, so even reached with <code>USE_PTHA</code> true they degrade to "not available" rather than fail when step 8 has not run. With <code>--ptha false</code> the guard above stops them being called at all.</p>
+</section>
+
+<section>
+  <h2 id="step9">Step 9's report: the comparison without the read</h2>
+  <p>The report can show a from-scratch-vs-PTHA18 comparison (mesh maps, convergence, GCMT count, rate curves) without step 9 ever opening a PTHA18 file itself. Every "official" path it reads resolves under this example's own folder:</p>
+  <div class="tbl"><table>
+    <tr><th>Constant in step 9</th><th>Resolves to</th></tr>
+    <tr><td><code>OFFICIAL_RUN_DIR</code></td><td><code>&lt;folder&gt;/outputs_official/</code></td></tr>
+    <tr><td><code>REFERENCE_DIR</code></td><td><code>&lt;folder&gt;/outputs_official/ptha18_reference/</code></td></tr>
+    <tr><td><code>OFFICIAL_NC</code>, <code>OFFICIAL_CONV_NPY</code>, <code>OFFICIAL_GRID_NPY</code>, <code>OFFICIAL_GCMT_JSON</code></td><td>all inside <code>REFERENCE_DIR</code></td></tr>
+  </table></div>
+  <p>Those files exist only if step 8 wrote them. Without step 8, every <code>os.path.exists(...)</code> guard around them is false, the report says so in plain words, and steps 1-7's own numbers are shown in full: a from-scratch run is a complete result on its own, not a stub waiting on PTHA18.</p>
+  <div class="callout good"><span class="lbl">Where step 8 itself fits</span>Step 8 is documented on its own page: <a href="official.html">8. The official PTHA18 run</a>. It is the one place this package reads PTHA18, by design, since a comparison needs something to compare against, and everything it reads and writes is listed there.</div>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Verified 2026-09-28 on a from-zero run of calabria2_v8 (a zone PTHA18 never modelled) under a file-open audit hook watching <code>rptha/</code>, <code>official_ptha_data/</code> and <code>inputs/</code>. See <a href="reference.html#ptha-reads">reference.html</a> for the full per-step, per-flag breakdown.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

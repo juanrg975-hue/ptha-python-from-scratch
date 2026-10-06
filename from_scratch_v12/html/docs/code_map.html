@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python and rptha, side by side | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+table.cm td:nth-child(2) code, table.cm td:nth-child(3) code { font-size: 12px; }
+.tag-same { color: #2e9e6b; font-weight: 600; }
+.tag-new { color: #b7791f; font-weight: 600; }
+.tag-stat { color: #8a5cd1; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Code</div>
+  <h1>Python and rptha, side by side</h1>
+  <p class="lead">PTHA18 was computed with <b>rptha</b>, Geoscience Australia's R package, and a set of R scripts in its <code>austptha_template</code>. This package reimplements the parts needed for earthquake sources and their rates in Python. This page maps every Python function to the R code it reproduces, says how close it is, and which test or check proves it. Functions with no R counterpart are this package's own additions, and are marked as such.</p>
+  <div class="grid g3">
+    <div class="card"><h4 class="tag-same">port</h4><p>reproduces an R function; the "checked by" column says to what precision.</p></div>
+    <div class="card"><h4 class="tag-new">new</h4><p>no R counterpart: replaces a hand edit of PTHA18 (step 1) or is a safety check (the mesh repairs, the cache).</p></div>
+    <div class="card"><h4 class="tag-stat">statistical</h4><p>random by nature (HS slip): compared by distributions, never field by field.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 960 300" role="img" aria-label="The Python package layout next to the rptha R files it ports">
+      <defs><marker id="cm-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker></defs>
+      <text x="20" y="22" font-size="12" font-weight="700" fill="#5b6475">PYTHON (from_scratch_v12/)</text>
+      <text x="600" y="22" font-size="12" font-weight="700" fill="#5b6475">R (rptha/R/)</text>
+      <g font-size="12" font-family="Consolas, monospace">
+        <rect x="20" y="34" width="330" height="30" rx="6" fill="#fff" stroke="#b7791f"/><text x="30" y="54">lib/slab_contours.py</text>
+        <rect x="20" y="70" width="330" height="30" rx="6" fill="#e4f5ec" stroke="#2e9e6b"/><text x="30" y="90">pyptha_v12/contour_discretisation.py</text>
+        <rect x="20" y="106" width="330" height="30" rx="6" fill="#e4f5ec" stroke="#2e9e6b"/><text x="30" y="126">pyptha_v12/unit_sources.py</text>
+        <rect x="20" y="142" width="330" height="30" rx="6" fill="#fcf0e2" stroke="#d9822b"/><text x="30" y="162">lib/bird_convergence.py</text>
+        <rect x="20" y="178" width="330" height="30" rx="6" fill="#f1eafb" stroke="#8a5cd1"/><text x="30" y="198">steps/step5_subset_gcmt.py</text>
+        <rect x="20" y="214" width="330" height="30" rx="6" fill="#e8f0fd" stroke="#2f6fdf"/><text x="30" y="234">pyptha_v12/ events, scaling, rates, ...</text>
+        <rect x="20" y="250" width="330" height="30" rx="6" fill="#e8f0fd" stroke="#2f6fdf"/><text x="30" y="270">python_logic_tree_v12/run_logic_tree.py</text>
+
+        <rect x="600" y="34" width="340" height="30" rx="6" fill="#f0f2f5" stroke="#8a93a3" stroke-dasharray="4 3"/><text x="610" y="54" font-family="Segoe UI, sans-serif">none: PTHA18 edited its contours by hand</text>
+        <rect x="600" y="70" width="340" height="30" rx="6" fill="#fff" stroke="#8a93a3"/><text x="610" y="90">downdip_3d_lines_on_source.R</text>
+        <rect x="600" y="106" width="340" height="30" rx="6" fill="#fff" stroke="#8a93a3"/><text x="610" y="126">unit_sources.R, geometric_util.R</text>
+        <rect x="600" y="142" width="340" height="30" rx="6" fill="#fff" stroke="#8a93a3"/><text x="610" y="162">EVENT_RATES/compute_rates_all_sources.R</text>
+        <rect x="600" y="178" width="340" height="30" rx="6" fill="#fff" stroke="#8a93a3"/><text x="610" y="198">EVENT_RATES/gcmt_subsetter.R</text>
+        <rect x="600" y="214" width="340" height="30" rx="6" fill="#fff" stroke="#8a93a3"/><text x="610" y="234">rupture_events.R, rupture_*.R</text>
+        <rect x="600" y="250" width="340" height="30" rx="6" fill="#fff" stroke="#8a93a3"/><text x="610" y="270">compute_rates_all_sources.R, ...</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.6" fill="none" marker-end="url(#cm-ar)">
+        <path d="M350,85 L598,85"/><path d="M350,121 L598,121"/><path d="M350,157 L598,157"/><path d="M350,193 L598,193"/><path d="M350,229 L598,229"/><path d="M350,265 L598,265"/>
+      </g>
+      <g font-size="11.5" fill="#2e9e6b"><text x="400" y="80">same to metres</text><text x="400" y="116">4e-10</text><text x="400" y="152">1e-15</text><text x="400" y="188">identical lists</text><text x="400" y="224">row-identical events</text><text x="400" y="260">1e-10 per scenario</text></g>
+    </svg>
+    <figcaption><b>Python on the left, R on the right</b>, with the agreement reached on PTHA18's own data. R paths: the package files are in <code>PTHA_codes/rptha/R/rptha/R/</code>, PTHA18's scripts in <code>PTHA_codes/rptha/R/examples/austptha_template/</code> (EVENT_RATES, DATA, SOURCE_ZONES), and <code>ptha_access/</code> in <code>PTHA_codes/rptha/</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="geometry">Geometry: steps 1 and 2</h2>
+  <div class="tbl"><table class="fixed cm">
+    <colgroup><col style="width:21%"><col style="width:27%"><col style="width:27%"><col style="width:25%"></colgroup>
+    <tr><th>What</th><th>Python</th><th>R (rptha / PTHA18)</th><th>Checked by</th></tr>
+    <tr><td>Trench, datum, contours, checks</td><td><code>lib/slab_contours.py</code>: <code>find_trench</code>, <code>depth_below_trench</code>, <code>below_trench_contours</code>, <code>check_contours</code></td><td class="tag-new">new (PTHA18: hand edits)</td><td><code>test_step1_contours_on_a_synthetic_slab</code> (under 0.3 km); 1-3 km from PTHA18's contours</td></tr>
+    <tr><td>Clean ends</td><td><code>down_dip_transects</code>, <code>_end_deviation</code>, <code>_end_cuts</code>, <code>trim_ends</code></td><td class="tag-new">new (PTHA18: hand edits)</td><td><code>test_step1_cuts_a_slanted_raster_end_square_and_keeps_a_clean_one</code>, <code>test_step1_cuts_a_zone_that_narrows_to_a_point</code></td></tr>
+    <tr><td>Trench ramp rule (v10_q)</td><td><code>lib/slab_contours.py</code>: <code>_ramp_trim</code>, <code>find_trench(ramp_rise_km=)</code>, <code>below_trench_contours(ramp_rise_km=)</code></td><td class="tag-new">new (PTHA18: hand-edited trench lines)</td><td><code>test_trench_ramp.py</code></td></tr>
+    <tr><td>Contour interpolation by arc length</td><td><code>contour_discretisation._build_interpolators</code>, <code>_line_interpolator</code></td><td><code>make_source_contours_interpolation_function_list</code>, <code>make_line_interpolation_fun</code> (downdip_3d_lines_on_source.R)</td><td class="tag-same">port</td></tr>
+    <tr><td>Badness of a mesh</td><td><code>_quality_matrix</code>, <code>_spherical_to_cartesian2d</code></td><td><code>get_quality_matrix</code>, <code>spherical_to_cartesian2d_coordinates</code></td><td><code>test_spherical_to_cartesian2d_official</code>, <code>test_optimiser_reduces_badness</code></td></tr>
+    <tr><td>Levenberg-Marquardt, multigrid</td><td><code>_optimise_s_matrix</code>, <code>_nls_lm</code>, <code>_fd_jacobian</code>, <code>_stencil_colouring</code></td><td><code>create_downdip_lines_on_source_contours_improved</code> with <code>minpack.lm::nls.lm</code></td><td><code>test_coloured_jacobian_is_minpack_fdjac2_bit_for_bit</code>, <code>test_nls_lm_equals_true_lmdif</code>, <code>test_downdip_lines_match_rptha_r_output</code> (under 1 m)</td></tr>
+    <tr><td>Contours to grid (lm)</td><td><code>discretized_source_from_contours_orthogonal</code>, <code>interpolate_3D_path</code>, <code>interpolate_gc_path</code></td><td><code>discretized_source_from_source_contours</code> (unit_sources.R) as called by <code>DATA/make_initial_downdip_lines.R</code>; <code>geometric_util.R</code></td><td><code>test_mesh_reproduces_ptha18_grid</code>; <code>validate_v9.py mesh</code>: 14/14 zones, area within 0.004%</td></tr>
+    <tr><td>Older method (mid)</td><td><code>discretized_source_from_contours_mid</code></td><td><code>create_downdip_lines_on_source_contours</code> (<code>improved_downdip_lines = FALSE</code>)</td><td class="tag-same">port ('eq_spacing' cuts, as R runs)</td></tr>
+    <tr><td>Defects, repairs (optimal)</td><td><code>mesh_defects</code>, <code>_nearest_point_init_s_matrix</code>, <code>align_contour_ends</code>, <code>discretized_source_from_contours_optimal</code></td><td class="tag-new">new (rptha keeps a broken mesh)</td><td>8/8 examples: rptha's mesh kept, 0 defects</td></tr>
+    <tr><td>Grid cache</td><td><code>pyptha_v12/grid_cache.py</code></td><td class="tag-new">new</td><td>log line <code>mesh: reusing step 2's grid</code></td></tr>
+    <tr><td>Cell properties</td><td><code>unit_sources.discretized_source_approximate_summary_statistics</code>, <code>distance_down_depth</code>, <code>_mean_angle</code></td><td>same names (unit_sources.R, geometric_util.R), <code>mean_angle</code></td><td><code>test_unit_source_statistics_match_ptha18_table</code> (4e-10), <code>test_distance_down_depth_official</code>, <code>test_mean_angle_official</code></td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="convergence">Convergence and earthquakes: steps 3 to 5</h2>
+  <div class="tbl"><table class="fixed cm">
+    <colgroup><col style="width:21%"><col style="width:27%"><col style="width:27%"><col style="width:25%"></colgroup>
+    <tr><th>What</th><th>Python</th><th>R (rptha / PTHA18)</th><th>Checked by</th></tr>
+    <tr><td>Top edge to nearest Bird segment</td><td><code>lib/bird_convergence.py</code>: <code>top_edge_point</code>, <code>spherical_midpoint</code>, <code>dist_haversine</code>, <code>load_bird_segments</code></td><td><code>EVENT_RATES/make_spatially_variable_source_zone_convergence_rates.R</code> (<code>destPoint</code>, <code>midPoint</code>, <code>distHaversine</code>)</td><td rowspan="2"><code>test_bird_convergence_reproduces_ptha18_convergence</code> (7 zones, under 1e-12; about 1e-15 in practice)</td></tr>
+    <tr><td>Convergent slip, per column</td><td><code>convergence_components</code>, <code>column_convergence</code>, <code>rates_entries</code></td><td><code>compute_rates_all_sources.R</code> lines 371-415 (<code>div_vec</code>, 50 deg cap)</td></tr>
+    <tr><td>Which Bird table</td><td><code>column_convergence(..., table=)</code>: <code>"bird"</code> (Bird's public catalogue, <code>load_bird_raw_segments</code>, convergent types SUB/OCB/CCB) or <code>"bird-griffin"</code> (PTHA18's table, a copy in <code>data/bird/</code>; always in step 8), from <code>generate.py --convergence</code></td><td>R reads only PTHA18's table (<code>EVENT_RATES/config.R</code> line 49)</td><td><code>test_bird_convergence_reproduces_ptha18_convergence</code> (bird-griffin, 7 zones) and <code>test_bird_public_table_matches_ptha18_where_ptha18_used_bird</code> (bird, 5 zones)</td></tr>
+    <tr><td>PTHA18's Bird flag</td><td><code>ptha18_uses_bird_convergence</code> (step 8 only)</td><td><code>sourcezone_parameters.csv</code>, column <code>use_bird_convergence</code></td><td>read, not computed</td></tr>
+    <tr><td>GCMT selection</td><td><code>steps/step5_subset_gcmt.py</code> (<code>parse_ndk_full</code> and the rule)</td><td><code>EVENT_RATES/gcmt_subsetter.R</code> (with rptha's <code>lonlat_in_poly</code>)</td><td><code>validate_v9.py gcmt</code>: identical lists on 8/8 zones</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="engine">The engine: steps 6 and 7</h2>
+  <div class="tbl"><table class="fixed cm">
+    <colgroup><col style="width:21%"><col style="width:27%"><col style="width:27%"><col style="width:25%"></colgroup>
+    <tr><th>What</th><th>Python</th><th>R (rptha / PTHA18)</th><th>Checked by</th></tr>
+    <tr><td>Scenarios</td><td><code>events.get_all_earthquake_events</code>, <code>get_all_earthquake_events_of_magnitude_Mw</code></td><td>same names (rupture_events.R), order of <code>expand.grid(dipIndex, strikeIndex)</code></td><td><code>test_event_table_is_row_identical_to_ptha18</code> (puysegur2, 189 rows)</td></tr>
+    <tr><td>Cell-by-cell scenarios (v10)</td><td><code>events._local_blocks</code>, via <code>get_all_earthquake_events(rupture_size="local")</code></td><td class="tag-new">new (rptha: one block per magnitude)</td><td><code>test_rupture_size.py</code></td></tr>
+    <tr><td>q, the rupture-overlap weight (v10_q)</td><td><code>events.coverage_weights</code>; applied in <code>run_logic_tree.py</code> before <code>rates.get_event_probabilities_conditional_on_Mw</code></td><td class="tag-new">new</td><td><code>test_rupture_size.py</code> (3 tests)</td></tr>
+    <tr><td>Size and slip from magnitude</td><td><code>scaling.Mw_2_rupture_size</code>, <code>M0_2_Mw</code>, <code>slip_from_Mw</code></td><td>same names (rupture_scaling.R)</td><td><code>test_strasser_size_golden</code>, <code>test_M0_Mw_known_value</code> ...</td></tr>
+    <tr><td>Gutenberg-Richter curves</td><td><code>rates.Mw_exceedance_rate_truncated_gutenberg_richter</code>, <code>..._characteristic_...</code></td><td>same (rupture_probabilities.R)</td><td><code>test_truncated_gr_endpoints</code>, <code>test_characteristic_gr_positive_at_mwmax</code></td></tr>
+    <tr><td>Moment balance per branch</td><td><code>rates.rate_of_earthquakes_greater_than_Mw_function</code>, <code>compute_moment_fraction_from_events_greater_or_equal_than_mwmin</code></td><td><code>rate_of_earthquakes_greater_than_Mw_function</code> (rupture_probabilities.R)</td><td><code>validate_v9.py engine</code>: GR a of 32,000 branches within 3e-12</td></tr>
+    <tr><td>Bayesian update (LEVEL 3)</td><td><code>rates.compute_updated_logic_tree_weights</code>, <code>logic_tree.exceedance_rate_of_observed</code></td><td>same names (rupture_probabilities.R)</td><td><code>validate_v9.py engine</code>: prior and posterior weights of every branch</td></tr>
+    <tr><td>Conditional probability</td><td><code>rates.get_event_probabilities_conditional_on_Mw</code>; <code>convergent_slip_weighted</code> branch of <code>run_logic_tree.py</code></td><td><code>get_event_probabilities_conditional_on_Mw</code>; <code>make_conditional_probability_function_uniform_slip</code> (make_spatially_variable_source_zone_convergence_rates.R)</td><td rowspan="3"><code>validate_v9.py events</code>: every scenario's mean rate within 1e-10, percentiles within 8e-9 (4 zones)</td></tr>
+    <tr><td>Edge correction (LEVEL 4)</td><td><code>moment_balance.back_calculate_convergence</code>, <code>fit_edge_multiplier</code>, <code>logic_tree.edge_correct_conditional_probabilities</code></td><td><code>EVENT_RATES/back_calculate_convergence.R</code>; <code>optimize()</code> in compute_rates_all_sources.R (tol eps<sup>0.25</sup>)</td></tr>
+    <tr><td>Percentiles (LEVEL 5)</td><td><code>logic_tree.compute_exceedance_rate_percentiles_with_random_sampling</code>, <code>weighted_percentile</code></td><td><code>ptha_access/get_PTHA_results.R</code>; <code>weighted_percentile</code> (make_stage_vs_rate_curve_fast.R)</td></tr>
+    <tr><td>Segmentation (LEVEL 0)</td><td><code>logic_tree.get_unsegmented_and_segmented_source_names_on_source_zone</code></td><td>same name (ptha_access/get_detailed_PTHA18_source_zone_info.R)</td><td><code>test_segmentation_with_segments_is_50_50</code>; with <code>--segmented true</code> (v9), checked against PTHA18 by <code>validate_v9.py official_segments</code> and <code>events_segmented</code></td></tr>
+    <tr><td>Tree axes, coupling prior, dip factor, Mw_max</td><td><code>moment_balance.coupling_prior_spreadsheet_and_uniform_50_50</code>, <code>interpolate_logic_tree_parameter</code>, <code>mean_dip_cos_factor</code>, <code>mw_max_anchor</code>; <code>run_logic_tree.build_parameter_axes</code></td><td><code>compute_rates_all_sources.R</code> (R's <code>approx</code>, <code>mean_angle</code>, <code>cos_dip</code>)</td><td><code>test_interpolate_logic_tree_parameter_matches_r_approx</code>, <code>test_coupling_prior_*</code>, <code>test_dip_factor_is_one_over_cos</code></td></tr>
+    <tr><td>The whole run</td><td><code>python_logic_tree_v12/run_logic_tree.py</code> <code>main()</code></td><td><code>EVENT_RATES/compute_rates_all_sources.R</code></td><td>all of the above</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="hs">Slip patterns: step 7b</h2>
+  <div class="tbl"><table class="fixed cm">
+    <colgroup><col style="width:21%"><col style="width:27%"><col style="width:27%"><col style="width:25%"></colgroup>
+    <tr><th>What</th><th>Python</th><th>R (rptha / PTHA18)</th><th>Checked by</th></tr>
+    <tr><td>Heterogeneous slip (SFFM)</td><td><code>pyptha_v12/stochastic_slip.py</code>: <code>sffm_simulate</code>, <code>sffm_make_random_lwkc_function</code>, <code>sffm_recentre_slip</code>, <code>rectangle_on_grid</code></td><td>same names (sffm_fit_simulate_earthquake.R)</td><td class="tag-stat"><code>test_mean_slip_preserved</code> and others; distributions vs PTHA18's catalogue (<a href="hs_vaus.html#official-comparison">comparison</a>)</td></tr>
+    <tr><td>VAUS from HS</td><td>step 7b, <code>--- VAUS ---</code> block</td><td><code>SOURCE_ZONES/TEMPLATE/TSUNAMI_EVENTS/make_all_earthquake_events.R</code>, about lines 255-345</td><td class="tag-stat">distributions vs PTHA18's VAUS catalogue</td></tr>
+    <tr><td>Comparison with PTHA18's catalogues</td><td><code>lib/hs_official_compare.py</code>: <code>field_features</code> (step 7b saves them), <code>compare_features</code> (step 8's <code>compare_hs_vaus</code>)</td><td>rptha's <code>sffm_slip_goodness_of_fit</code> idea (mean |FFT(slip)|)</td><td><code>test_saved_hs_features_give_the_same_comparison</code></td></tr>
+  </table></div>
+  <p class="where">Not used by the pipeline, but ported and tested: <code>pyptha_v12/okada.py</code> (sea-floor deformation of a rectangular fault; rptha's <code>okada_tsunami.R</code> and <code>src/okada_tsunami_fortran.f</code>; tests against Okada's 1985 tables).</p>
+</section>
+
+<section>
+  <h2 id="read-both">Reading both codes</h2>
+  <ul class="tight">
+    <li>Most Python functions keep the R name, so a text search in <code>rptha/R/</code> finds the original.</li>
+    <li>Comments in the Python code cite R line numbers, for example <code>compute_rates_all_sources.R:704</code> next to the edge fit's tolerance, and explain every place where the Python has to do something specific to match R (geodesy on a sphere or the ellipsoid, R's <code>approx</code>, column-major order, MINPACK's settings).</li>
+    <li>The step templates' docstrings (<code>from_scratch_v12/templates/</code>) say which R script each step replaces.</li>
+  </ul>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Sources: the module docstrings of <code>pyptha_v12/</code>, <code>lib/</code> and <code>python_logic_tree_v12/</code>, the test files in <code>pyptha_v12/tests/</code>, and <code>validation/validate_v9.py</code>.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

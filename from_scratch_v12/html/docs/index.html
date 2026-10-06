@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>from_scratch_v12 documentation</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Documentation</div>
+  <h1>from_scratch_v12: PTHA18 earthquake sources from public data</h1>
+  <p class="lead">One command builds a complete earthquake source model for a subduction zone, the way the Australian tsunami hazard assessment <b>PTHA18</b> built its own: the fault surface cut into cells, how fast the plates move, which earthquakes have happened, and how often every possible earthquake is expected. It uses public data only, and every step is checked against the files PTHA18 published.</p>
+
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">9</div><div class="lbl">steps, one script each, from download to report</div></div>
+    <div class="card kpi"><div class="num">32,000</div><div class="lbl">logic-tree branches per zone, as PTHA18</div></div>
+    <div class="card kpi"><div class="num">8 + 2</div><div class="lbl">worked examples: eight v9 zones, two of them also run segmented</div></div>
+    <div class="card kpi"><div class="num">163 + 9</div><div class="lbl">tests and checks against PTHA18, all passing</div></div>
+  </div>
+  <div class="callout"><span class="lbl">New in v12 (2026-10-06)</span><code>generate.py --mesh-file</code>: ruptures and rates on an external quadrilateral mesh (one line per subfault, its 4 corners as lon, lat, depth) instead of a SLAB mesh. Tested on the alaskaaleutians mesh colleagues sent: it is PTHA18's own, and gives PTHA18's rates to 8.5e-12. <a href="v12.html">What is new in v12</a>.</div>
+  <div class="callout"><span class="lbl">New in v11 (2026-10-06)</span>PTHA18's variable shear modulus rates (<code>variable_mu</code>), the ones its headline hazard maps use with the HS scenarios: a new step 7c, after 7b, adds them next to the constant-rigidity ones, which do not change. Checked against PTHA18's published files to 7e-13. <a href="v11.html">What is new in v11</a>.</div>
+  <div class="callout"><span class="lbl">New in v10 and v10_q (2026-10-02)</span>Uniform-slip ruptures sized from the real km of their own cells (<code>--rupture-size local</code>, v10), the q correction of the rate shared among them (v10_q), and the trench ramp rule (<code>--trench-ramp</code>, v10_q, on by default). With the defaults the results are v9's, except where the ramp rule changes the trench (hellenic, caribbean/antilles, kermadectonga2). Everything, with figures: <a href="v10_q.html">What is new in v10 and v10_q</a>.</div>
+</section>
+
+<section id="glance">
+  <h2 id="at-a-glance">At a glance</h2>
+  <p>Four public data sets go in on the left. Nine steps turn them into a source model on the right. PTHA18's own published files (bottom) are used only to check the result, never to build it.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 380" role="img" aria-label="Public data sets feed the nine steps, which produce the mesh, the earthquake rates and the report; PTHA18's files are used only for checking">
+      <defs>
+        <marker id="ix-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+      </defs>
+      <text x="20" y="24" font-size="12" font-weight="700" fill="#5b6475">PUBLIC DATA IN</text>
+      <text x="360" y="24" font-size="12" font-weight="700" fill="#5b6475">THE NINE STEPS</text>
+      <text x="760" y="24" font-size="12" font-weight="700" fill="#5b6475">WHAT COMES OUT</text>
+
+      <g font-size="13">
+        <rect x="20" y="40" width="220" height="54" rx="9" fill="#e4f5ec" stroke="#2e9e6b"/>
+        <text x="32" y="62" font-weight="700">SLAB2.0 / SLAB1.0 (USGS)</text>
+        <text x="32" y="81" font-size="11.5" fill="#5b6475">depth of the plate surface</text>
+        <rect x="20" y="108" width="220" height="54" rx="9" fill="#fcf0e2" stroke="#d9822b"/>
+        <text x="32" y="130" font-weight="700">Bird (2003) plate model</text>
+        <text x="32" y="149" font-size="11.5" fill="#5b6475">how fast the plates converge</text>
+        <rect x="20" y="176" width="220" height="54" rx="9" fill="#f1eafb" stroke="#8a5cd1"/>
+        <text x="32" y="198" font-weight="700">GCMT catalogue</text>
+        <text x="32" y="217" font-size="11.5" fill="#5b6475">earthquakes since 1976</text>
+        <rect x="20" y="244" width="220" height="54" rx="9" fill="#f0f2f5" stroke="#8a93a3" stroke-dasharray="5 4"/>
+        <text x="32" y="266" font-weight="700">Berryman et al. (2015)</text>
+        <text x="32" y="285" font-size="11.5" fill="#5b6475">depth limit, coupling, b-value</text>
+      </g>
+
+      <g font-size="12.5">
+        <rect x="300" y="40" width="190" height="40" rx="8" fill="#e4f5ec" stroke="#2e9e6b"/>
+        <text x="312" y="65"><tspan font-weight="700">1</tspan>  depth contours</text>
+        <rect x="500" y="40" width="190" height="40" rx="8" fill="#e4f5ec" stroke="#2e9e6b"/>
+        <text x="512" y="65"><tspan font-weight="700">2</tspan>  mesh of unit sources</text>
+        <rect x="300" y="115" width="190" height="40" rx="8" fill="#fcf0e2" stroke="#d9822b"/>
+        <text x="312" y="140"><tspan font-weight="700">3</tspan>  convergence rate</text>
+        <rect x="300" y="190" width="190" height="40" rx="8" fill="#f1eafb" stroke="#8a5cd1"/>
+        <text x="312" y="215"><tspan font-weight="700">4-5</tspan>  earthquakes on this zone</text>
+        <rect x="500" y="152" width="190" height="40" rx="8" fill="#e8f0fd" stroke="#2f6fdf"/>
+        <text x="512" y="177"><tspan font-weight="700">6-7</tspan>  logic tree, LEVELs 0-5</text>
+        <rect x="500" y="228" width="190" height="40" rx="8" fill="#e8f0fd" stroke="#2f6fdf"/>
+        <text x="512" y="253"><tspan font-weight="700">9</tspan>  report.html</text>
+      </g>
+
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#ix-ar)">
+        <path d="M240,67 L298,60"/>
+        <path d="M240,135 L298,135"/>
+        <path d="M240,203 L298,210"/>
+        <path d="M240,271 C270,271 270,60 298,64" stroke-dasharray="5 4"/>
+        <path d="M490,60 L498,60"/>
+        <path d="M595,80 L595,150"/>
+        <path d="M490,135 C520,135 520,168 498,170"/>
+        <path d="M490,210 C520,210 520,178 498,176"/>
+        <path d="M595,192 L595,226"/>
+        <path d="M690,60 L758,62"/>
+        <path d="M690,172 L758,160"/>
+        <path d="M690,248 L758,258"/>
+      </g>
+
+      <g font-size="13">
+        <rect x="760" y="40" width="180" height="54" rx="9" fill="#fff" stroke="#eb6834" stroke-width="1.6"/>
+        <text x="772" y="62" font-weight="700">The mesh</text>
+        <text x="772" y="81" font-size="11.5" fill="#5b6475">cells of about 50 x 50 km</text>
+        <rect x="760" y="130" width="180" height="54" rx="9" fill="#fff" stroke="#2f6fdf" stroke-width="1.6"/>
+        <text x="772" y="152" font-weight="700">Earthquake rates</text>
+        <text x="772" y="171" font-size="11.5" fill="#5b6475">every scenario, per year</text>
+        <rect x="760" y="230" width="180" height="54" rx="9" fill="#fff" stroke="#2f6fdf" stroke-width="1.6"/>
+        <text x="772" y="252" font-weight="700">report.html</text>
+        <text x="772" y="271" font-size="11.5" fill="#5b6475">every number, with figures</text>
+      </g>
+
+      <rect x="300" y="318" width="640" height="46" rx="9" fill="#f0f2f5" stroke="#8a93a3" stroke-dasharray="5 4"/>
+      <text x="316" y="339" font-size="13" font-weight="700">PTHA18's published files (NCI): checking only</text>
+      <text x="316" y="356" font-size="11.5" fill="#5b6475">step 8 runs the official inputs through the same engine; validate_v9.py compares mesh, rates and earthquake lists</text>
+      <path d="M620,318 L620,290" stroke="#8a93a3" stroke-width="1.8" stroke-dasharray="4 4" marker-end="url(#ix-ar)" fill="none"/>
+      <text x="628" y="306" font-size="11" fill="#5b6475">step 8</text>
+    </svg>
+    <figcaption><b>The whole package in one picture.</b> Colours follow the documentation everywhere: green for the geometry (steps 1-2), orange for the plate speed (step 3), purple for the earthquake catalogue (steps 4-5), blue for the engine and the report (steps 6-9), grey and dashed for literature values and for the optional comparison with PTHA18.</figcaption>
+  </figure>
+</section>
+
+<section id="what">
+  <h2 id="what-it-does">What it does, in five sentences</h2>
+  <ol class="steps">
+    <li><b>Step 1</b> downloads the depth of the sinking plate (USGS SLAB) and draws depth lines every 5 km, measured from the nearby trench, down to the depth where large earthquakes stop; it cuts the zone's ends square where the data ends crookedly. <a href="step1.html">Step 1</a>, <a href="clean_ends.html">clean ends</a></li>
+    <li><b>Step 2</b> cuts that surface into cells of about 50 km (the <i>unit sources</i>) with rptha's own method, and with <code>--discretizer optimal</code> repairs the mesh only if a cell is folded, collapsed or overlapping. <a href="step2.html">Step 2</a>, <a href="discretizer.html">optimal, lm and mid</a></li>
+    <li><b>Step 3</b> reads how fast the plates converge under every column of cells from Bird's (2003) plate model, exactly as PTHA18 does; <b>steps 4 and 5</b> pick the earthquakes of the Global CMT catalogue that happened on this interface. <a href="step3.html">Step 3</a>, <a href="seismicity.html">steps 4-5</a></li>
+    <li><b>Steps 6 and 7</b> put everything in one input file and run PTHA18's logic tree: 32,000 combinations of coupling, b-value and maximum magnitude, each balanced against the plate motion, re-weighted by the observed earthquakes, and summarised into rates with uncertainty. <a href="input_json.html">Step 6</a>, <a href="engine.html">step 7</a></li>
+    <li><b>Step 9</b> writes <code>report.html</code> with every number and figure, including the mesh on a real map; <b>step 8</b> (optional, needs R) runs PTHA18's own inputs through the same engine so the two can be compared. <a href="official.html">Step 8</a>, <a href="report_guide.html">reading the report</a>, <a href="data_provenance.html">what step 8 is the only thing that touches PTHA18</a></li>
+  </ol>
+</section>
+
+<section id="start">
+  <h2 id="one-minute-run">The one-minute run</h2>
+  <p>From <code>ptha18_logic_tree_test/</code>, generate a folder for a zone and run all its steps. <a href="quickstart.html">Quick start</a> explains every option and has a command builder.</p>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py kermadec --zone kermadectonga2 --folder kermadectonga2_v9 --ptha false --discretizer optimal
+.venv/Scripts/python.exe kermadectonga2_v9/steps/step_total.py --skip-hs     <span class="cm"># steps 1-9; step 8 needs R</span>
+start kermadectonga2_v9/report.html</pre></div>
+</section>
+
+<section id="map">
+  <h2 id="how-to-read">Where to go</h2>
+  <p>Every page covers one topic, opens with a diagram that summarises it, keeps long explanations in boxes you can open (marked <b>+</b>), and says where in the code each thing happens. Pick by what you need:</p>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:36%"><col style="width:64%"></colgroup>
+    <tr><th>I want to...</th><th>Read</th></tr>
+    <tr><td>understand PTHA without being a seismologist</td><td><a href="concepts.html">PTHA in plain words</a>, then <a href="glossary.html">the glossary</a></td></tr>
+    <tr><td>know what v11 adds (variable shear modulus)</td><td><a href="v11.html">What is new in v11</a></td></tr>
+    <tr><td>know what changed in v10 and v10_q</td><td><a href="v10_q.html">What is new in v10 and v10_q</a></td></tr>
+    <tr><td>run a zone now</td><td><a href="quickstart.html">Quick start</a></td></tr>
+    <tr><td>see what each step does</td><td><a href="pipeline.html">The nine steps</a></td></tr>
+    <tr><td>know exactly what is done to the SLAB data, and what optimal changes</td><td><a href="slab_fixes.html">Every fix, in one page</a>; then <a href="step1.html">contours</a>, <a href="clean_ends.html">clean ends</a>, <a href="step2.html">the mesh</a>, <a href="discretizer.html">optimal, lm and mid</a></td></tr>
+    <tr><td>understand the rates</td><td><a href="step3.html">convergence</a> (<a href="convergence_sources.html">Bird or Bird + Griffin</a>), <a href="seismicity.html">earthquake catalogue</a>, <a href="input_json.html">input file</a>, <a href="engine.html">logic tree</a></td></tr>
+    <tr><td>read a report</td><td><a href="report_guide.html">9. Reading report.html</a></td></tr>
+    <tr><td>run a zone of my own: which names to type</td><td><a href="zones.html">Zones you can run</a></td></tr>
+    <tr><td>change a setting (a width, a convergence, rows...) and re-run</td><td><a href="customise.html">Change a setting, re-run</a></td></tr>
+    <tr><td>find a file, a column, an option; fix an error</td><td><a href="reference.html">Options, files, columns</a>, <a href="troubleshooting.html">Troubleshooting</a></td></tr>    <tr><td>see which Python function reproduces which R function</td><td><a href="code_map.html">Python and rptha, side by side</a></td></tr>
+    <tr><td>know how far to trust the results</td><td><a href="validation.html">Validation and tests</a>, <a href="examples.html">the 8 examples</a></td></tr>
+  </table></div>
+
+  <h3>All pages</h3>
+  <div class="grid g3">
+    <a class="card" href="slab_fixes.html"><b>Every fix, in one page</b><br><span class="where">From the SLAB raster to the mesh in 11 operations; what each --discretizer option changes.</span></a>
+    <a class="card" href="step1.html"><b>1. Contours from SLAB</b><br><span class="where">The raster, the trench, the local datum, the contours, the checks, --clip.</span></a>
+    <a class="card" href="clean_ends.html"><b>1. Clean ends</b><br><span class="where">When and how a zone's end is cut square, and every end of the 8 examples.</span></a>
+    <a class="card" href="step2.html"><b>2. The mesh</b><br><span class="where">rptha's method, the badness measure, rows and width, the cache, the cell properties.</span></a>
+    <a class="card" href="discretizer.html"><b>2. optimal, lm and mid</b><br><span class="where">Broken meshes, each repair, a real repair, the three methods compared.</span></a>
+    <a class="card" href="step3.html"><b>3. Plate convergence</b><br><span class="where">Bird's model matched to each column, the formula, the dip correction, puysegur, and the check for a mesh that runs past its own plate boundary.</span></a>
+    <a class="card" href="convergence_sources.html"><b>3. Bird or Bird + Griffin, per zone</b><br><span class="where">--convergence bird or bird-griffin: which PTHA18 zones used Griffin's traces, measured on every zone.</span></a>
+    <a class="card" href="seismicity.html"><b>4-5. Earthquake catalogue</b><br><span class="where">GCMT, the window, PTHA18's selection rule.</span></a>
+    <a class="card" href="input_json.html"><b>6. The input file</b><br><span class="where">Every key of the engine's input, with its value and origin.</span></a>
+    <a class="card" href="engine.html"><b>7. Logic tree and rates</b><br><span class="where">Scenarios and LEVELs 0 to 5, one by one.</span></a>
+    <a class="card" href="segmentation.html"><b>7. Segmented vs unsegmented</b><br><span class="where">LEVEL 0 in one page: what it is, how to run it, what it changes, how it compares with PTHA18.</span></a>
+    <a class="card" href="hs_vaus.html"><b>7b. HS and VAUS slip</b><br><span class="where">Realistic slip patterns, optional, never used by the rates.</span></a>
+    <a class="card" href="official.html"><b>8. The official PTHA18 run</b><br><span class="where">PTHA18's own inputs through the same engine.</span></a>
+    <a class="card" href="data_provenance.html"><b>8. Data provenance</b><br><span class="where">Verified from zero: everything else comes from public sources only.</span></a>
+    <a class="card" href="report_guide.html"><b>9. Reading report.html</b><br><span class="where">Every block of the report explained, and the CSV exports it writes beside it.</span></a>
+    <a class="card" href="zones.html"><b>Zones you can run</b><br><span class="where">All 32 zone names, their SLAB region and the command to copy.</span></a>  </div>
+</section>
+
+<section id="trust">
+  <h2 id="how-far-to-trust">How far to trust it</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h4><span class="badge good">proven equal to PTHA18</span></h4>
+      <ul class="tight">
+        <li>Given PTHA18's own contours, the mesh has PTHA18's exact size on all 14 zones checked.</li>
+        <li>Given PTHA18's own inputs, all 32,000 branches match PTHA18's tables (4 zones checked), and every segment's (7 segmented zones).</li>
+        <li>The rate of every earthquake scenario, and its uncertainty, match PTHA18's published files (mean within 1e-10, percentiles within 8e-9) on 4 unsegmented zones, and on 7 segmented zones, where PTHA18's rates add the unsegmented model and every segment a rupture touches.</li>
+        <li>The convergence (to about 1e-15) and the earthquake selection (identical lists on 8 zones and on every segment of 4) reproduce PTHA18's.</li>
+      </ul>
+      <p class="where">Details: <a href="validation.html">Validation and tests</a>.</p>
+    </div>
+    <div class="card">
+      <h4><span class="badge warn">different by design</span></h4>
+      <ul class="tight">
+        <li>The contours come from SLAB automatically, while PTHA18 edited its own by hand, so meshes differ by a few km and sometimes at the ends.</li>
+        <li>Segmented zones (LEVEL 0) <b>are</b> reproduced in v9, with <code>--segmented true</code>: the zone is split along strike, the unsegmented branch and the union of segments each take weight 0.5, and the segments sum within that union. Boundaries come from Berryman et al. (2015) Table 3.1's segment end points, the table PTHA18 took its segments from, so a segmented run stays public-data-only under <code>--ptha false</code> and still lands within 0 to 2 columns of PTHA18's boundaries on PTHA18's own meshes. Without the flag every zone is run unsegmented, exactly as v8 did.</li>
+        <li>Where PTHA18 extended a zone beyond the SLAB data by hand (puysegur2), this package does not invent geometry.</li>
+        <li>v10 / v10_q, opt-in: <code>--rupture-size local</code> sizes each uniform-slip rupture from its own cells and weights it with q. Not PTHA18's procedure: the event list no longer matches PTHA18's event by event, while the earthquakes per magnitude stay identical. The trench ramp rule (default on) trims a trench end that is the edge of the SLAB data (<a href="v10_q.html">details</a>).</li>
+      </ul>
+      <p class="where">Details: <a href="reference.html#caveats">known limits</a> and <a href="examples.html">the examples</a>.</p>
+    </div>
+  </div>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>from_scratch_v12 documentation. Figures come from the example folders in <code>ptha18_logic_tree_test/</code> or from the scripts in <code>html/docs/figures_src/</code>.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

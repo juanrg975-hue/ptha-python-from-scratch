@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6. The input file | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .jsonkey { font-family: var(--mono); font-size: 12.5px; }
+  table.jt { table-layout: fixed; font-size: 13.5px; }
+  table.jt td, table.jt code { overflow-wrap: anywhere; }
+  td.src-d { color: #2e9e6b; font-weight: 600; }
+  td.src-l { color: #8a93a3; font-weight: 600; }
+  td.src-f { color: #2f6fdf; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+<section id="top">
+  <div class="crumb">Rates</div>
+  <h1>6. The input file</h1>
+  <p class="lead">Step 6 gathers everything steps 1 to 5 found, plus a few values from the literature, into one JSON file: <code>inputs/input_&lt;zone&gt;_scratch.json</code>. It is the only thing the engine (step 7) reads, apart from the saved mesh, so it is also where a run can be changed by hand. This page lists every key.</p>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <figure class="fig narrow">
+    <svg viewBox="0 0 620 300" role="img" aria-label="The blocks of the input JSON">
+      <rect x="10" y="10" width="600" height="280" rx="10" fill="#fff" stroke="#dde1e8"/>
+      <text x="26" y="36" font-size="13" font-family="Consolas, monospace" font-weight="700">input_kermadectonga2_scratch.json</text>
+      <g font-size="12.5" font-family="Consolas, monospace">
+        <rect x="26" y="50" width="180" height="30" rx="6" fill="#e4f5ec" stroke="#2e9e6b"/><text x="36" y="70">"geometry"</text>
+        <text x="220" y="70" font-family="Segoe UI, sans-serif" font-size="12" fill="#5b6475">which mesh: contour file, cell size, discretizer, saved grid</text>
+        <rect x="26" y="88" width="180" height="30" rx="6" fill="#e8f0fd" stroke="#2f6fdf"/><text x="36" y="108">"events"</text>
+        <text x="220" y="108" font-family="Segoe UI, sans-serif" font-size="12" fill="#5b6475">magnitudes of the scenarios: 7.2 to 9.8 by 0.1</text>
+        <rect x="26" y="126" width="180" height="30" rx="6" fill="#fcf0e2" stroke="#d9822b"/><text x="36" y="146">"rates"</text>
+        <text x="220" y="146" font-family="Segoe UI, sans-serif" font-size="12" fill="#5b6475">the physics: convergence, coupling, b, Mw_max, GCMT, ...</text>
+        <rect x="26" y="164" width="180" height="30" rx="6" fill="#f0f2f5" stroke="#8a93a3"/><text x="36" y="184">"segments": {}</text>
+        <text x="220" y="184" font-family="Segoe UI, sans-serif" font-size="12" fill="#5b6475">empty: the whole zone only (LEVEL 0)</text>
+        <rect x="26" y="202" width="180" height="30" rx="6" fill="#e8f0fd" stroke="#2f6fdf"/><text x="36" y="222">"percentiles"</text>
+        <text x="220" y="222" font-family="Segoe UI, sans-serif" font-size="12" fill="#5b6475">LEVEL 5 settings: thresholds, 40,000 samples, seed</text>
+        <rect x="26" y="240" width="180" height="30" rx="6" fill="#fff" stroke="#8a93a3" stroke-dasharray="4 3"/><text x="36" y="260">"_..._provenance"</text>
+        <text x="220" y="260" font-family="Segoe UI, sans-serif" font-size="12" fill="#5b6475">plain-text notes: where each number came from</text>
+      </g>
+    </svg>
+    <figcaption><b>The six blocks of the file.</b> The <code>rates</code> block holds most of the keys; the table below lists them all with the kermadectonga2 values.</figcaption>
+  </figure>
+  <div class="grid g3">
+    <div class="card"><h4 style="color:#2e9e6b">derived</h4><p>computed from public data by steps 1 to 5: the contours, the mesh, the convergence and its profiles, the observed earthquakes.</p></div>
+    <div class="card"><h4 style="color:#8a93a3">declared</h4><p>read from Berryman et al. (2015), the literature PTHA18 cites: coupling, b-value, largest observed magnitude.</p></div>
+    <div class="card"><h4 style="color:#2f6fdf">setting</h4><p>PTHA18's own configuration: magnitude range, tree resolution, GR shapes and weights, percentile settings.</p></div>
+  </div>
+  <p>Keys that start with <code>_</code> are notes for people; the engine never reads them.</p>
+</section>
+
+<section>
+  <h2 id="never-overwritten">Step 6 never overwrites an edited file</h2>
+  <div class="callout warn"><span class="lbl">Important when you re-run</span>If <code>inputs/input_&lt;zone&gt;_scratch.json</code> already exists, step 6 leaves it alone and prints <code>... already exists -- NOT overwriting it.</code> This keeps your hand edits when you re-run the whole pipeline with <code>step_total.py</code>. The other side of it: a change you make <b>before</b> step 6 (a new width in step 2, a convergence override in step 3, a new GCMT selection) does not reach the engine until you rebuild the file with <code>steps/step6_write_input.py --force</code> (or delete it).</div>
+  <div class="code"><pre>.venv/Scripts/python.exe puysegur2_v9/steps/step6_write_input.py --force   <span class="cm"># rebuild from steps 1-5, discarding hand edits</span></pre></div>
+  <p>Which to use, and what to re-run after each kind of change: <a href="customise.html">Change a setting, re-run</a>.</p>
+</section>
+<section>
+  <h2 id="keys">Every key, with kermadectonga2's values</h2>
+
+  <p>Every value is one of three kinds: <b style="color:#2e9e6b">derived</b> from public data by steps 1-5, <b style="color:#8a93a3">declared</b> from the literature (Berryman et al. 2015, the paper PTHA18 cites), or a <b style="color:#2f6fdf">fixed setting</b> copied from PTHA18's own configuration. Keys that start with <code>_</code> are notes for humans; the engine never reads them.</p>
+
+  <div class="tbl"><table class="jt">
+    <colgroup><col style="width:21%"><col style="width:19%"><col style="width:36%"><col style="width:9%"><col style="width:15%"></colgroup>
+    <tr><th>Key</th><th>kermadectonga2 value</th><th>What it means</th><th>Kind</th><th>Where it comes from</th></tr>
+    <tr><td class="jsonkey">run_name</td><td><code>kermadectonga2_scratch_kermadectonga2_v9</code></td><td>Name of the engine's output folder <code>runs/python/&lt;run_name&gt;/</code>. It includes the example folder's name, so two folders of the same zone never overwrite each other there.</td><td class="src-f">setting</td><td>step 6 (<code>RUN_NAME</code>)</td></tr>
+    <tr><td class="jsonkey">source_zone</td><td><code>kermadectonga2</code></td><td>PTHA18's name of the zone (a label; with <code>--ptha false</code> nothing is looked up with it).</td><td class="src-f">setting</td><td><code>generate.py --zone</code></td></tr>
+    <tr class="hl"><td class="jsonkey" colspan="5"><b>geometry</b></td></tr>
+    <tr><td class="jsonkey">mode</td><td><code>"shapefile"</code></td><td>Mesh the contours of a shapefile. The engine also knows <code>planar</code>, <code>official_grid</code>, <code>official_statistics</code> (used by <a href="official.html">step 8</a> to read PTHA18's own cell table) and, v12, <code>mesh_file</code> (<code>"mesh_file"</code>: path, <code>"mesh_depth_units"</code>: an external quadrilateral mesh, written by step 6 when the folder was generated with <code>--mesh-file</code>; <a href="v12.html">details</a>).</td><td class="src-f">setting</td><td>step 6</td></tr>
+    <tr><td class="jsonkey">shapefile</td><td><code>kermadectonga2_v9/inputs/geometry/kermadectonga2_slab2_contours.shp</code></td><td>The depth contours drawn by step 1.</td><td class="src-d">derived</td><td><a href="step1.html">step 1</a>, SLAB2.0</td></tr>
+    <tr><td class="jsonkey">desired_unit_source_length<br>desired_unit_source_width</td><td>50.0, 50.0</td><td>Target cell size in km. With <code>--ptha true</code> the width is PTHA18's value for the zone.</td><td class="src-f">setting</td><td>step 6 (PTHA18 uses 50 km)</td></tr>
+    <tr><td class="jsonkey">n_downdip, min_downdip</td><td>null, 2</td><td>Forced number of down-dip rows (none here), and the minimum of 2 rows PTHA18 imposes. Read from step 2's own constants so the two steps cannot disagree.</td><td class="src-f">setting</td><td>step 2 (<code>N_DOWNDIP_OVERRIDE</code>, <code>MIN_DOWNDIP_ROWS</code>)</td></tr>
+    <tr><td class="jsonkey">seed, discretizer</td><td>1234, <code>"optimal"</code></td><td>The mesher's settings, as in <a href="step2.html">step 2</a>.</td><td class="src-f">setting</td><td><code>generate.py --discretizer</code></td></tr>
+    <tr><td class="jsonkey">unit_source_grid_npy</td><td><code>kermadectonga2_v9/data/slab2/unit_source_grid.npy</code></td><td>The mesh step 2 saved. The engine reuses it when its fingerprint (contour file hash + the fields above) still matches, so steps 7 and 9 use exactly the checked mesh; edit a meshing field and it rebuilds (<a href="step2.html#cache">cache</a>).</td><td class="src-d">derived</td><td>step 2</td></tr>
+    <tr class="hl"><td class="jsonkey" colspan="5"><b>events</b></td></tr>
+    <tr><td class="jsonkey">Mmin, Mmax, dMw</td><td>7.2, 9.8, 0.1</td><td>The magnitudes of the scenarios: 27 values. Scenarios above the largest Mw_max (9.6) get a zero rate but are kept so the table has PTHA18's rows.</td><td class="src-f">setting</td><td>PTHA18 <code>TSUNAMI_EVENTS/config.R</code></td></tr>
+    <tr><td class="jsonkey">source_zone_name</td><td><code>kermadectonga2</code></td><td>Label only.</td><td class="src-f">setting</td><td>step 6</td></tr>
+    <tr><td class="jsonkey">scaling_relation, shear_modulus_Pa</td><td><code>"Strasser"</code>, 3e10</td><td>The rupture size for a magnitude (Strasser et al. 2010) and the rigidity of the rock, for building the scenarios (the engine and step 7b). With <code>--ptha true</code> step 6 copies them from PTHA18's zone table, which gives the same two values on every subduction zone.</td><td class="src-f">setting</td><td>step 6 (literature)</td></tr>
+    <tr><td class="jsonkey">rupture_size</td><td><code>"rptha"</code></td><td>v10: how the uniform-slip scenarios are built. <code>"rptha"</code>: one block of cells per magnitude (absent key = this). <code>"local"</code>: a block per placement from the real km of its cells, and the conditional-probability weights times q (v10_q). Read by the engine, step 7b and step 9. <a href="v10_q.html#rupture-size">Details</a>.</td><td class="src-f">setting</td><td>step 6 (<code>--rupture-size</code>)</td></tr>
+    <tr class="hl"><td class="jsonkey" colspan="5"><b>rates</b></td></tr>
+    <tr><td class="jsonkey">tectonic_convergence_mm_per_yr</td><td>99.3560</td><td>How fast the plates approach, horizontally, averaged over the zone (area-weighted). The engine divides it by cos(mean dip) once.</td><td class="src-d">derived</td><td><a href="step3.html#formula">step 3</a>, Bird (2003)</td></tr>
+    <tr><td class="jsonkey">coupling.prior_type</td><td><code>"spreadsheet_and_uniform_50_50"</code></td><td>How the <a href="glossary.html#term-coupling">coupling</a> axis is weighted (<a href="engine.html#level1">LEVEL 1</a>). The engine also accepts <code>"explicit"</code> with your own <code>values</code> and <code>probs</code>.</td><td class="src-f">setting</td><td>PTHA18 <code>EVENT_RATES/config.R</code></td></tr>
+    <tr><td class="jsonkey">coupling.uniform_range</td><td>[0.1, 1.3]</td><td>The wide uniform half of the coupling prior. Above 1 allows for an underestimated convergence.</td><td class="src-f">setting</td><td>PTHA18</td></tr>
+    <tr><td class="jsonkey">coupling.spreadsheet_values</td><td>[0.21, 0.31, 0.72]</td><td>Minimum, preferred and maximum coupling of the zone.</td><td class="src-l">declared</td><td>Berryman Table 3.1, its "Hikurangi-Tonga-Kermadec Whole margin" row (v9; v8 used the mean of Kermadec and Tonga, 0.15/0.25/0.725): <code>berryman_coupling()</code></td></tr>
+    <tr><td class="jsonkey">coupling.prob_zero_coupling</td><td>0.0</td><td>Optional weight on an "aseismic" branch (coupling 0). Not used.</td><td class="src-f">setting</td><td>step 6</td></tr>
+    <tr><td class="jsonkey">b_anchor</td><td>[0.7, 0.95, 1.2]</td><td>Minimum, preferred, maximum <a href="glossary.html#term-b-value">b-value</a>.</td><td class="src-l">declared</td><td>Berryman, mean over the two segments: <code>berryman_b_anchor()</code></td></tr>
+    <tr><td class="jsonkey">Mw_max_anchor</td><td><code>"derive"</code></td><td>Compute the Mw_max range from the mesh as PTHA18 does (<a href="engine.html#level1">LEVEL 1</a>). A pair of numbers would be used as typed.</td><td class="src-f">setting</td><td>step 6</td></tr>
+    <tr><td class="jsonkey">mw_max_observed</td><td>8.1</td><td>Largest magnitude believed to have happened; the lower end of the Mw_max range is this + 0.05.</td><td class="src-d">derived</td><td>the larger of Berryman's largest "Mmax min" of the zone's rows (8.1, Kermadec and the Whole margin row; <code>berryman_mw_max_observed()</code>) and step 5's GCMT maximum (8.00); v8 used the dominant segment's (Tonga, 8.0)</td></tr>
+    <tr><td class="jsonkey">Mw_min, Mw_min_prob</td><td>[7.15], [1.0]</td><td>Lower end of the Gutenberg-Richter curve: 7.2 minus half a bin, so the Mw 7.2 bin (7.15 to 7.25) is whole.</td><td class="src-f">setting</td><td>PTHA18 <code>MW_MIN</code></td></tr>
+    <tr><td class="jsonkey">Mw_frequency_distribution<br>..._prob</td><td>truncated, characteristic GR<br>[0.7, 0.3]</td><td>The two <a href="glossary.html#term-gr">Gutenberg-Richter</a> shapes and their weights (<a href="engine.html#level1">LEVEL 1</a>).</td><td class="src-f">setting</td><td>PTHA18 report, Section 3.7.1</td></tr>
+    <tr><td class="jsonkey">n_logic_tree_bins</td><td>coupling 20, b 20, Mw_max 40</td><td>How many values each axis gets. Resolution, not physics.</td><td class="src-f">setting</td><td>PTHA18</td></tr>
+    <tr><td class="jsonkey">update_logic_tree_weights_with_data</td><td>true</td><td>Run <a href="engine.html#level3">LEVEL 3</a>. With <code>false</code> the posterior equals the prior.</td><td class="src-f">setting</td><td>PTHA18</td></tr>
+    <tr><td class="jsonkey">mw_max_posterior_equals_mw_max_prior</td><td>false</td><td>If true, LEVEL 3 may not change the Mw_max weights (rescaled back to the prior). Off in PTHA18.</td><td class="src-f">setting</td><td>PTHA18</td></tr>
+    <tr><td class="jsonkey">edge_correction</td><td>mode <code>"fit"</code>, lower 0, upper 30</td><td><a href="engine.html#level4">LEVEL 4</a>: fit the edge multiplier in [0, 30]. Other modes: <code>"fixed"</code> (+ <code>value</code>), <code>"inherit"</code> (segments), <code>"off"</code>.</td><td class="src-f">setting</td><td>PTHA18 <code>compute_rates_all_sources.R</code></td></tr>
+    <tr><td class="jsonkey">account_for_moment_below_mwmin</td><td>true</td><td>Part of the plate's moment is released by quakes smaller than Mw 7.15; do not give it to the scenarios (<a href="engine.html#level2">LEVEL 2</a>).</td><td class="src-f">setting</td><td>PTHA18 (<code>TRUE</code>)</td></tr>
+    <tr><td class="jsonkey">conditional_probability_model</td><td><code>"convergent_slip_weighted"</code></td><td>How a magnitude's rate is shared among its scenarios (<a href="engine.html#conditional-probability">below</a>). Step 6 first writes <code>"inverse_slip"</code> and replaces it when step 3 used Bird.</td><td class="src-d">derived</td><td>step 3's choice (Bird or a constant)</td></tr>
+    <tr><td class="jsonkey">convergent_slip_profile</td><td>73 values, 5.8 to 251.4 mm/yr</td><td>Per along-strike column: Bird's full slip speed, sqrt(convergent<sup>2</sup> + sideways<sup>2</sup>). Weights the scenarios.</td><td class="src-d">derived</td><td>step 3, <code>convergence_per_column.json</code></td></tr>
+    <tr><td class="jsonkey">convergence_profile</td><td>73 values, 4.4 to 229.0 mm/yr</td><td>Per column: the convergent part only (PTHA18's <code>div_vec</code>). The shape LEVEL 4 aims for.</td><td class="src-d">derived</td><td>step 3</td></tr>
+    <tr><td class="jsonkey">scaling_relation</td><td><code>"Strasser"</code></td><td>Rupture size vs magnitude, used to derive Mw_max. (The scenario sizes use <code>events.scaling_relation</code>, the same value.)</td><td class="src-f">setting</td><td>step 6 (literature)</td></tr>
+    <tr><td class="jsonkey">observed_seismicity</td><td>threshold 7.15, count 9, duration 41.164 yr, 9 magnitudes (7.164 to 7.999)</td><td>The earthquakes LEVEL 3 compares with: count above the threshold, the window length (1976-01-01 to 2017-03-01), and each magnitude.</td><td class="src-d">derived</td><td><a href="seismicity.html">steps 4-5</a>, GCMT</td></tr>
+    <tr class="hl"><td class="jsonkey" colspan="5"><b>segments, percentiles, outputs</b></td></tr>
+    <tr><td class="jsonkey">segments</td><td><code>{}</code>, or one entry per segment</td><td><a href="engine.html#level0">LEVEL 0</a>. Empty without <code>--segmented true</code> (v8 behaviour). With it, step 6 writes one entry per segment, each carrying its <code>alongstrike_slice</code>, its own <code>observed_seismicity</code> and <code>mw_max_observed</code>, its own <code>coupling</code> from its Berryman row (<code>_berryman_rows</code> names it), its plate pair (<code>_plate_pair</code>) and which rule placed it (<code>_boundaries</code>: <code>berryman</code> or <code>bird</code>).</td><td class="src-d">derived</td><td>step 6, from <code>lib/segmentation.py</code> (Berryman et al. 2015 Table 3.1)</td></tr>
+    <tr><td class="jsonkey">percentiles.threshold_Mw</td><td>[7.2, 7.3, ..., 9.8] (every 0.1)</td><td>Magnitudes at which LEVEL 5 computes percentiles. Until 2026-09-30: [7.2, 7.6, 8.0, 8.4, 8.8, 9.2], which is what older input files still contain.</td><td class="src-f">setting</td><td>step 6</td></tr>
+    <tr><td class="jsonkey">percentiles.copula, N, seed</td><td><code>"comonotonic"</code>, 40000, 123</td><td>How segments are combined at <a href="engine.html#level5">LEVEL 5</a> (no effect without segments), number of random samples, random seed.</td><td class="src-f">setting</td><td>PTHA18 (<code>comonotonic</code>)</td></tr>
+    <tr><td class="jsonkey">percentiles.percentile_probs</td><td>[0.025, 0.16, 0.5, 0.84, 0.975]</td><td>Which percentiles: 95% and 68% ranges and the median.</td><td class="src-f">setting</td><td>PTHA18</td></tr>
+    <tr><td class="jsonkey">outputs.write_branch_rate_curves</td><td>false</td><td>If true, also write every branch's curve (a very large file). The engine's own default is true; step 6 turns it off.</td><td class="src-f">setting</td><td>step 6</td></tr>
+    <tr class="hl"><td class="jsonkey" colspan="5"><b>notes (never read by the engine)</b></td></tr>
+    <tr><td class="jsonkey">_what_this_is</td><td colspan="4">One paragraph: this is a from-scratch input, which data it came from, and that it will not reproduce PTHA18's published curve exactly.</td></tr>
+    <tr><td class="jsonkey">_convergence_provenance</td><td colspan="4">"DERIVED in step3_convergence.py: Bird (2003) velocities nearest each column's top edge, area-weighted over the unit sources ... This run: 99.3560 mm/yr. The per-column profiles in this block select PTHA18's Bird model for event probabilities and the LEVEL 4 target."</td></tr>
+    <tr><td class="jsonkey">_observed_seismicity_provenance</td><td colspan="4">How the GCMT subset was selected (0.4 deg buffer, rake and strike within 50 deg, depth &lt;= 71 km), the count and the window.</td></tr>
+    <tr><td class="jsonkey">_coupling_provenance<br>_b_anchor_provenance</td><td colspan="4">That coupling and b come from Berryman et al. (2015) Table 3.1 via <code>berryman_params.py</code>, as the mean over the zone's merged Berryman segments, not from PTHA18's own table.</td></tr>
+  </table></div>
+  <p class="where">Where in the code: <code>templates/step6_write_input.py.tmpl</code> <code>main()</code>; Bird entries from <code>lib/bird_convergence.py</code> <code>rates_entries()</code>; literature values from <code>lib/berryman_params.py</code> <code>berryman_coupling()</code>, <code>berryman_b_anchor()</code>, <code>berryman_mw_max_observed()</code>.</p>
+
+  <details class="deep"><summary>Optional keys the engine reads but step 6 does not write<span class="tag">for hand edits</span></summary><div class="body">
+    <ul class="tight">
+      <li><code>rates.computational_increment</code>: step of the magnitude grid used to tabulate every branch curve. Default 0.02, PTHA18's value.</li>
+      <li><code>rates.maximum_allowed_mw_max</code>: cap on Mw_max. Default 9.6 for thrust zones, 9.0 for normal-fault (rake -90) zones, as in PTHA18.</li>
+      <li><code>rates.mw_observation_error_halfwidth</code>: if set, LEVEL 3 also computes weights that allow for a uniform error of +/- this value on the GCMT magnitudes. They are written to the <code>posterior_prob_with_Mw_error</code> column only; no rate uses them. Not set by step 6, so that column equals <code>posterior_prob</code>.</li>
+      <li><code>unsegmented</code> and each entry of <code>segments</code>: blocks that override <code>geometry</code> and <code>rates</code> for one source representation; a segment needs <code>alongstrike_slice: [first, last]</code> (columns) and, when LEVEL 3 is on, its own <code>observed_seismicity</code> (the engine refuses to credit a segment with the whole zone's earthquakes). Its convergence is not written: the engine averages the zone's <code>convergent_slip_profile</code> over the segment's own cells, as PTHA18 does, unless the segment sets its own <code>tectonic_convergence_mm_per_yr</code>. <code>alongstrike_slice</code> also works on an <code>official_statistics</code> geometry (step 8's PTHA18 segments).</li>
+      <li><code>percentiles.threshold_Mw</code> can be removed: the default is every 0.1 from Mmin to Mmax.</li>
+    </ul>
+    <p class="where">Where in the code: <code>python_logic_tree_v12/run_logic_tree.py</code> <code>build_source_representation()</code>, <code>build_parameter_axes()</code>, <code>main()</code>.</p>
+  </div></details>
+  <div class="callout"><span class="lbl">Editing and re-running</span>Edit the JSON, then run step 7 and step 9. Step 7 replaces <code>outputs/</code> as a whole, including step 7b's HS/VAUS results, so re-run <a href="hs_vaus.html">step 7b</a> afterwards if you need them. See <a href="customise.html">Change a setting, re-run</a>.</div>
+</section>
+<nav class="pager" id="pager"></nav>
+<footer>from_scratch_v12 documentation. Numbers on this page come from <code>kermadectonga2_v9/</code> (<code>outputs/</code>, <code>outputs_official/</code>, <code>inputs/</code>, <code>run_final.log</code>); the figures named <code>engine_*</code> were made by <code>html/docs/figures_src/make_engine.py</code> from those files, except the branch fan and moment-balance figures, which are the engine's own.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

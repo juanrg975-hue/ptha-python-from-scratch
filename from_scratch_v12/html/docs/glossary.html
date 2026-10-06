@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossary | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+.az { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 20px; }
+.az a { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 6px; background: var(--card); border: 1px solid var(--line); text-decoration: none; font-weight: 600; }
+.az a:hover { border-color: var(--accent); }
+dl.gl { max-width: 900px; margin: 0; }
+dl.gl dt { font-weight: 700; font-size: 15.5px; margin-top: 16px; scroll-margin-top: 14px; }
+dl.gl dd { margin: 3px 0 0 0; color: var(--ink); }
+dl.gl dd .see { color: var(--muted); font-size: 13px; }
+h2.letter { font-size: 20px; margin-top: 26px; }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Code</div>
+  <h1>Glossary</h1>
+  <p class="lead">Every term used in this documentation, in plain words, with the value this package uses where there is one, and the page that explains it.</p>
+  <div class="az">
+    <a href="#A">A</a><a href="#B">B</a><a href="#C">C</a><a href="#D">D</a><a href="#E">E</a><a href="#F">F</a><a href="#G">G</a><a href="#H">H</a><a href="#L">L</a><a href="#M">M</a><a href="#N">N</a><a href="#O">O</a><a href="#P">P</a><a href="#R">R</a><a href="#S">S</a><a href="#T">T</a><a href="#U">U</a><a href="#V">V</a>
+  </div>
+</section>
+
+<h2 class="letter" id="A">A</h2>
+<dl class="gl">
+  <dt id="term-auto-clip">auto-clip</dt><dd>An option of <code>step_total.py</code> (and step 1) that cuts the along-strike columns step 3 found sitting on a different plate boundary, with a window derived from the mesh. kurilsjapan_v9 is run with it (the Izu-Bonin tail). <span class="see"><a href="step3.html#plate-change">The plate-boundary check</a></span></dd>
+  <dt id="term-along-strike">along strike</dt><dd>Parallel to the trench. The columns of the mesh are side by side along strike. <span class="see"><a href="step2.html#mesh-basics">The mesh</a></span></dd>
+  <dt id="term-area-weighted">area-weighted mean</dt><dd>An average where each cell counts in proportion to its area; used for the zone's convergence. <span class="see"><a href="step3.html#per-column">Convergence</a></span></dd>
+</dl>
+
+<h2 class="letter" id="B">B</h2>
+<dl class="gl">
+  <dt id="term-b-value">b-value</dt><dd>The slope of the Gutenberg-Richter law: each magnitude unit up is 10<sup>b</sup> times rarer. From Berryman et al. (2015); kermadectonga2: 0.7, 0.95, 1.2 (minimum, preferred, maximum). <span class="see"><a href="engine.html#level1">LEVEL 1</a></span></dd>
+  <dt id="term-bayesian-update">Bayesian update</dt><dd>Re-weighting the logic-tree branches by how well each one predicts the earthquakes actually observed (LEVEL 3). The curves do not change, only their weights. <span class="see"><a href="engine.html#level3">LEVEL 3</a></span></dd>
+  <dt id="term-berryman">Berryman et al. (2015)</dt><dd>The GEM report on subduction interfaces that PTHA18 used for literature values: seismogenic depth, coupling, b-value, largest observed magnitude. Read through <code>lib/berryman_params.py</code>. <span class="see"><a href="input_json.html">The input file</a></span></dd>
+  <dt id="term-bird">Bird (2003)</dt><dd>A global model of plate boundaries (PB2002) with the relative velocity of the plates along every short segment. PTHA18's source of convergence rates. <span class="see"><a href="step3.html#bird">Convergence</a></span></dd>
+  <dt id="term-bow-tie">bow-tie cell</dt><dd>A folded cell whose four sides cross, like the two triangles of a bow tie; it has no sensible area or dip. The defect check counts them. <span class="see"><a href="discretizer.html#defects">Defects</a></span></dd>
+  <dt id="term-branch">branch</dt><dd>One complete combination of the uncertain inputs (coupling, b-value, Mw_max, GR shape): one possible answer, with a weight. 32,000 of them. <span class="see"><a href="concepts.html#logic-tree">Logic tree</a></span></dd>
+</dl>
+
+<h2 class="letter" id="C">C</h2>
+<dl class="gl">
+  <dt id="term-centroid">centroid (of an earthquake)</dt><dd>The average location of the slip of an earthquake, as given by its moment tensor; can differ by tens of km from the hypocentre. <span class="see"><a href="seismicity.html">Catalogue</a></span></dd>
+  <dt id="term-clean-ends">clean ends</dt><dd>Step 1's rule that cuts a zone's end square along a down-dip line when the end would give cells more than 45 deg off square, or the zone narrows to a point; clean ends are kept. <span class="see"><a href="clean_ends.html">Clean ends</a></span></dd>
+  <dt id="term-conditional-probability">conditional probability</dt><dd>How the rate of one magnitude is shared between the scenarios of that magnitude. With Bird's convergence: in proportion to area x mean convergent slip of the scenario's cells. <span class="see"><a href="engine.html#conditional-probability">Conditional probability</a></span></dd>
+  <dt id="term-contour">contour</dt><dd>A line joining points at the same depth of the plate interface. Here: depth below the nearby trench, every 5 km. <span class="see"><a href="step1.html#contours">Contours</a></span></dd>
+  <dt id="term-convergence">convergence</dt><dd>How fast the two plates approach each other, horizontally, in mm/yr. kermadectonga2: 99.36 mm/yr, area-weighted. <span class="see"><a href="step3.html">Convergence</a></span></dd>
+  <dt id="term-copula">copula (comonotonic)</dt><dd>How the uncertainties of several segments are combined in LEVEL 5 (with <code>--segmented true</code>); without segments it has no effect. <span class="see"><a href="engine.html#level5">LEVEL 5</a></span></dd>
+  <dt id="term-coupling">coupling</dt><dd>The fraction of the plate motion released in earthquakes (the rest slides silently). Uncertain: the tree uses 20 values between 0.1 and 1.3. <span class="see"><a href="engine.html#level1">LEVEL 1</a></span></dd>
+</dl>
+
+<h2 class="letter" id="D">D</h2>
+<dl class="gl">
+  <dt id="term-dip">dip</dt><dd>The angle of the plate interface below the horizontal (0 = flat, 90 = vertical). Mean dip of kermadectonga2: 15.42 deg (angle-weighted). <span class="see"><a href="step2.html#statistics">Cell properties</a></span></dd>
+  <dt id="term-discretizer">discretizer</dt><dd>The method that cuts the contours into cells: <code>optimal</code> (default), <code>lm</code> or <code>mid</code>. <span class="see"><a href="discretizer.html">optimal, lm and mid</a></span></dd>
+  <dt id="term-down-dip">down dip</dt><dd>Down the slope of the plate interface, away from the trench. The rows of the mesh are stacked down dip. <span class="see"><a href="step2.html#mesh-basics">The mesh</a></span></dd>
+  <dt id="term-down-dip-line">down-dip line</dt><dd>A line from the trench to the deepest contour, separating two columns of cells; rptha places them to cross every contour at a right angle. <span class="see"><a href="step2.html#rptha-method">rptha's method</a></span></dd>
+</dl>
+
+<h2 class="letter" id="E">E</h2>
+<dl class="gl">
+  <dt id="term-edge-correction">edge correction (LEVEL 4)</dt><dd>A multiplier of the probability of scenarios that touch an end of the zone, fitted so that the slip released along the zone follows the plate convergence. kermadectonga2: 7.15. A segment does not fit its own: it inherits the zone's. <span class="see"><a href="engine.html#level4">LEVEL 4</a></span></dd>
+  <dt id="term-esri">Esri, Leaflet</dt><dd>Esri: the provider of the map tiles (sea floor, satellite) of the report's map. Leaflet: the JavaScript library that shows them. Both load from the internet. <span class="see"><a href="report_guide.html#map">The map</a></span></dd>
+  <dt id="term-exceedance-rate">exceedance rate</dt><dd>How many earthquakes of at least a given magnitude are expected per year. kermadectonga2: 0.225 per year for Mw 7.2 or more. <span class="see"><a href="concepts.html#rates">How often</a></span></dd>
+</dl>
+
+<h2 class="letter" id="F">F</h2>
+<dl class="gl">
+  <dt id="term-faus">FAUS</dt><dd>Fixed Area Uniform Slip: a scenario as a rectangle of cells, sized by the scaling relation, with the same slip everywhere. All rates are computed on FAUS scenarios. <span class="see"><a href="hs_vaus.html#faus">FAUS</a></span></dd>
+</dl>
+
+<h2 class="letter" id="G">G</h2>
+<dl class="gl">
+  <dt id="term-gcmt">GCMT</dt><dd>The Global Centroid Moment Tensor catalogue: every large earthquake since 1976 with its magnitude, location and fault orientation. The window used: 1976-01-01 to 2017-03-01. <span class="see"><a href="seismicity.html">Catalogue</a></span></dd>
+  <dt id="term-gr">Gutenberg-Richter (GR)</dt><dd>The law that smaller earthquakes are exponentially more frequent than large ones, log<sub>10</sub>(rate) = a - b Mw. Two shapes are used: truncated (weight 0.7) and characteristic (0.3). <span class="see"><a href="engine.html#level1">LEVEL 1</a></span></dd>
+</dl>
+
+<h2 class="letter" id="H">H</h2>
+<dl class="gl">
+  <dt id="term-hs">HS</dt><dd>Heterogeneous Slip: a scenario whose slip is uneven, concentrated in patches, with the same moment as its FAUS scenario. Optional (step 7b); never used by the rates. <span class="see"><a href="hs_vaus.html#hs">HS</a></span></dd>
+  <dt id="term-hypocentre">hypocentre</dt><dd>Where an earthquake starts. <span class="see"><a href="seismicity.html">Catalogue</a></span></dd>
+</dl>
+
+<h2 class="letter" id="L">L</h2>
+<dl class="gl">
+  <dt id="term-lm">lm (Levenberg-Marquardt)</dt><dd>The least-squares method rptha uses to place the down-dip lines; also the <code>--discretizer</code> option that runs rptha's mesh exactly, without repair. <span class="see"><a href="discretizer.html#lm">lm</a></span></dd>
+  <dt id="term-local-datum">local datum</dt><dd>The reference depth of each point: the depth of the trench nearest to it. Contour depths are measured from it ("depth below the nearby trench"). <span class="see"><a href="step1.html#datum">Local datum</a></span></dd>
+  <dt id="term-logic-tree">logic tree</dt><dd>All combinations of the uncertain inputs, each a branch with a weight. <span class="see"><a href="concepts.html#logic-tree">Logic tree</a></span></dd>
+</dl>
+
+<h2 class="letter" id="M">M</h2>
+<dl class="gl">
+  <dt id="term-mesh">mesh</dt><dd>All the unit sources of a zone, as a grid of nodes: columns along strike, rows down dip. kermadectonga2: 73 x 3 = 219 cells. <span class="see"><a href="step2.html">The mesh</a></span></dd>
+  <dt id="term-moment-balance">moment balance</dt><dd>The rule that, over a long time, earthquakes release the moment the plates accumulate (area x rigidity x slip rate x coupling). It fixes each branch's rates (LEVEL 2). <span class="see"><a href="engine.html#level2">LEVEL 2</a></span></dd>
+  <dt id="term-moment-tensor">moment tensor, nodal plane</dt><dd>The description of an earthquake's source in GCMT; it gives two possible fault planes (nodal planes), each with strike, dip and rake. <span class="see"><a href="seismicity.html">Catalogue</a></span></dd>
+  <dt id="term-mw">Mw (moment magnitude)</dt><dd>The logarithmic size of an earthquake: Mw = (2/3)(log<sub>10</sub> M<sub>0</sub> - 9.05). One unit more is 32 times more moment. <span class="see"><a href="concepts.html#magnitude">Magnitude</a></span></dd>
+  <dt id="term-mw-max">Mw_max</dt><dd>The largest magnitude a branch allows. Its range is derived from the mesh as PTHA18 does, from the largest observed magnitude + 0.05 up to at most 9.6. <span class="see"><a href="engine.html#level1">LEVEL 1</a></span></dd>
+</dl>
+
+<h2 class="letter" id="N">N</h2>
+<dl class="gl">
+  <dt id="term-nci">NCI</dt><dd>Australia's National Computational Infrastructure, whose public server (THREDDS) holds PTHA18's published files: contours, meshes, cell tables, scenario tables, the saved R session. <span class="see"><a href="validation.html">Validation</a></span></dd>
+</dl>
+
+<h2 class="letter" id="O">O</h2>
+<dl class="gl">
+  <dt id="term-optimal">optimal</dt><dd>The default <code>--discretizer</code>: rptha's mesh, kept unchanged unless it has folded, collapsed or overlapping cells, and repaired only then. <span class="see"><a href="discretizer.html#optimal">optimal</a></span></dd>
+</dl>
+
+<h2 class="letter" id="P">P</h2>
+<dl class="gl">
+  <dt id="term-plate-pair">plate pair</dt><dd>The two plates that meet along a stretch of a boundary in Bird (2003)'s model, such as TO/PA (Tonga plate over the Pacific plate). Berryman et al. (2015) placed most segment ends where the pair changes, and <code>--segment-boundaries bird</code> starts a new <a href="#term-segment">segment</a> there. <span class="see"><a href="segmentation.html#bird-vs-ptha18">Berryman, PTHA18 and Bird</a></span></dd>
+  <dt id="term-percentile">percentile</dt><dd>The value below which a given share of the branch weight lies; the report gives the 2.5, 16, 50 (median), 84 and 97.5 percentiles of the rates. <span class="see"><a href="concepts.html#uncertainty">Uncertainty</a></span></dd>
+  <dt id="term-ptha18">PTHA18</dt><dd>The 2018 Australian Probabilistic Tsunami Hazard Assessment, by Geoscience Australia (Davies and Griffin). This package rebuilds its earthquake-source part. <span class="see"><a href="index.html">Home</a></span></dd>
+</dl>
+
+<h2 class="letter" id="Q">Q</h2>
+<dl class="gl">
+  <dt id="term-q">q (v10_q)</dt><dd>A rupture's mean, over its cells, of 1 / (number of ruptures of the same magnitude that contain the cell). With <code>--rupture-size local</code> it multiplies the conditional-probability weight, so places covered by more ruptures (smaller cells) do not get more rate. <span class="see"><a href="v10_q.html#q">q</a></span></dd>
+</dl>
+
+<h2 class="letter" id="R">R</h2>
+<dl class="gl">
+  <dt id="term-ramp-rule">ramp rule (trench, v10_q)</dt><dd>A trench end more than 3 km deeper than the trench's normal depth is the edge of the SLAB data, not trench, and is trimmed (at most 100 km) before the depth-below-trench datum is built. <code>--trench-ramp on</code> by default. <span class="see"><a href="step1.html#ramp">Step 1</a></span></dd>
+  <dt id="term-rake">rake</dt><dd>The direction of slip on the fault plane: 90 deg is a pure thrust, the upper plate moving straight up the slope. All scenarios here are pure thrusts. <span class="see"><a href="step3.html#formula">Convergence</a></span></dd>
+  <dt id="term-rupture-size">rupture size: rptha / local (v10)</dt><dd>How many cells a uniform-slip scenario gets. <code>rptha</code>: one block per magnitude from the zone's mean cell size; <code>local</code>: a block per placement from the real km of its own cells. <span class="see"><a href="v10_q.html#rupture-size">Cell-by-cell ruptures</a></span></dd>
+  <dt id="term-rptha">rptha</dt><dd>Geoscience Australia's R package with which PTHA18 was computed. <span class="see"><a href="code_map.html">Python and rptha</a></span></dd>
+</dl>
+
+<h2 class="letter" id="S">S</h2>
+<dl class="gl">
+  <dt id="term-s-matrix">s-matrix</dt><dd>How rptha describes the down-dip lines: for every contour, the fraction of its length at which each line crosses it. <span class="see"><a href="step2.html#s-matrix">s-matrix</a></span></dd>
+  <dt id="term-scaling-relation">scaling relation (Strasser)</dt><dd>An empirical rule for the length and width of a rupture of a given magnitude; PTHA18 uses Strasser et al. (2010) for subduction interfaces. <span class="see"><a href="engine.html#events">Scenarios</a></span></dd>
+  <dt id="term-segment">segment</dt><dd>A stretch of a zone, a run of along-strike columns of its mesh, that can break on its own, with its own convergence, coupling, Mw max observed and earthquakes. In v9 each is one segment of Berryman et al. (2015) Table 3.1, between the two trench end points the table gives it, and named as PTHA18 names the same segment (<code>tonga</code>, <code>kermadec</code>, <code>hikurangi</code>). With <code>--segment-boundaries bird</code> it is a Bird (2003) <a href="#term-plate-pair">plate pair</a> instead (<code>to_pa</code>, <code>ke_pa</code>). <span class="see"><a href="segmentation.html#method">How v9 builds a segment</a></span></dd>
+  <dt id="term-segmentation">segmentation (LEVEL 0)</dt><dd>Whether a zone breaks as a whole or in separate segments. PTHA18 weights both at 0.5 and SUMS the segments within the segmented half. v9 reproduces this with <code>--segmented true</code>, taking the boundaries from Berryman et al. (2015) Table 3.1's segment end points, as PTHA18 did; without the flag every zone is run unsegmented. <span class="see"><a href="segmentation.html">Segmented vs unsegmented</a>, <a href="engine.html#level0">LEVEL 0</a></span></dd>
+  <dt id="term-source-zone">source zone (the LEVEL 0 mix)</dt><dd>A segmented zone's own answer: 0.5 x the <a href="#term-unsegmented">unsegmented branch</a> + 0.5 x the <a href="#term-union">union of segments</a>. Column <code>exceedance_rate_source_zone</code> of <code>rate_curves.csv</code>, and <code>scenario_rates_&lt;zone&gt;_source_zone.csv</code> per scenario. kermadectonga2_v9seg: 0.2521 per year for Mw 7.2 or more (unsegmented 0.2251, union 0.2790). <span class="see"><a href="segmentation.html#results">Worked examples</a></span></dd>
+  <dt id="term-seismic-moment">seismic moment (M<sub>0</sub>)</dt><dd>The physical size of an earthquake: rigidity x area x slip, in N m (rigidity 3 x 10<sup>10</sup> Pa). <span class="see"><a href="concepts.html#magnitude">Magnitude</a></span></dd>
+  <dt id="term-seismogenic-cutoff">seismogenic cutoff</dt><dd>The depth below which the interface is too hot for large earthquakes; the deepest contour. From Berryman et al. (2015); kermadectonga2: 40 km below the trench. <span class="see"><a href="step1.html#slab">SLAB</a></span></dd>
+  <dt id="term-shear-modulus">shear modulus, rigidity (&mu;)</dt><dd>How stiff the rock is; M<sub>0</sub> = &mu; x area x slip. Steps 7 and 7b use 30 GPa everywhere (PTHA18's <code>rate_annual</code>); step 7c (v11) uses PTHA18's depth curve, 10 GPa near the trench to 67 GPa from 35 km (<code>variable_mu</code>). <span class="see"><a href="v11.html#what">What is new in v11</a></span></dd>
+  <dt id="term-sffm">SFFM</dt><dd>The stochastic slip generator of Davies et al. (2015) that makes HS fields. <span class="see"><a href="hs_vaus.html#hs">HS</a></span></dd>
+  <dt id="term-variable-mu">variable_mu (v11)</dt><dd>PTHA18's variable shear modulus case: each scenario's magnitude is relabelled with the rigidity at each cell's depth (<code>variable_mu_Mw</code>); the difference is treated as an error of the catalogue magnitudes in LEVEL 3, which changes the branch weights; the rates are <code>variable_mu_rate_*</code>. Slip and tsunami of every scenario are unchanged. <span class="see"><a href="v11.html#how">How it works</a></span></dd>
+  <dt id="term-slab2">SLAB2.0, SLAB1.0</dt><dd>The USGS models of the depth of subducting plates, on a map grid (0.05 and 0.02 deg). A zone whose PTHA18 name ends in 2 uses SLAB2.0. Downloaded from USGS ScienceBase or earthquake.usgs.gov. <span class="see"><a href="step1.html#slab">The SLAB raster</a></span></dd>
+  <dt id="term-slab">slab</dt><dd>The part of an oceanic plate that has sunk into the mantle. <span class="see"><a href="concepts.html#subduction">Subduction</a></span></dd>
+  <dt id="term-strike">strike</dt><dd>The direction of the top edge of a cell, in degrees clockwise from north, with the slab dipping to the right. <span class="see"><a href="step2.html#statistics">Cell properties</a></span></dd>
+</dl>
+
+<h2 class="letter" id="T">T</h2>
+<dl class="gl">
+  <dt id="term-trench">trench</dt><dd>The long, deep groove of the sea floor where the plate starts to sink; the 0 km contour and the top edge of the mesh. <span class="see"><a href="step1.html#trench">Finding the trench</a></span></dd>
+  <dt id="term-tvd">TVD</dt><dd>Total variation distance: how much the Bayesian update moved the branch weights, from 0 (not at all) to 1 (completely). kermadectonga2: 0.690. <span class="see"><a href="engine.html#level3">LEVEL 3</a></span></dd>
+</dl>
+
+<h2 class="letter" id="U">U</h2>
+<dl class="gl">
+  <dt id="term-union">union of segments</dt><dd>The segments added up: on a segmented run, the second half of LEVEL 0. Column <code>exceedance_rate_union_of_segments</code> of <code>rate_curves.csv</code>. It lies above the unsegmented curve at small magnitudes and below it at the largest. <span class="see"><a href="segmentation.html#what">What segmentation is</a></span></dd>
+  <dt id="term-unit-source">unit source</dt><dd>One cell of the mesh, about 50 x 50 km, the building block of every scenario. <span class="see"><a href="concepts.html#unit-sources">Unit sources</a></span></dd>
+  <dt id="term-unsegmented">unsegmented branch</dt><dd>The zone as one fault. On an unsegmented run it is the whole answer (weight 1); on a segmented one it is half of it (weight 0.5), and the step cards, TVD, edge fit and PTHA18 comparison of the report describe it. Column <code>exceedance_rate_unsegmented</code>. <span class="see"><a href="report_guide.html#modes">What changes on the page</a></span></dd>
+</dl>
+
+<h2 class="letter" id="V">V</h2>
+<dl class="gl">
+  <dt id="term-vaus">VAUS</dt><dd>Variable Area Uniform Slip: from an HS field, the smallest rectangle containing it, with uniform slip and the same moment. Optional (step 7b). <span class="see"><a href="hs_vaus.html#vaus">VAUS</a></span></dd>
+</dl>
+
+<nav class="pager" id="pager"></nav>
+<footer>Values from the kermadectonga2_v9 example, and kermadectonga2_v9seg for the segmented terms.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

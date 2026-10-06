@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The 8 examples | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Results</div>
+  <h1>The 8 examples</h1>
+  <p class="lead">Eight zones were run from start to finish with the current code, each chosen because it tests something different: a long arc, a huge one, a tiny one, a very flat one, one PTHA18 extended by hand, and three that PTHA18 never modelled with this geometry. For each one this page gives the command, what makes it interesting, its figures, its map and its numbers next to PTHA18's.</p>
+  <div class="callout"><span class="lbl">v9 folders, unsegmented</span>These eight are v9 runs (<code>*_v9</code>), all unsegmented, each with its official step 8 where PTHA18 published the zone. Two of them also have a <b>segmented</b> twin, <code>kermadectonga2_v9seg</code> and <code>kurilsjapan_v9seg</code>, described with their numbers in <a href="segmentation.html#results">Segmented vs unsegmented</a>. Against v8's folders (<code>*_v8</code>) only steps 6 onwards can differ: v9 takes a zone's coupling from Berryman's "Whole margin" row where there is one, and its Mw max observed as the larger of Berryman's rows and the GCMT maximum, as PTHA18 did. That moved kermadectonga2, southamerica and puysegur2; kurilsjapan changed too, because it is now run with <code>--auto-clip</code>; makran2, calabria2, caribbean2 and antilles2 give v8's numbers.</div>
+  <div class="callout"><span class="lbl">How these numbers were produced</span>Every example was generated with <code>--ptha false --discretizer optimal</code>, so nothing is taken from PTHA18's mesh, and run with <code>step_total.py --skip-hs</code>. The numbers come from each folder's own files: <code>run_final.log</code>, <code>outputs/</code>, <code>outputs_official/</code> and <code>data/step1_contours_info.json</code>. The script that collects them is <code>html/docs/figures_src/make_examples.py</code>.</div>
+</section>
+
+<section>
+  <h2 id="summary">All 8 at a glance</h2>
+  <div class="callout"><span class="lbl">v10 / v10_q examples</span>The eight examples below are v9 folders. Made with v10 / v10_q (2026-10-02): <code>calabria2_v10</code>, <code>calabria2_v10_q</code>, <code>caribbean2_v10</code>, <code>caribbean2_v10_q</code> (all with <code>--rupture-size local</code>, generated before the trench ramp rule existed, so with v9's trench) and <code>hellenic_west2_v10_q</code> (ramp rule and <code>--rupture-size local</code>). Commands and results: <a href="v10_q.html">What is new in v10 and v10_q</a>.</div>
+  <div class="callout"><span class="lbl">v11 / v12 examples (2026-10-06)</span>Made with v11 (<code>--rupture-size local</code>, constant rigidity): <code>calabria2_v11</code>, <code>caribbean2_v11</code>, <code>kermadectonga2_v11</code>, <code>kurilsjapan_v11</code>; with <code>--variable-mu on</code>: <code>calabria2_v11_varmu</code> (<a href="v11.html">v11</a>). With v12, <code>--mesh-file</code>: <code>alaskaaleutians_v12</code> (colleagues' mesh, which is PTHA18's own) and <code>alaskaaleutians_v12_slab</code> (the same zone from SLAB, to compare) (<a href="v12.html">v12</a>).</div>
+  <figure class="fig">
+    <img src="img/examples_overview.png" alt="The eight example meshes, one panel each, with the top edge drawn thick">
+    <figcaption><b>The eight meshes, drawn from their own <code>unit_source_grid.npy</code>.</b> Each panel has its own scale (the zones range from 630 km to 5,900 km of trench). The thick dark line is the top edge of the mesh, which lies on the trench; the plate sinks away from it. Title: folder, then columns along the trench x rows down the slope.</figcaption>
+  </figure>
+
+  <div class="tbl"><table>
+    <tr><th>Folder</th><th class="n">Mesh</th><th class="n">Area, km<sup>2</sup></th><th class="n">Mean dip</th><th class="n">Convergence, mm/yr</th><th class="n">GCMT events</th><th class="n">Rate Mw 7.2+, per yr</th><th>Ends</th></tr>
+    <tr><td><a href="#kermadectonga2">kermadectonga2_v9</a></td><td class="n">73 x 3</td><td class="n">542,559 <span class="where">(511,220)</span></td><td class="n">15.42 <span class="where">(16.01)</span></td><td class="n">99.36 <span class="where">(98.77)</span></td><td class="n">9 <span class="where">(9)</span></td><td class="n">0.225 <span class="where">(0.225)</span></td><td>both cut</td></tr>
+    <tr><td><a href="#southamerica">southamerica_v9</a></td><td class="n">118 x 4</td><td class="n">1,163,678 <span class="where">(1,681,297)</span></td><td class="n">16.62 <span class="where">(15.88)</span></td><td class="n">72.59 <span class="where">(58.71)</span></td><td class="n">24 <span class="where">(25)</span></td><td class="n">0.520 <span class="where">(0.573)</span></td><td>south cut</td></tr>
+    <tr><td><a href="#kurilsjapan">kurilsjapan_v9</a></td><td class="n">60 x 4</td><td class="n">593,269 <span class="where">(594,621)</span></td><td class="n">16.33 <span class="where">(16.68)</span></td><td class="n">87.91 <span class="where">(87.72)</span></td><td class="n">21 <span class="where">(21)</span></td><td class="n">0.462 <span class="where">(0.465)</span></td><td>south clipped (--auto-clip)</td></tr>
+    <tr><td><a href="#makran2">makran2_v9</a></td><td class="n">20 x 8</td><td class="n">382,203 <span class="where">(383,274)</span></td><td class="n">6.06 <span class="where">(6.10)</span></td><td class="n">41.06 <span class="where">(41.06)</span></td><td class="n">0 <span class="where">(0)</span></td><td class="n">0.0413 <span class="where">(0.0419)</span></td><td>both kept</td></tr>
+    <tr><td><a href="#puysegur2">puysegur2_v9</a></td><td class="n">13 x 2</td><td class="n">43,468 <span class="where">(46,853)</span></td><td class="n">36.63 <span class="where">(36.18)</span></td><td class="n">25.60 <span class="where">(35, fixed)</span></td><td class="n">4 <span class="where">(4)</span></td><td class="n">0.0639 <span class="where">(0.0808)</span></td><td>south cut</td></tr>
+    <tr><td><a href="#calabria2">calabria2_v9</a></td><td class="n">20 x 5</td><td class="n">136,468</td><td class="n">14.95</td><td class="n">7.93</td><td class="n">0</td><td class="n">0.0174</td><td>both cut</td></tr>
+    <tr><td><a href="#caribbean2">caribbean2_v9</a></td><td class="n">47 x 4</td><td class="n">399,747</td><td class="n">15.44</td><td class="n">15.65</td><td class="n">0</td><td class="n">0.0277</td><td>south cut</td></tr>
+    <tr><td><a href="#antilles2">antilles2_v9</a></td><td class="n">24 x 6</td><td class="n">249,217</td><td class="n">9.31</td><td class="n">18.50</td><td class="n">0</td><td class="n">0.0265</td><td>both cut</td></tr>
+  </table></div>
+  <p class="where">In brackets: PTHA18's official value, from step 8 (the official input run through the same engine). The last three zones have no official run: PTHA18 does not publish a unit-source grid for them on NCI. Mesh = columns along the trench x rows down the slope. All eight meshes are rptha's own mesh, kept unchanged by <code>optimal</code> (0 folded, 0 collapsed, 0% overlapping cells). "Rate Mw 7.2+" is the mean rate of earthquakes of magnitude 7.2 or more, per year.</p>
+
+  <div class="grid g2">
+    <div class="callout good"><span class="lbl">Where the pipeline matches PTHA18</span>On the four zones with an official run and the same along-strike extent (kermadectonga2, kurilsjapan, makran2, puysegur2), mean dip is within 0.6 deg and the rate of Mw 7.2+ earthquakes within 1.3%, except puysegur2 (see below). The GCMT event counts are identical wherever the meshes cover the same stretch.</div>
+    <div class="callout warn"><span class="lbl">Where it does not, and why</span>The gaps come from the geometry PTHA18 edited by hand: southamerica's official mesh continues about 1,600 km further south than the SLAB1.0 data this package uses (and PTHA18 lowered its Mw max observed to 9.2, where Berryman gives 9.5), and puysegur2's official rate uses a fixed 35 mm/yr instead of Bird's model. Neither is a bug of the pipeline; both are explained in their sections.</div>
+  </div>
+</section>
+
+<!-- ======================= kermadectonga2 ======================= -->
+<section>
+  <h2 id="kermadectonga2">kermadectonga2: the main running example</h2>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py kermadec --zone kermadectonga2 --folder kermadectonga2_v9 --ptha false --discretizer optimal</pre></div>
+  <p><b>Why it is interesting.</b> 3,600 km of trench from Tonga to New Zealand's South Island, crossing the 180 deg meridian. SLAB2.0 ends it crookedly in the north and tapers it to a point in the south, which is what made the automatic mesh differ most from PTHA18's hand-edited one without step 1's <a href="clean_ends.html">clean ends</a>.</p>
+  <div class="tabs">
+    <button data-pane="kt-map" class="on">Real map</button><button data-pane="kt-s1">Step 1</button><button data-pane="kt-mesh">Mesh</button><button data-pane="kt-cmp">vs PTHA18</button><button data-pane="kt-conv">Convergence</button>
+  </div>
+  <div class="pane on" id="kt-map"><figure class="fig"><img src="img/examples_kermadectonga2_map.jpg" alt="kermadectonga2 meshes over Esri's ocean map"><figcaption><b>The report's map.</b> Orange: this run's mesh; pink band: PTHA18's published mesh (its top edge wide). Both follow the Tonga and Kermadec trenches, the dark grooves east of the island arc. This run's trench line lies a median 4 km seaward of PTHA18's (<a href="step1.html#trench-offset">why</a>).</figcaption></figure></div>
+  <div class="pane" id="kt-s1"><figure class="fig"><img src="img/examples_kermadectonga2_step1_trench_and_contours.png" alt="Step 1 figure of kermadectonga2"><figcaption><b>Step 1.</b> The trench found on the SLAB raster, the depth contours every 5 km, the parts removed by the end cuts (dotted) and the cut lines (orange).</figcaption></figure></div>
+  <div class="pane" id="kt-mesh"><figure class="fig narrow"><img src="img/examples_kermadectonga2_scratch_mesh_map.png" alt="kermadectonga2 mesh coloured by depth"><figcaption><b>The mesh</b>, 219 cells coloured by depth.</figcaption></figure></div>
+  <div class="pane" id="kt-cmp"><figure class="fig"><img src="img/examples_kermadectonga2_mesh_comparison_map.png" alt="Official and this run's mesh side by side"><figcaption><b>PTHA18's mesh (left) and this run's (right)</b>, same depth colours. The official cells are drawn as rectangles rebuilt from PTHA18's statistics table, so small gaps between them are a drawing artefact.</figcaption></figure></div>
+  <div class="pane" id="kt-conv"><figure class="fig narrow"><img src="img/examples_kermadectonga2_scratch_mesh_map_convergence.png" alt="kermadectonga2 mesh coloured by Bird convergence"><figcaption><b>Plate convergence per column</b> (step 3): faster in the north (Tonga) than in the south.</figcaption></figure></div>
+  <div class="grid g2">
+    <div class="tbl"><table>
+      <tr><th>Quantity</th><th class="n">This run</th><th class="n">PTHA18</th><th class="n">Gap</th></tr>
+      <tr><td>Cells</td><td class="n">219</td><td class="n">216</td><td class="n">+3</td></tr>
+      <tr><td>Area, km<sup>2</sup></td><td class="n">542,559</td><td class="n">511,220</td><td class="n">+6.1%</td></tr>
+      <tr><td>Mean dip, deg</td><td class="n">15.42</td><td class="n">16.01</td><td class="n">-0.59</td></tr>
+      <tr><td>Convergence, mm/yr</td><td class="n">99.36</td><td class="n">98.77</td><td class="n">+0.6%</td></tr>
+      <tr><td>Edge multiplier (LEVEL 4)</td><td class="n">7.15</td><td class="n">6.70</td><td class="n">+6.8%</td></tr>
+      <tr><td>Rate Mw 7.2+, /yr</td><td class="n">0.2251</td><td class="n">0.2246</td><td class="n">+0.2%</td></tr>
+      <tr><td>Rate Mw 8.0+, /yr</td><td class="n">0.0402</td><td class="n">0.0398</td><td class="n">+1.3%</td></tr>
+      <tr><td>Rate Mw 9.0+, /yr</td><td class="n">0.00285</td><td class="n">0.00259</td><td class="n">+10.1%</td></tr>
+    </table></div>
+    <div class="tbl"><table>
+      <tr><th>End</th><th>Step 1's decision</th></tr>
+      <tr><td>South (trench start)</td><td>narrows to 34% of its median width: <b>cut</b> where it is back to 70%; 195 km of trench and 247 km of the deepest contour removed</td></tr>
+      <tr><td>North (trench end)</td><td>77 deg off square: <b>cut</b> along the down-dip line from the trench's last point; 5 km of trench, 53 km of contour removed</td></tr>
+      <tr><td colspan="2" class="where">Both cuts land within 10 km of PTHA18's own hand-made ends. 9 GCMT events, as PTHA18. The coupling (0.21 / 0.31 / 0.72) and Mw max observed (8.1) are PTHA18's own, so the remaining gap is the mesh and, through it, the LEVEL 4 edge fit (7% higher), which depends on where the column boundaries fall. Segmented twin: <code>kermadectonga2_v9seg</code> (<a href="segmentation.html#results">numbers</a>).</td></tr>
+    </table></div>
+  </div>
+</section>
+
+<!-- ======================= southamerica ======================= -->
+<section>
+  <h2 id="southamerica">southamerica: the biggest zone</h2>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py "south america" --zone southamerica --folder southamerica_v9 --ptha false --discretizer optimal</pre></div>
+  <p><b>Why it is interesting.</b> The longest zone (5,900 km of trench, 472 cells) and a SLAB1.0 zone (its name does not end in 2). Its raw south end is crooked (78 deg off square): without the end cut, rptha's mesh there has a folded cell (<a href="discretizer.html#real-demo">the repair demonstration</a>); with it, rptha's own mesh has no defect.</p>
+  <div class="tabs">
+    <button data-pane="sa-map" class="on">Real map</button><button data-pane="sa-s1">Step 1</button><button data-pane="sa-mesh">Mesh</button><button data-pane="sa-cmp">vs PTHA18</button><button data-pane="sa-conv">Convergence</button>
+  </div>
+  <div class="pane on" id="sa-map"><figure class="fig"><img src="img/examples_southamerica_map.jpg" alt="southamerica meshes over Esri's ocean map"><figcaption><b>The report's map.</b> Both meshes follow the Peru-Chile trench; PTHA18's continues south past 43 deg S to Tierra del Fuego, where the SLAB1.0 data this package uses has ended.</figcaption></figure></div>
+  <div class="pane" id="sa-s1"><figure class="fig"><img src="img/examples_southamerica_step1_trench_and_contours.png" alt="Step 1 figure of southamerica"><figcaption><b>Step 1.</b> The south end, cut along a down-dip line (orange).</figcaption></figure></div>
+  <div class="pane" id="sa-mesh"><figure class="fig narrow"><img src="img/examples_southamerica_scratch_mesh_map.png" alt="southamerica mesh"><figcaption><b>The mesh</b>, 118 x 4 cells.</figcaption></figure></div>
+  <div class="pane" id="sa-cmp"><figure class="fig"><img src="img/examples_southamerica_mesh_comparison_map.png" alt="Official and this run's southamerica mesh"><figcaption><b>PTHA18 (left) and this run (right).</b> The missing southern 1,600 km or so is the whole area gap.</figcaption></figure></div>
+  <div class="pane" id="sa-conv"><figure class="fig narrow"><img src="img/examples_southamerica_scratch_mesh_map_convergence.png" alt="southamerica convergence"><figcaption><b>Convergence per column.</b></figcaption></figure></div>
+  <div class="tbl"><table>
+    <tr><th>Quantity</th><th class="n">This run</th><th class="n">PTHA18</th><th class="n">Gap</th></tr>
+    <tr><td>Latitude covered</td><td class="n">5.0 N to 43.0 S</td><td class="n">7.7 N to 57.6 S</td><td></td></tr>
+    <tr><td>Area, km<sup>2</sup></td><td class="n">1,163,678</td><td class="n">1,681,297</td><td class="n">-30.8%</td></tr>
+    <tr><td>Mean dip, deg</td><td class="n">16.62</td><td class="n">15.88</td><td class="n">+0.74</td></tr>
+    <tr><td>Convergence, mm/yr</td><td class="n">72.59</td><td class="n">58.71</td><td class="n">+23.6%</td></tr>
+    <tr><td>GCMT events</td><td class="n">24</td><td class="n">25</td><td></td></tr>
+    <tr><td>Rate Mw 7.2+ / 8.0+ / 9.0+, /yr</td><td class="n">0.520 / 0.114 / 0.0134</td><td class="n">0.573 / 0.125 / 0.0145</td><td class="n">-9.2% / -9.2% / -8.1%</td></tr>
+  </table></div>
+  <div class="callout"><span class="lbl">Reading the gaps</span>The missing south is where the plates converge slowly, so the area-weighted convergence of the shorter mesh is 24% higher. Less area and faster convergence partly cancel in the moment balance, which is why the rates end up within 10%. The coupling is PTHA18's (Berryman's Whole margin row); Mw max observed is 9.5 here, Berryman's value, where PTHA18 used 9.2, its own choice. North end: kept (26 deg off square). South end: cut, 235 km of trench.</div>
+</section>
+
+<!-- ======================= kurilsjapan ======================= -->
+<section>
+  <h2 id="kurilsjapan">kurilsjapan: cutting the tail with --auto-clip</h2>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py kuril --zone kurilsjapan --folder kurilsjapan_v9 --ptha false --discretizer optimal
+<span class="cm"># steps 1-3 once, so step 3 can flag the tail; then the full run with the cut</span>
+.venv/Scripts/python.exe kurilsjapan_v9/steps/step1_fetch_slab2.py
+.venv/Scripts/python.exe kurilsjapan_v9/steps/step2_build_grid.py
+.venv/Scripts/python.exe kurilsjapan_v9/steps/step3_convergence.py
+.venv/Scripts/python.exe kurilsjapan_v9/steps/step_total.py --skip-hs --auto-clip</pre></div>
+  <p><b>Why it is interesting.</b> The SLAB2.0 region runs south past the Boso triple junction onto the Izu-Bonin trench, another plate boundary. Step 3's <a href="step3.html#plate-change">plate-boundary check</a> flags those columns, and <code>--auto-clip</code> cuts them with a window derived from the mesh, no coordinates typed. The result, 60 x 4 cells, has PTHA18's area to 0.2% and its Mw 7.2+ rate to 0.6%. Without the cut (v8's <code>kurilsjapan_v8</code>, 65 x 4) the mesh was 6% larger. Segmented twin: <code>kurilsjapan_v9seg</code> (<a href="segmentation.html#results">numbers</a>).</p>
+  <div class="tabs">
+    <button data-pane="ku-map" class="on">Real map</button><button data-pane="ku-s1">Step 1</button><button data-pane="ku-mesh">Mesh</button><button data-pane="ku-cmp">vs PTHA18</button>
+  </div>
+  <div class="pane on" id="ku-map"><figure class="fig"><img src="img/examples_kurilsjapan_map.jpg" alt="kurilsjapan meshes over Esri's ocean map"><figcaption><b>The report's map.</b> Kamchatka, the Kuril Islands and northern Japan. Both meshes now stop at about the same latitude in the south, where Bird's plate pair changes.</figcaption></figure></div>
+  <div class="pane" id="ku-s1"><figure class="fig"><img src="img/examples_kurilsjapan_step1_trench_and_contours.png" alt="Step 1 figure of kurilsjapan"><figcaption><b>Step 1</b>, on the clipped raster: both ends kept (24 and 9 deg off square).</figcaption></figure></div>
+  <div class="pane" id="ku-mesh"><figure class="fig narrow"><img src="img/examples_kurilsjapan_scratch_mesh_map.png" alt="kurilsjapan mesh"><figcaption><b>The mesh</b>, 60 x 4 cells.</figcaption></figure></div>
+  <div class="pane" id="ku-cmp"><figure class="fig"><img src="img/examples_kurilsjapan_mesh_comparison_map.png" alt="Official and this run's kurilsjapan mesh"><figcaption><b>PTHA18 (left) and this run (right).</b></figcaption></figure></div>
+  <div class="tbl"><table>
+    <tr><th>Quantity</th><th class="n">This run</th><th class="n">PTHA18</th><th class="n">Gap</th></tr>
+    <tr><td>Area, km<sup>2</sup></td><td class="n">593,269</td><td class="n">594,621</td><td class="n">-0.2%</td></tr>
+    <tr><td>Mean dip, deg</td><td class="n">16.33</td><td class="n">16.68</td><td class="n">-0.35</td></tr>
+    <tr><td>Convergence, mm/yr</td><td class="n">87.91</td><td class="n">87.72</td><td class="n">+0.2%</td></tr>
+    <tr><td>GCMT events</td><td class="n">21</td><td class="n">21</td><td></td></tr>
+    <tr><td>Rate Mw 7.2+ / 8.0+ / 9.0+, /yr</td><td class="n">0.462 / 0.0859 / 0.00761</td><td class="n">0.465 / 0.0850 / 0.00749</td><td class="n">-0.6% / +1.1% / +1.6%</td></tr>
+  </table></div>
+</section>
+
+<!-- ======================= makran2 ======================= -->
+<section>
+  <h2 id="makran2">makran2: a very flat interface</h2>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py makran --zone makran2 --folder makran2_v9 --ptha false --discretizer optimal</pre></div>
+  <p><b>Why it is interesting.</b> The plate sinks at only 6 deg, so the zone is very wide (8 rows of cells) for a short trench, and a large part of the mesh lies under land (Iran and Pakistan). Both ends are slanted (33 and 25 deg off square) but within the range PTHA18 itself kept, so step 1 keeps them. Area matches PTHA18 to 0.3% and the Mw 7.2+ rate to 1.3%.</p>
+  <div class="tabs">
+    <button data-pane="mk-map" class="on">Real map</button><button data-pane="mk-s1">Step 1</button><button data-pane="mk-mesh">Mesh</button><button data-pane="mk-cmp">vs PTHA18</button>
+  </div>
+  <div class="pane on" id="mk-map"><figure class="fig"><img src="img/examples_makran2_map.jpg" alt="makran2 meshes over Esri's ocean map"><figcaption><b>The report's map.</b> The two meshes almost coincide; the trench lies off the coast in the Gulf of Oman.</figcaption></figure></div>
+  <div class="pane" id="mk-s1"><figure class="fig"><img src="img/examples_makran2_step1_trench_and_contours.png" alt="Step 1 figure of makran2"><figcaption><b>Step 1.</b> Both slanted ends kept.</figcaption></figure></div>
+  <div class="pane" id="mk-mesh"><figure class="fig narrow"><img src="img/examples_makran2_scratch_mesh_map.png" alt="makran2 mesh"><figcaption><b>The mesh</b>, 20 x 8 cells.</figcaption></figure></div>
+  <div class="pane" id="mk-cmp"><figure class="fig"><img src="img/examples_makran2_mesh_comparison_map.png" alt="Official and this run's makran2 mesh"><figcaption><b>PTHA18 (left) and this run (right).</b></figcaption></figure></div>
+  <div class="tbl"><table>
+    <tr><th>Quantity</th><th class="n">This run</th><th class="n">PTHA18</th><th class="n">Gap</th></tr>
+    <tr><td>Area, km<sup>2</sup></td><td class="n">382,203</td><td class="n">383,274</td><td class="n">-0.3%</td></tr>
+    <tr><td>Mean dip, deg</td><td class="n">6.06</td><td class="n">6.10</td><td class="n">-0.04</td></tr>
+    <tr><td>Convergence, mm/yr</td><td class="n">41.06</td><td class="n">41.06</td><td class="n">0.0%</td></tr>
+    <tr><td>GCMT events</td><td class="n">0</td><td class="n">0</td><td></td></tr>
+    <tr><td>Rate Mw 7.2+ / 8.0+ / 9.0+, /yr</td><td class="n">0.0413 / 0.00864 / 0.000979</td><td class="n">0.0419 / 0.00865 / 0.000967</td><td class="n">-1.3% / -0.2% / +1.2%</td></tr>
+  </table></div>
+</section>
+
+<!-- ======================= puysegur2 ======================= -->
+<section>
+  <h2 id="puysegur2">puysegur2: tiny, steep, and extended by hand</h2>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py puysegur --zone puysegur2 --folder puysegur2_v9 --ptha false --discretizer optimal</pre></div>
+  <p><b>Why it is interesting.</b> The smallest zone (26 cells) and the steepest (36 deg). Two things make it differ from PTHA18 on purpose: PTHA18 extended its south end by hand beyond the SLAB2.0 data (this package does not invent geometry: its south end, 53 deg off square, is cut to 13 deg), and PTHA18 used a fixed convergence of 35 mm/yr here instead of Bird's model, which gives 25.6 mm/yr on this mesh.</p>
+  <div class="tabs">
+    <button data-pane="pu-map" class="on">Real map</button><button data-pane="pu-s1">Step 1</button><button data-pane="pu-mesh">Mesh</button><button data-pane="pu-cmp">vs PTHA18</button>
+  </div>
+  <div class="pane on" id="pu-map"><figure class="fig"><img src="img/examples_puysegur2_map.jpg" alt="puysegur2 meshes over Esri's ocean map"><figcaption><b>The report's map.</b> The Puysegur trench south-west of New Zealand's South Island.</figcaption></figure></div>
+  <div class="pane" id="pu-s1"><figure class="fig"><img src="img/examples_puysegur2_step1_trench_and_contours.png" alt="Step 1 figure of puysegur2"><figcaption><b>Step 1.</b> The south end is cut; the north end (17 deg) is kept.</figcaption></figure></div>
+  <div class="pane" id="pu-mesh"><figure class="fig narrow"><img src="img/examples_puysegur2_scratch_mesh_map.png" alt="puysegur2 mesh"><figcaption><b>The mesh</b>, 13 x 2 cells.</figcaption></figure></div>
+  <div class="pane" id="pu-cmp"><figure class="fig"><img src="img/examples_puysegur2_mesh_comparison_map.png" alt="Official and this run's puysegur2 mesh"><figcaption><b>PTHA18 (left) and this run (right).</b></figcaption></figure></div>
+  <div class="tbl"><table>
+    <tr><th>Quantity</th><th class="n">This run</th><th class="n">PTHA18</th><th class="n">Gap</th></tr>
+    <tr><td>Cells</td><td class="n">26</td><td class="n">28</td><td class="n">-2</td></tr>
+    <tr><td>Area, km<sup>2</sup></td><td class="n">43,468</td><td class="n">46,853</td><td class="n">-7.2%</td></tr>
+    <tr><td>Mean dip, deg</td><td class="n">36.63</td><td class="n">36.18</td><td class="n">+0.45</td></tr>
+    <tr><td>Convergence, mm/yr</td><td class="n">25.60 (Bird)</td><td class="n">35 (fixed)</td><td class="n">-26.9%</td></tr>
+    <tr><td>GCMT events</td><td class="n">4</td><td class="n">4</td><td></td></tr>
+    <tr><td>Rate Mw 7.2+ / 8.0+, /yr</td><td class="n">0.0639 / 0.00328</td><td class="n">0.0808 / 0.00516</td><td class="n">-21.0% / -36.4%</td></tr>
+  </table></div>
+  <div class="callout"><span class="lbl">To reproduce PTHA18's choice</span>Set <code>CONVERGENCE_OVERRIDE_MM_PER_YR = 35</code> in <code>steps/step3_convergence.py</code> and re-run step 3, step 6 with <code>--force</code>, then steps 7 and 9: step 3 then writes the constant and step 6 switches to PTHA18's constant-rate model. See <a href="step3.html#puysegur">puysegur's convergence</a>.</div>
+</section>
+
+<!-- ======================= calabria2 ======================= -->
+<section>
+  <h2 id="calabria2">calabria2: a strongly curved trench</h2>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py calabria --zone calabria2 --folder calabria2_v9 --ptha false --discretizer optimal</pre></div>
+  <p><b>Why it is interesting.</b> The Calabrian arc in the Ionian Sea bends through almost 180 deg around a large, flat, noisy accretionary prism, and the SLAB2.0 data ends crookedly in the west (82 deg off square) and narrows to a point in the north-east (43% of its median width). It is the hardest case for step 1; the result is 20 x 5 cells with no broken cell. PTHA18 has no official run to compare.</p>
+  <div class="tabs">
+    <button data-pane="ca-map" class="on">Real map</button><button data-pane="ca-s1">Step 1</button><button data-pane="ca-mesh">Mesh</button><button data-pane="ca-conv">Convergence</button>
+  </div>
+  <div class="pane on" id="ca-map"><figure class="fig"><img src="img/examples_calabria2_map.jpg" alt="calabria2 mesh over Esri's ocean map"><figcaption><b>The report's map.</b> The mesh fans out under Calabria and eastern Sicily from the arc-shaped trench in the Ionian Sea.</figcaption></figure></div>
+  <div class="pane" id="ca-s1"><figure class="fig"><img src="img/examples_calabria2_step1_trench_and_contours.png" alt="Step 1 figure of calabria2"><figcaption><b>Step 1.</b> Both ends cut.</figcaption></figure></div>
+  <div class="pane" id="ca-mesh"><figure class="fig narrow"><img src="img/examples_calabria2_scratch_mesh_map.png" alt="calabria2 mesh"><figcaption><b>The mesh</b>, 20 x 5 cells.</figcaption></figure></div>
+  <div class="pane" id="ca-conv"><figure class="fig narrow"><img src="img/examples_calabria2_scratch_mesh_map_convergence.png" alt="calabria2 convergence"><figcaption><b>Convergence per column</b>: only 7.4 mm/yr on average, the slowest of the eight.</figcaption></figure></div>
+  <div class="tbl"><table>
+    <tr><th>End</th><th>Step 1's decision</th></tr>
+    <tr><td>West (trench start)</td><td>82 deg off square: <b>cut</b>; 15 km of trench, 89 km of the deepest contour removed</td></tr>
+    <tr><td>North-east (trench end)</td><td>narrows to 43% of its median width: <b>cut</b> where it is back to 70%; 55 km of trench, 135 km of contour removed</td></tr>
+  </table></div>
+  <p class="where">Area 136,468 km<sup>2</sup>, mean dip 14.95 deg, convergence 7.93 mm/yr, 0 GCMT events, rate of Mw 7.2+ 0.0174 per year.</p>
+</section>
+
+<!-- ======================= caribbean2 ======================= -->
+<section>
+  <h2 id="caribbean2">caribbean2: the whole Caribbean raster</h2>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py caribbean --zone antilles2 --folder caribbean2_v9 --ptha false --discretizer optimal</pre></div>
+  <p><b>Why it is interesting.</b> The SLAB2.0 "Caribbean" region covers more than one subduction zone. Without a clip window, step 1 takes the longest trench-like edge of the raster (2,300 km, from the Lesser Antilles along Puerto Rico and Hispaniola). This is a test of how the automatic trench finder behaves on a raster that is not one zone; compare with <a href="#antilles2">antilles2</a>, the same raster clipped to the Lesser Antilles. No official run to compare.</p>
+  <div class="tabs">
+    <button data-pane="cb-map" class="on">Real map</button><button data-pane="cb-s1">Step 1</button><button data-pane="cb-mesh">Mesh</button>
+  </div>
+  <div class="pane on" id="cb-map"><figure class="fig"><img src="img/examples_caribbean2_map.jpg" alt="caribbean2 mesh over Esri's ocean map"><figcaption><b>The report's map.</b></figcaption></figure></div>
+  <div class="pane" id="cb-s1"><figure class="fig"><img src="img/examples_caribbean2_step1_trench_and_contours.png" alt="Step 1 figure of caribbean2"><figcaption><b>Step 1.</b> The south end cut, the west end kept (22 deg).</figcaption></figure></div>
+  <div class="pane" id="cb-mesh"><figure class="fig narrow"><img src="img/examples_caribbean2_scratch_mesh_map.png" alt="caribbean2 mesh"><figcaption><b>The mesh</b>, 47 x 4 cells.</figcaption></figure></div>
+  <p class="where">Area 399,747 km<sup>2</sup>, mean dip 15.44 deg, convergence 15.65 mm/yr, 0 GCMT events, rate of Mw 7.2+ 0.0277 per year. South end (trench start): 86 deg off square, cut along the down-dip line from the trench's last point (242 km of the deepest contour removed). West end: kept.</p>
+</section>
+
+<!-- ======================= antilles2 ======================= -->
+<section>
+  <h2 id="antilles2">antilles2: using --clip</h2>
+  <div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py caribbean --zone antilles2 --folder antilles2_v9 --ptha false --discretizer optimal --clip 297,307,5,18.5</pre></div>
+  <p><b>Why it is interesting.</b> The Lesser Antilles arc alone, cut out of the Caribbean raster with <code>--clip LON_MIN,LON_MAX,LAT_MIN,LAT_MAX</code> (longitudes in the raster's 0-360 convention). The clip window's corner makes the south end crooked (85 deg off square) and the north end narrows where the arc meets the window (46%), so both are cut. The flat dip (9.3 deg) gives 6 rows. No official run to compare.</p>
+  <div class="tabs">
+    <button data-pane="an-map" class="on">Real map</button><button data-pane="an-s1">Step 1</button><button data-pane="an-mesh">Mesh</button>
+  </div>
+  <div class="pane on" id="an-map"><figure class="fig"><img src="img/examples_antilles2_map.jpg" alt="antilles2 mesh over Esri's ocean map"><figcaption><b>The report's map.</b> The mesh sits east of the Lesser Antilles island arc, from Barbados to the Virgin Islands.</figcaption></figure></div>
+  <div class="pane" id="an-s1"><figure class="fig"><img src="img/examples_antilles2_step1_trench_and_contours.png" alt="Step 1 figure of antilles2"><figcaption><b>Step 1.</b> Both ends cut.</figcaption></figure></div>
+  <div class="pane" id="an-mesh"><figure class="fig narrow"><img src="img/examples_antilles2_scratch_mesh_map.png" alt="antilles2 mesh"><figcaption><b>The mesh</b>, 24 x 6 cells.</figcaption></figure></div>
+  <p class="where">Area 249,217 km<sup>2</sup>, mean dip 9.31 deg, convergence 18.50 mm/yr, 0 GCMT events, rate of Mw 7.2+ 0.0265 per year. South end: cut (242 km of the deepest contour). North end: cut where the zone is back to 70% of its width (105 km of trench, 203 km of contour).</p>
+  <div class="callout warn"><span class="lbl">Check the step 1 figure when you use --clip</span>A window that cuts through a neighbouring slab is not detected automatically: for example <code>--clip 283,307,5,18.5</code> keeps a strip of the Puerto Rico slab and no check flags it. See <a href="step1.html#clip">--clip</a>.</div>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Numbers: each <code>*_v9</code> folder's <code>run_final.log</code>, <code>outputs/</code>, <code>outputs_official/</code> and <code>data/step1_contours_info.json</code>, collected by <code>figures_src/make_examples.py</code>; maps: <code>figures_src/make_examples_maps.py</code> (screenshots of each report's map, Esri tiles).</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

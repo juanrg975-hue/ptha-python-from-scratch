@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From SLAB to mesh: every fix | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Geometry: from SLAB to mesh</div>
+  <h1>From SLAB to mesh: every fix, in one page</h1>
+  <p class="lead">The USGS SLAB data is a map of the depth of the sinking plate, cell by cell. rptha, the code PTHA18 used, needs something else: clean depth lines every 5 km from the trench down, one unbroken line per depth, ending squarely at both ends of the zone. PTHA18 drew those lines partly by hand. This package does it automatically, in 11 small operations. This page lists all of them, says why each is needed, and shows which ones change with <code>--discretizer</code>.</p>
+  <div class="callout good"><span class="lbl">The short answer</span>Operations 1 to 8 (step 1) are the same for every option: they turn SLAB into contours. <code>--discretizer</code> only matters in step 2. <code>lm</code> and <code>optimal</code> build exactly the same mesh (rptha's), and <code>optimal</code> adds a safety net: if that mesh has a broken cell, it repairs it. <code>mid</code> is an older, different method.</div>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 960 430" role="img" aria-label="The eleven operations from the SLAB raster to the mesh, grouped into step 1 (the same for every option) and step 2 (where the discretizer option acts)">
+      <defs>
+        <marker id="sf-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+      </defs>
+      <rect x="10" y="10" width="940" height="232" rx="12" fill="#f4faf6" stroke="#2e9e6b" stroke-dasharray="6 4"/>
+      <text x="26" y="34" font-size="13" font-weight="700" fill="#2e9e6b">STEP 1: SLAB raster to contours (identical for optimal, lm and mid)</text>
+
+      <g font-size="12">
+        <rect x="26" y="50" width="140" height="74" rx="8" fill="#fff" stroke="#2e9e6b"/>
+        <text x="36" y="70" font-weight="700">0  SLAB raster</text>
+        <text x="36" y="88" fill="#5b6475">depth of the plate,</text>
+        <text x="36" y="104" fill="#5b6475">one value per cell</text>
+        <!-- mini raster -->
+        
+
+        <rect x="190" y="50" width="140" height="74" rx="8" fill="#fff" stroke="#2e9e6b"/>
+        <text x="200" y="70" font-weight="700">1  one block</text>
+        <text x="200" y="88" fill="#5b6475">keep the largest</text>
+        <text x="200" y="104" fill="#5b6475">connected piece</text>
+
+        <rect x="354" y="50" width="140" height="74" rx="8" fill="#fff" stroke="#2e9e6b"/>
+        <text x="364" y="70" font-weight="700">2  find the trench</text>
+        <text x="364" y="88" fill="#5b6475">the shallow, up-dip</text>
+        <text x="364" y="104" fill="#5b6475">facing part of the edge</text>
+
+        <rect x="518" y="50" width="140" height="74" rx="8" fill="#fff" stroke="#2e9e6b"/>
+        <text x="528" y="70" font-weight="700">3  trench depth</text>
+        <text x="528" y="88" fill="#5b6475">measured at the edge,</text>
+        <text x="528" y="104" fill="#5b6475">smoothed over 50 km</text>
+
+        <rect x="682" y="50" width="140" height="74" rx="8" fill="#fff" stroke="#2e9e6b"/>
+        <text x="692" y="70" font-weight="700">4  local datum</text>
+        <text x="692" y="88" fill="#5b6475">depth below the</text>
+        <text x="692" y="104" fill="#5b6475">NEARBY trench point</text>
+
+        <rect x="682" y="150" width="140" height="74" rx="8" fill="#fff" stroke="#2e9e6b"/>
+        <text x="692" y="170" font-weight="700">5  contours</text>
+        <text x="692" y="188" fill="#5b6475">0, 5, 10 ... km down</text>
+        <text x="692" y="204" fill="#5b6475">to the cutoff</text>
+
+        <rect x="518" y="150" width="140" height="74" rx="8" fill="#fff" stroke="#2e9e6b"/>
+        <text x="528" y="170" font-weight="700">6  one line each</text>
+        <text x="528" y="188" fill="#5b6475">longest piece kept,</text>
+        <text x="528" y="204" fill="#5b6475">the rest reported</text>
+
+        <rect x="354" y="150" width="140" height="74" rx="8" fill="#fff" stroke="#c2185b" stroke-width="1.6"/>
+        <text x="364" y="170" font-weight="700">7  clean ends</text>
+        <text x="364" y="188" fill="#5b6475">cut crooked or</text>
+        <text x="364" y="204" fill="#5b6475">pointed ends square</text>
+
+        <rect x="190" y="150" width="140" height="74" rx="8" fill="#fff" stroke="#2e9e6b"/>
+        <text x="200" y="170" font-weight="700">8  checks</text>
+        <text x="200" y="188" fill="#5b6475">stop if a level is</text>
+        <text x="200" y="204" fill="#5b6475">missing or broken</text>
+
+        <rect x="26" y="150" width="140" height="74" rx="8" fill="#e4f5ec" stroke="#2e9e6b" stroke-width="1.6"/>
+        <text x="36" y="170" font-weight="700">contours</text>
+        <text x="36" y="188" fill="#5b6475">_slab2_contours.shp</text>
+        <text x="36" y="204" fill="#5b6475">same file for all 3</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#sf-ar)">
+        <path d="M166,87 L188,87"/><path d="M330,87 L352,87"/><path d="M494,87 L516,87"/><path d="M658,87 L680,87"/>
+        <path d="M752,124 L752,148"/>
+        <path d="M682,187 L660,187"/><path d="M518,187 L496,187"/><path d="M354,187 L332,187"/><path d="M190,187 L168,187"/>
+      </g>
+
+      <rect x="10" y="256" width="940" height="164" rx="12" fill="#f5f8ff" stroke="#2f6fdf" stroke-dasharray="6 4"/>
+      <text x="140" y="280" font-size="13" font-weight="700" fill="#2f6fdf">STEP 2: contours to mesh (here --discretizer matters)</text>
+      <g font-size="12">
+        <rect x="26" y="296" width="170" height="74" rx="8" fill="#fff" stroke="#2f6fdf"/>
+        <text x="36" y="316" font-weight="700">9  rptha's mesh</text>
+        <text x="36" y="334" fill="#5b6475">orthogonal down-dip</text>
+        <text x="36" y="350" fill="#5b6475">lines, optimised (LM)</text>
+
+        <rect x="230" y="296" width="170" height="74" rx="8" fill="#fff" stroke="#2f6fdf"/>
+        <text x="240" y="316" font-weight="700">10  defect check</text>
+        <text x="240" y="334" fill="#5b6475">folded, collapsed,</text>
+        <text x="240" y="350" fill="#5b6475">overlapping cells?</text>
+
+        <rect x="434" y="296" width="200" height="74" rx="8" fill="#fbeaea" stroke="#c43d3d"/>
+        <text x="444" y="316" font-weight="700">11  repair (optimal only)</text>
+        <text x="444" y="334" fill="#5b6475">only if the check found</text>
+        <text x="444" y="350" fill="#5b6475">a defect: 3 tries</text>
+
+        <rect x="668" y="296" width="120" height="74" rx="8" fill="#fff" stroke="#eb6834" stroke-width="1.8"/>
+        <text x="680" y="320" font-weight="700">the mesh</text>
+        <text x="680" y="338" fill="#5b6475">unit_source_</text>
+        <text x="680" y="354" fill="#5b6475">grid.npy</text>
+
+        <text x="812" y="310" font-weight="700" fill="#2f6fdf">lm: 9, 10 (report)</text>
+        <text x="812" y="330" font-weight="700" fill="#2f6fdf">optimal: 9, 10, 11</text>
+        <text x="812" y="350" font-weight="700" fill="#8a93a3">mid: another 9,</text>
+        <text x="812" y="366" font-weight="700" fill="#8a93a3">then 10 (report)</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#sf-ar)">
+        <path d="M110,224 L110,294"/>
+        <path d="M196,333 L228,333"/><path d="M400,333 L432,333"/><path d="M634,333 L666,333"/>
+        <path d="M315,370 C315,400 700,400 728,372" stroke-dasharray="5 4"/>
+      </g>
+      <text x="420" y="410" font-size="11.5" fill="#5b6475">no defect: the mesh goes straight through, unchanged (all 8 examples)</text>
+    </svg>
+    <figcaption><b>The 11 operations.</b> Green frame: step 1, <code>lib/slab_contours.py</code>, the same for every option. Blue frame: step 2, <code>pyptha_v12/contour_discretisation.py</code>. Only box 11 depends on choosing <code>optimal</code>, and it runs only when box 10 finds a broken cell. The pink box, clean ends, is the operation that reproduces PTHA18's hand edits.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="table">All operations, one by one</h2>
+  <p>Each row: the problem in the raw data, what is done about it, where in the code, and whether it has an rptha counterpart. Click the link in the last column for the full explanation with figures.</p>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:4%"><col style="width:25%"><col style="width:31%"><col style="width:15%"><col style="width:17%"><col style="width:8%"></colgroup>
+    <tr><th>#</th><th>Problem in the raw SLAB data</th><th>What is done</th><th>Code</th><th>rptha / PTHA18</th><th>More</th></tr>
+    <tr><td>1</td><td>The raster can contain small detached patches (a neighbouring slab, noise, a clip window cutting a corner).</td><td>Keep only the largest block of connected cells (8-connected).</td><td><code>largest_component</code></td><td>no counterpart: PTHA18 edited by hand</td><td><a href="step1.html#slab">step 1</a></td></tr>
+    <tr><td>2</td><td>SLAB does not say where the trench is. The edge of the data is partly the trench, partly deep edges and side edges.</td><td>Walk the outer edge. A point is trench if its depth is shallow (within 12 km of the shallowest 5% of the edge, threshold at least 15 km) and the plate gets deeper going inward (cosine at least 0.5). Keep the longest such run, bridge shallow gaps under 250 km, trim its ends back to where the cosine reaches 0.7, smooth over 15 km.</td><td><code>find_trench</code></td><td>no counterpart</td><td><a href="step1.html#trench">trench</a></td></tr>
+    <tr><td>3</td><td>The nearest cell centre is up to one cell inside the edge, so its depth reads slightly deep.</td><td>Fit a plane to the 5 x 5 cells around it and read it at the edge point; then a running median over 50 km along the trench.</td><td><code>find_trench</code>, <code>running_median</code></td><td>no counterpart</td><td><a href="step1.html#trench">trench</a></td></tr>
+    <tr><td>3b</td><td>v10_q: an end of the "trench" can be the edge of the SLAB data, deeper than the real trench (hellenic's Kefalonia end: 19.7 against 11.5 km below sea level), and it would become the datum of everything near it.</td><td>Trim each end back (at most 100 km) while it is more than 3 km deeper than the trench's normal depth there.</td><td><code>_ramp_trim</code>, <code>find_trench(ramp_rise_km=)</code></td><td>no (hand-edited trench lines)</td><td><a href="step1.html#ramp">step 1</a></td></tr>
+    <tr><td>4</td><td>The trench is not at one depth (kermadectonga2: 5 to 11 km below sea level). With one depth for the whole zone, shallow levels do not exist where the trench is deeper and come out in pieces.</td><td>Each cell's datum is the trench depth at its nearest trench point, smoothed with a 25 km Gaussian. D = depth - datum: the "depth below the nearby trench", PTHA18's own convention.</td><td><code>depth_below_trench</code></td><td>PTHA18's convention (report section 3.1)</td><td><a href="step1.html#datum">datum</a></td></tr>
+    <tr><td>5</td><td>A raster is not lines.</td><td>Contour D every 5 km (0, 5, 10 ...) down to the seismogenic cutoff of Berryman et al. (2015). The 0 km line is the trench line itself.</td><td><code>below_trench_contours</code></td><td>same levels as PTHA18's contour files</td><td><a href="step1.html#contours">contours</a></td></tr>
+    <tr><td>6</td><td>A depth can appear as several pieces.</td><td>Keep the longest piece of each level; report any other piece longer than 5% of it.</td><td><code>below_trench_contours</code></td><td>PTHA18: one line per level</td><td><a href="step1.html#contours">contours</a></td></tr>
+    <tr class="hl"><td>7</td><td>The zone ends where the data (or the clip window) ends: crookedly, or narrowing to a point. rptha pins the end cells to those ends, so they would be slanted or sliver-shaped.</td><td>Cut every contour along one down-dip line only where the end cells would be more than 45 deg off square, or the zone is below 50% of its width (cut where it is back to 70%). Clean ends are kept.</td><td><code>trim_ends</code></td><td>reproduces PTHA18's hand edits (its cuts: 2-42 deg off square; kermadectonga2's within 10 km)</td><td><a href="clean_ends.html">clean ends</a></td></tr>
+    <tr><td>8</td><td>A level can be missing, closed, much shorter than the level above, in two big pieces, or run along the edge of the data.</td><td>Stop the run with the reason (no silent bad geometry).</td><td><code>check_contours</code></td><td>no counterpart</td><td><a href="step1.html#checks">checks</a></td></tr>
+    <tr><td>9</td><td>Contours are not cells.</td><td>rptha's method: down-dip lines that cross every contour at right angles and are evenly spaced, found by least squares (Levenberg-Marquardt), then each line cut into equal pieces.</td><td><code>discretized_source_from_contours_orthogonal</code></td><td>port of <code>create_downdip_lines_on_source_contours_improved</code> and <code>discretized_source_from_source_contours</code>, same to the metre</td><td><a href="step2.html#rptha-method">the mesh</a></td></tr>
+    <tr><td>10</td><td>Any mesh can have folded (bow-tie), collapsed or overlapping cells.</td><td>Count them. Printed for every option.</td><td><code>mesh_defects</code></td><td>no counterpart</td><td><a href="discretizer.html#defects">defects</a></td></tr>
+    <tr><td>11</td><td>A broken mesh would bias area and dip for the whole zone.</td><td><code>optimal</code> only: (a) restart the optimiser from the nearest points, (b) trim the contours to the span all levels share, (c) both. First defect-free one wins.</td><td><code>discretized_source_from_contours_optimal</code></td><td>no counterpart (rptha keeps the broken mesh)</td><td><a href="discretizer.html#repairs">repairs</a></td></tr>
+  </table></div>
+  <p class="where">Operations 1 to 8: <code>from_scratch_v12/lib/slab_contours.py</code>, called by <code>steps/step1_fetch_slab2.py</code>. Operations 9 to 11: <code>from_scratch_v12/pyptha_v12/contour_discretisation.py</code>, called by <code>steps/step2_build_grid.py</code> and, with the same settings, by the engine.</p>
+</section>
+
+<section>
+  <h2 id="options">What each --discretizer option does</h2>
+  <div class="tbl"><table>
+    <tr><th></th><th><code>optimal</code> (default, recommended)</th><th><code>lm</code></th><th><code>mid</code></th></tr>
+    <tr><td>Contours (step 1)</td><td colspan="3" style="text-align:center">the same file for all three: operations 1 to 8</td></tr>
+    <tr><td>Mesh method</td><td>rptha's (operation 9)</td><td>rptha's (operation 9)</td><td>rptha's older method: straight cuts from evenly spaced trench points to evenly spaced deep points, no optimisation</td></tr>
+    <tr><td>Defect check</td><td>yes, and acts on it</td><td>printed only</td><td>printed only</td></tr>
+    <tr><td>Repair</td><td>only if broken: a, b, c in order</td><td>never</td><td>never</td></tr>
+    <tr><td>Result on the 8 examples</td><td colspan="2" style="text-align:center">identical meshes: no example needed a repair</td><td>same size, same area within 1%, cells more slanted (mean dip up to 0.9 deg lower)</td></tr>
+    <tr><td>Use it to</td><td>get PTHA18's automatic mesh, safely</td><td>reproduce rptha strictly, or see a broken mesh as rptha makes it</td><td>compare methods only; PTHA18 did not use it</td></tr>
+  </table></div>
+  <div class="callout"><span class="lbl">Why optimal and lm are the same on the examples</span>The folds that rptha's method can produce come from contours whose ends are far apart along the zone. Operation 7 (clean ends) removes that cause before step 2, so rptha's own mesh has no defect on any of the 8 examples, and the repair is never needed. It is kept as a safety net for zones where it would be. <a href="discretizer.html#real-demo">A real example where it is needed.</a></div>
+</section>
+
+<section>
+  <h2 id="flags">What else can change the geometry</h2>
+  <div class="tbl"><table>
+    <tr><th>Setting</th><th>Where</th><th>What it changes</th></tr>
+    <tr><td><code>--clip LON_MIN,LON_MAX,LAT_MIN,LAT_MAX</code></td><td>generate.py (CLIP_BBOX in step 1)</td><td>step 1 uses only that window of the raster, before operation 1. For a raster that covers more than one zone. <a href="step1.html#clip">details</a></td></tr>
+    <tr><td><code>--trench-ramp on|off</code></td><td>generate.py (TRENCH_RAMP_RISE_KM in step 1)</td><td>v10_q: trims a trench end that climbs like a ramp (default on; off = v9's trench). <a href="step1.html#ramp">details</a></td></tr>
+    <tr><td><code>--ptha true / false</code></td><td>generate.py (USE_PTHA in steps 2, 3, 5, 6)</td><td>for the geometry, only step 2's cell width (50 km, or PTHA18's per-zone value: 35 km on puysegur2) and the number of rows (rptha's rule, or PTHA18's own count). The contours never depend on it. With <code>false</code> no step but step 8 reads a PTHA18 or rptha file (<a href="reference.html#ptha-reads">list</a>).</td></tr>
+    <tr><td>Contour spacing</td><td><code>CONTOUR_SPACING_KM = 5.0</code> in step 1</td><td>distance between depth levels (PTHA18 used 5 km)</td></tr>
+    <tr><td>Seismogenic cutoff</td><td><code>lib/berryman_params.py</code></td><td>the deepest level; from Berryman et al. (2015)</td></tr>
+    <tr><td>Clean-ends threshold</td><td><code>MAX_END_DEVIATION_DEG = 45.0</code> in <code>lib/slab_contours.py</code></td><td>how crooked an end must be before it is cut</td></tr>
+    <tr><td>Cell size, rows</td><td><code>DESIRED_LENGTH_KM</code>, <code>DESIRED_WIDTH_KM</code>, <code>N_DOWNDIP_OVERRIDE</code>, <code>MIN_DOWNDIP_ROWS</code> in step 2</td><td>columns, rows and cell size. <a href="customise.html">How to change them and re-run</a></td></tr>
+  </table></div>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Sources: <code>lib/slab_contours.py</code>, <code>pyptha_v12/contour_discretisation.py</code>, the step 1 and step 2 templates, and the examples' <code>run_final.log</code>.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

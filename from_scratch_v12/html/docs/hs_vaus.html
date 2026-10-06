@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7b. HS and VAUS slip | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Rates</div>
+  <h1>7b. HS and VAUS slip</h1>
+  <p class="lead">Step 7's scenarios slip by the same amount everywhere. Real earthquakes do not: slip concentrates in patches. PTHA18 therefore publishes three kinds of rupture for every scenario. Step 7b (optional) makes the other two, heterogeneous slip (HS) and variable-area uniform slip (VAUS), with PTHA18's own method. It never changes a single rate.</p>
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">3</div><div class="lbl">rupture types: FAUS, HS, VAUS</div></div>
+    <div class="card kpi"><div class="num">15</div><div class="lbl">HS fields per FAUS scenario (at least 200 per magnitude)</div></div>
+    <div class="card kpi"><div class="num">1 : 1</div><div class="lbl">one VAUS field derived from each HS field</div></div>
+    <div class="card kpi"><div class="num">0</div><div class="lbl">rates changed: LEVELs 0-5 use FAUS only</div></div>
+  </div>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <p>One FAUS scenario from <a href="engine.html#events">step 7</a> is the parent. Step 7b draws 15 random HS fields from it, and turns each HS field into one VAUS field. All three have the same magnitude, so the same seismic moment. Only FAUS feeds the logic tree.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 330" role="img" aria-label="FAUS parent, 15 HS fields, one VAUS per HS field; rates only from FAUS">
+      <defs>
+        <marker id="hv-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker>
+      </defs>
+      <text x="20" y="24" font-size="12" font-weight="700" fill="#5b6475">STEP 7 (the rates)</text>
+      <text x="330" y="24" font-size="12" font-weight="700" fill="#5b6475">STEP 7b (optional, illustrative)</text>
+
+      <rect x="20" y="40" width="250" height="150" rx="10" fill="#e8f0fd" stroke="#2f6fdf" stroke-width="1.6"/>
+      <text x="34" y="64" font-size="14" font-weight="700">FAUS scenario</text>
+      <text x="34" y="82" font-size="11.5" fill="#5b6475">fixed area, uniform slip</text>
+      <g stroke="#fff" stroke-width="1.5">
+        <rect x="40" y="96" width="30" height="26" fill="#f6c667"/><rect x="70" y="96" width="30" height="26" fill="#f6c667"/><rect x="100" y="96" width="30" height="26" fill="#f6c667"/><rect x="130" y="96" width="30" height="26" fill="#f6c667"/><rect x="160" y="96" width="30" height="26" fill="#f6c667"/>
+        <rect x="40" y="122" width="30" height="26" fill="#f6c667"/><rect x="70" y="122" width="30" height="26" fill="#f6c667"/><rect x="100" y="122" width="30" height="26" fill="#f6c667"/><rect x="130" y="122" width="30" height="26" fill="#f6c667"/><rect x="160" y="122" width="30" height="26" fill="#f6c667"/>
+      </g>
+      <text x="34" y="172" font-size="11.5">same slip in every cell</text>
+
+      <rect x="20" y="210" width="250" height="100" rx="10" fill="#fff" stroke="#2f6fdf" stroke-dasharray="5 4"/>
+      <text x="34" y="234" font-size="13" font-weight="700" fill="#2f6fdf">LEVELs 0-5, all rates</text>
+      <text x="34" y="254" font-size="11.5" fill="#5b6475">rate_curves, scenario_rates,</text>
+      <text x="34" y="270" font-size="11.5" fill="#5b6475">percentiles, branches:</text>
+      <text x="34" y="286" font-size="11.5" fill="#5b6475">computed from FAUS only</text>
+      <path d="M145,190 L145,208" stroke="#2f6fdf" stroke-width="1.7" fill="none" marker-end="url(#hv-ar)"/>
+
+      <path d="M272,115 L328,115" stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#hv-ar)"/>
+      <text x="276" y="106" font-size="11" fill="#5b6475">x 15</text>
+
+      <rect x="330" y="40" width="290" height="270" rx="10" fill="#fff" stroke="#eb6834" stroke-width="1.6"/>
+      <text x="344" y="64" font-size="14" font-weight="700">HS fields (heterogeneous slip)</text>
+      <text x="344" y="82" font-size="11.5" fill="#5b6475">random size, position and slip pattern</text>
+      <g stroke="#fff" stroke-width="1.2">
+        <rect x="350" y="96" width="24" height="22" fill="#fde7c2"/><rect x="374" y="96" width="24" height="22" fill="#f8a65a"/><rect x="398" y="96" width="24" height="22" fill="#e0452b"/><rect x="422" y="96" width="24" height="22" fill="#f8a65a"/>
+        <rect x="350" y="118" width="24" height="22" fill="#fde7c2"/><rect x="374" y="118" width="24" height="22" fill="#f8a65a"/><rect x="398" y="118" width="24" height="22" fill="#b41d1d"/><rect x="422" y="118" width="24" height="22" fill="#f28a3c"/>
+        <rect x="480" y="96" width="24" height="22" fill="#f8a65a"/><rect x="504" y="96" width="24" height="22" fill="#e0452b"/><rect x="528" y="96" width="24" height="22" fill="#fde7c2"/><rect x="552" y="96" width="24" height="22" fill="#fde7c2"/><rect x="576" y="96" width="24" height="22" fill="#fde7c2"/>
+        <rect x="480" y="118" width="24" height="22" fill="#fde7c2"/><rect x="504" y="118" width="24" height="22" fill="#f28a3c"/><rect x="528" y="118" width="24" height="22" fill="#fde7c2"/>
+        <rect x="350" y="170" width="24" height="22" fill="#fde7c2"/><rect x="374" y="170" width="24" height="22" fill="#fde7c2"/><rect x="398" y="170" width="24" height="22" fill="#f8a65a"/>
+        <rect x="350" y="192" width="24" height="22" fill="#f28a3c"/><rect x="374" y="192" width="24" height="22" fill="#b41d1d"/><rect x="398" y="192" width="24" height="22" fill="#f8a65a"/>
+        <rect x="480" y="170" width="24" height="22" fill="#fde7c2"/><rect x="504" y="170" width="24" height="22" fill="#f8a65a"/><rect x="528" y="170" width="24" height="22" fill="#e0452b"/><rect x="552" y="170" width="24" height="22" fill="#f8a65a"/>
+        <rect x="480" y="192" width="24" height="22" fill="#fde7c2"/><rect x="504" y="192" width="24" height="22" fill="#fde7c2"/><rect x="528" y="192" width="24" height="22" fill="#f28a3c"/><rect x="552" y="192" width="24" height="22" fill="#fde7c2"/>
+      </g>
+      <text x="344" y="244" font-size="11.5">15 per FAUS scenario, 200 per magnitude</text>
+      <text x="344" y="260" font-size="11.5">at least; peak slip several times the</text>
+      <text x="344" y="276" font-size="11.5">FAUS slip; moment = M0(Mw) exactly</text>
+      <text x="344" y="296" font-size="11" fill="#5b6475">SFFM, Davies et al. (2015)</text>
+
+      <path d="M622,175 L668,175" stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#hv-ar)"/>
+      <text x="626" y="166" font-size="11" fill="#5b6475">1 : 1</text>
+
+      <rect x="670" y="40" width="270" height="270" rx="10" fill="#fff" stroke="#8a5cd1" stroke-width="1.6"/>
+      <text x="684" y="64" font-size="14" font-weight="700">VAUS fields</text>
+      <text x="684" y="82" font-size="11.5" fill="#5b6475">variable area, uniform slip</text>
+      <g stroke="#fff" stroke-width="1.2">
+        <rect x="690" y="96" width="24" height="22" fill="#f8a65a"/><rect x="714" y="96" width="24" height="22" fill="#f8a65a"/><rect x="738" y="96" width="24" height="22" fill="#f8a65a"/><rect x="762" y="96" width="24" height="22" fill="#f8a65a"/>
+        <rect x="690" y="118" width="24" height="22" fill="#f8a65a"/><rect x="714" y="118" width="24" height="22" fill="#f8a65a"/><rect x="738" y="118" width="24" height="22" fill="#f8a65a"/><rect x="762" y="118" width="24" height="22" fill="#f8a65a"/>
+        <rect x="820" y="96" width="24" height="22" fill="#fcd9a7"/><rect x="844" y="96" width="24" height="22" fill="#fcd9a7"/><rect x="868" y="96" width="24" height="22" fill="#fcd9a7"/><rect x="892" y="96" width="24" height="22" fill="#fcd9a7"/><rect x="916" y="96" width="20" height="22" fill="#fcd9a7"/>
+        <rect x="820" y="118" width="24" height="22" fill="#fcd9a7"/><rect x="844" y="118" width="24" height="22" fill="#fcd9a7"/><rect x="868" y="118" width="24" height="22" fill="#fcd9a7"/><rect x="892" y="118" width="24" height="22" fill="#fcd9a7"/><rect x="916" y="118" width="20" height="22" fill="#fcd9a7"/>
+      </g>
+      <text x="684" y="176" font-size="11.5">the rectangle that just contains</text>
+      <text x="684" y="192" font-size="11.5">the HS field's cells, one slip value</text>
+      <text x="684" y="208" font-size="11.5">chosen to keep the HS moment</text>
+      <text x="684" y="244" font-size="11.5">same Mw, same position, same</text>
+      <text x="684" y="260" font-size="11.5">corner wavenumbers as its HS row</text>
+      <text x="684" y="296" font-size="11" fill="#5b6475">rptha make_all_earthquake_events.R</text>
+    </svg>
+    <figcaption><b>The three rupture types and how they are made.</b> Blue: step 7, the only part used for rates. Orange and purple: step 7b, written to <code>outputs/hs_slip_fields/</code> and <code>outputs/vaus_slip_fields/</code> and read only by the report (step 9). Colours in the cells are slip (darker = more).</figcaption>
+  </figure>
+  <div class="io">
+    <div><b>Reads</b><code>inputs/input_&lt;zone&gt;_scratch.json</code> (geometry and magnitudes), the contour shapefile it names, and the scaling relation and rigidity written in it by step 6. Nothing of PTHA18</div>
+    <div><b>Writes</b><code>outputs/hs_slip_fields/summary.csv</code>, <code>outputs/vaus_slip_fields/summary.csv</code>, and <code>comparison_features.npz</code> in each folder (for step 8's comparison with PTHA18)</div>
+  </div>
+  <div class="callout"><span class="lbl">When it runs</span><code>step_total.py</code> runs step 7b unless you pass <code>--skip-hs</code>; if it fails, <code>step_total.py</code> reports it and carries on (it is optional). Among the examples, step 7b has been run on <code>kermadectonga2_v8</code> (log: <code>run_final.log</code>). Step 7 deletes <code>outputs/</code> as a whole, so re-run step 7b after every step 7.</div>
+  <div class="code"><pre>.venv/Scripts/python.exe kermadectonga2_v9/steps/step7b_stochastic_slip.py               <span class="cm"># full volume, as rptha</span>
+.venv/Scripts/python.exe kermadectonga2_v9/steps/step7b_stochastic_slip.py --max-placements-per-mw 20 --max-fields-per-mw 300   <span class="cm"># quick</span>
+.venv/Scripts/python.exe kermadectonga2_v9/steps/step8_official.py --download-hs    <span class="cm"># then: fetch PTHA18's catalogues and compare</span></pre></div>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <div class="callout warn"><span class="lbl">v9 audit, 2026-09-30: four differences from rptha fixed in step 7b</span>
+    <ol class="steps" style="margin:6px 0 0">
+      <li><b>Redraw until every edge has slip.</b> rptha redraws a field until the first and last row and column of its window all have some slip (<code>sffm_fit_simulate_earthquake.R</code> 1347-1364); v9 drew once, and about 12% of fields had an empty edge, which made their VAUS rectangle smaller and its slip higher.</li>
+      <li><b>Random L, W, kcx, kcy clipped at 2 standard deviations</b>, rptha's default (<code>clip_random_parameters_at_2sd = TRUE</code>, lines 1119, 1199-1201); v9 did not clip, so about 15% of fields had at least one draw beyond 2 sd.</li>
+      <li><b>Independent random streams.</b> The old seed repeated across magnitudes (placement p at Mw m had the seed of placement p+10 at Mw m-0.1); every (magnitude, placement, realisation) now has its own stream.</li>
+      <li><b>Realisations per placement</b>: rptha's <code>max(15, ceiling(200 / n))</code> for every placement (<code>make_all_earthquake_events.R</code> 186-194); v9 topped up to exactly 200 per magnitude.</li>
+    </ol>
+    None of this changes a rate (HS and VAUS are never read back into LEVELs 0-5). The figures and numbers below are <code>kermadectonga2_v8</code>'s, made before these fixes; a new step 7b run gives statistically similar but not identical fields.</div>
+
+  <h2 id="faus">FAUS: fixed area, uniform slip</h2>
+  <p><a href="glossary.html#term-faus">FAUS</a> is what <a href="engine.html#events">step 7 builds</a>: for each magnitude, a rectangle of cells whose size follows the Strasser scaling relation, placed everywhere it fits, with one slip value everywhere. The slip is set by the <a href="glossary.html#term-seismic-moment">seismic moment</a>: M0 = 10<sup>1.5 Mw + 9.05</sup> N m = &#956; x area x slip, with the rigidity &#956; = 3e10 Pa.</p>
+  <ul class="tight">
+    <li><b>Why uniform:</b> it makes the moment balance and the edge correction simple and exact, and it is what PTHA18 uses for its logic tree (LEVELs 0-5). Every rate in the package is a FAUS rate.</li>
+    <li><b>Why it is not enough for tsunamis:</b> a real Mw 9 earthquake can have tens of metres of slip in one patch and little elsewhere. A concentrated patch near the trench makes a bigger, shorter wave than the same moment spread evenly. PTHA18 models tsunamis from all three types for this reason.</li>
+  </ul>
+  <p>Example, kermadectonga2 (the example's mesh, 73 x 3 cells): a Mw 9.0 FAUS scenario is 17 x 3 cells with about 10 m of slip everywhere (the top panel of the figure in <a href="#vaus">VAUS</a>).</p>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="hs">HS: heterogeneous slip</h2>
+  <p>An <a href="glossary.html#term-hs">HS</a> field keeps the magnitude of its parent FAUS scenario but redistributes the slip into patches ("asperities"). PTHA18 makes them with the <b>SFFM</b> generator of rptha (synthetic finite-fault model, file <code>sffm_fit_simulate_earthquake.R</code>), the <b>S<sub>NCF</sub></b> method of Davies et al. (2015). Step 7b uses a Python port of it, <code>pyptha_v12/stochastic_slip.py</code>.</p>
+
+  <h3>The idea of SFFM in plain words</h3>
+  <p>Look at a slip map as a picture. A smooth picture has only slow changes ("low wavenumbers"); a speckled one has fast changes too ("high wavenumbers"). Davies et al. (2015) measured, on real earthquakes' slip maps, how much of each wavenumber there is: the amplitude falls off beyond a <b>corner wavenumber</b> (kcx along strike, kcy down dip), and bigger earthquakes have smaller corner wavenumbers (their patches are larger). SFFM makes a random picture with exactly that amount of each wavenumber: the amounts are fixed, only the positions of the bumps (the phases) are random.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 250" role="img" aria-label="The SFFM steps: noise, phase, spectrum, inverse FFT, clip, recentre, decay, rescale">
+      <defs><marker id="sf-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker></defs>
+      <g font-size="12">
+        <rect x="10" y="30" width="170" height="80" rx="9" fill="#f0f2f5" stroke="#8a93a3"/>
+        <text x="22" y="52" font-weight="700">1. Random noise</text>
+        <text x="22" y="70" font-size="11" fill="#5b6475">normal numbers on the</text>
+        <text x="22" y="85" font-size="11" fill="#5b6475">grid; FFT; keep only</text>
+        <text x="22" y="100" font-size="11" fill="#5b6475">its phases</text>
+        <rect x="200" y="30" width="170" height="80" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+        <text x="212" y="52" font-weight="700">2. Target spectrum</text>
+        <text x="212" y="70" font-size="11" fill="#5b6475">A(k) = (1 + ((kx/kcx)</text>
+        <text x="212" y="85" font-size="11" fill="#5b6475">+ (ky/kcy)... )) (see below):</text>
+        <text x="212" y="100" font-size="11" fill="#5b6475">amplitude per wavenumber</text>
+        <rect x="390" y="30" width="170" height="80" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+        <text x="402" y="52" font-weight="700">3. Inverse FFT</text>
+        <text x="402" y="70" font-size="11" fill="#5b6475">amplitude A x random</text>
+        <text x="402" y="85" font-size="11" fill="#5b6475">phases, back to a map;</text>
+        <text x="402" y="100" font-size="11" fill="#5b6475">real part</text>
+        <rect x="580" y="30" width="170" height="80" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+        <text x="592" y="52" font-weight="700">4. No negative slip</text>
+        <text x="592" y="70" font-size="11" fill="#5b6475">values below 0 set to 0</text>
+        <rect x="770" y="30" width="180" height="80" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+        <text x="782" y="52" font-weight="700">5. Recentre</text>
+        <text x="782" y="70" font-size="11" fill="#5b6475">roll the map so its peak</text>
+        <text x="782" y="85" font-size="11" fill="#5b6475">is on the chosen peak cell</text>
+        <rect x="200" y="140" width="250" height="80" rx="9" fill="#e8f0fd" stroke="#2f6fdf"/>
+        <text x="212" y="162" font-weight="700">6. Gaussian decay</text>
+        <text x="212" y="180" font-size="11" fill="#5b6475">x exp(-(dx kcx)<tspan dy="-4" font-size="8">2</tspan><tspan dy="4"> - (dy kcy)</tspan><tspan dy="-4" font-size="8">2</tspan><tspan dy="4">): slip</tspan></text>
+        <text x="212" y="195" font-size="11" fill="#5b6475">fades away from the peak (dx, dy in</text>
+        <text x="212" y="210" font-size="11" fill="#5b6475">cells, k in cycles per cell)</text>
+        <rect x="480" y="140" width="270" height="80" rx="9" fill="#fff" stroke="#eb6834" stroke-width="1.6"/>
+        <text x="492" y="162" font-weight="700">7. Rescale to the exact moment</text>
+        <text x="492" y="180" font-size="11" fill="#5b6475">slip x M0(Mw) / &#931;(slip x cell area x &#956;):</text>
+        <text x="492" y="195" font-size="11" fill="#5b6475">the field has exactly the magnitude</text>
+        <text x="492" y="210" font-size="11" fill="#5b6475">of its parent (step 7b, as rptha)</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.6" fill="none" marker-end="url(#sf-ar)">
+        <path d="M180,70 L198,70"/><path d="M370,70 L388,70"/><path d="M560,70 L578,70"/><path d="M750,70 L768,70"/>
+        <path d="M860,110 C860,128 460,120 330,138"/><path d="M450,180 L478,180"/>
+      </g>
+    </svg>
+    <figcaption><b>How one HS field is generated.</b> Steps 1-6 are <code>sffm_simulate()</code>, a line-by-line port of rptha's function of the same name; step 7 is done in the step 7b loop. The optional sub-sampling refinement of R's <code>sffm_simulate</code> is not ported (documented in the module's docstring).</figcaption>
+  </figure>
+  <div class="formula">A(kx, ky) = ( 1 + ( (kx / kcx<sub>N</sub>)<sup>2</sup> + (ky / kcy<sub>N</sub>)<sup>2</sup> )<sup>2</sup> )<sup>-1/2</sup><span class="where">kx, ky: the numerical wavenumbers of the grid (min(j, n - j) / n along each axis, in cycles per cell). kcx<sub>N</sub> = kcx x (length of the peak cell), kcy<sub>N</sub> = kcy x (width of the peak cell): the physical corner wavenumbers (per km) converted to cycles per cell. Beyond the corner the amplitude falls as 1 / k<sup>2</sup>.</span></div>
+  <p class="where">Where in the code: <code>pyptha_v12/stochastic_slip.py</code> <code>sffm_simulate()</code>, <code>sffm_get_numerical_wavenumbers()</code>, <code>sffm_recentre_slip()</code>, <code>SFFMParameters.spectral_amplitude_fun()</code>.</p>
+
+  <h3>What is random in each HS field</h3>
+  <p>rptha does not reuse one shape per magnitude. Each realisation draws, in this order (step 7b's inner loop):</p>
+  <ol class="steps">
+    <li><b>A peak cell</b>, uniformly inside the parent FAUS scenario's rectangle (rptha's <code>vary_peak_slip_location</code>, with the window that rptha's driver <code>make_all_earthquake_events.R</code> passes: the parent's own along-strike and down-dip index range).</li>
+    <li><b>A length L and width W</b>, log-normal around Strasser's values for that Mw, with Strasser's own scatter (log10 standard deviation 0.180 for length, 0.173 for width).</li>
+    <li><b>Corner wavenumbers</b> kcx, kcy (per km): log10 kcx = -0.54 Mw + 2.03 + 0.22 e<sub>1</sub>, log10 kcy = -0.41 Mw + 1.18 + 0.19 e<sub>2</sub>, where e<sub>1</sub>, e<sub>2</sub> are standard normal numbers with correlation 0.68 (a patchier-than-average field along strike tends to be patchier down dip too). These are rptha's regression coefficients from Davies et al. (2015).</li>
+    <li><b>A footprint</b> of round(L / peak cell length) columns and round(W / peak cell width) rows, at least 1 and at most the whole zone. If W is wider than the zone can hold, on a coin flip the missing width is traded for more length (rptha's <code>expand_length_if_width_limited = "random"</code>).</li>
+    <li><b>Its position</b>: the footprint is placed on the <b>whole zone's</b> mesh so that it contains the peak cell, at a random offset, pushed back inside where it would cross the zone's edge (rptha's <code>rectangle_on_grid</code>). So an HS field can spill beyond its parent or be much smaller.</li>
+    <li>SFFM as above, then the exact-moment rescale.</li>
+  </ol>
+  <p>Each realisation has its own NumPy random generator, seeded with 1234 + 1000 x placement + realisation + int(100,000 x Mw), so a re-run gives the same fields. They cannot equal PTHA18's own fields: R and NumPy random numbers differ, and PTHA18's tables do not store the seeds.</p>
+  <p class="where">Where in the code: <code>templates/step7b_stochastic_slip.py.tmpl</code> <code>main()</code> and <code>rupture_to_template()</code>; <code>pyptha_v12/stochastic_slip.py</code> <code>sffm_make_random_lwkc_function()</code>, <code>rectangle_on_grid()</code>.</p>
+
+  <h3>How many</h3>
+  <p>Step 7b makes <b>15 HS fields per FAUS scenario</b>, and at least <b>200 per magnitude</b> (the extra fields for a magnitude with fewer than 14 scenarios are spread round-robin over its scenarios). This is rptha's rule, read off PTHA18's kermadectonga2 catalogue: exactly 15 per scenario at every magnitude from 7.2 to 9.5, and 200 where a magnitude has too few scenarios. <code>--max-placements-per-mw</code> (use only N evenly spaced scenarios per magnitude) and <code>--max-fields-per-mw</code> (scale the count down) make a faster, approximate run. On a large zone the full volume is tens of thousands of fields: on kermadectonga2 it took 1 minute on the machine used for this page. kermadectonga2_v8 (219 cells, 3,075 FAUS scenarios) makes 46,515 HS fields and as many VAUS fields.</p>
+
+  <figure class="fig">
+    <img src="img/hs_vaus_kermadectonga2_six_realisations.png" alt="Six HS realisations of the same Mw 9.0 parent scenario on the kermadectonga2 mesh">
+    <figcaption><b>Six HS fields from the same parent</b>, a Mw 9.0 FAUS scenario (dashed box, 17 x 3 cells) on the kermadectonga2_v8 mesh, drawn in along-strike column x down-dip row. Look at how different they are: random length (312 to 598 km), random peak cell (star, always inside the parent), different patches; one reaches 90 m of peak slip where the parent has 10.5 m everywhere. Every one has the same seismic moment. The mesh has only 3 rows, so the widths drawn (up to 370 km) are cut to the zone's 3 rows. Made by <code>figures_src/make_hs_vaus.py</code> with step 7b's recipe, drawn directly for this figure rather than read from step 7b's saved fields.</figcaption>
+  </figure>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="cells">Equal cells assumed (and what v10 changes here)</h2>
+  <p>rptha's SFFM draws a slip field on the grid of cell indices with ONE cell spacing for the whole footprint, the length and width of the peak cell: the footprint is Strasser's length and width divided by that cell's size, and the corner wavenumbers are scaled by it (<code>reg_par = kc x peak cell size</code> in step 7b). On PTHA18's 50 x 50 km meshes every cell is about that size. On a mesh whose cells differ, the slip pattern is stretched or squeezed in km where the cells are larger or smaller than the peak cell: inside a Mw 8.0 rupture the cell length varies up to 2.3 times (90th percentile) on hellenic_west2_v9 and 2.0 on calabria2, against 1.17 on kurilsjapan.</p>
+  <p>v10 / v10_q do not change the SFFM. With <code>--rupture-size local</code> the FAUS parents (and so the window where each field's peak is drawn) are the cell-by-cell ruptures, the same call step 7 makes. In PTHA18 an HS or VAUS event takes its rate from its parent (<code>compute_rates_all_sources.R</code>, lines 1551 to 1600), so the new parent rates would carry over; this pipeline writes no HS / VAUS rates. Options analysed but not implemented: the same spectrum correlated by real distance on the slab (covariance / Karhunen-Loeve on the cell centroids), or a regular km grid averaged onto the cells. See <a href="v10_q.html#limits">known limitations</a>.</p>
+</section>
+
+<section>
+  <h2 id="vaus">VAUS: variable area, uniform slip</h2>
+  <p><a href="glossary.html#term-vaus">VAUS</a> is not a third random model. rptha derives each VAUS row from one HS row (<code>make_all_earthquake_events.R</code>, which copies the whole HS table and only rewrites the footprint and the slip). Step 7b does the same, in the same loop iteration, right after generating the HS field:</p>
+  <ol class="steps">
+    <li>Take the <b>smallest rectangle</b> (in along-strike and down-dip index) that contains every cell where the HS field has slip &gt; 0. It can include cells where the HS slip was 0, but only real cells of the mesh.</li>
+    <li>Give every cell of that rectangle the <b>same slip</b>: &#931;(HS slip x cell area) / &#931;(rectangle cell areas). This keeps the HS field's moment, so the magnitude.</li>
+    <li>Copy the magnitude, position (<code>target_lon</code>, <code>target_lat</code>), peak cell and corner wavenumbers from the HS row.</li>
+  </ol>
+  <p>So VAUS is "uniform slip, but on the random area of an HS field": between FAUS (fixed area) and HS (fixed patches) in realism. Its uniform slip is usually larger than the FAUS slip when the HS field was compact, and smaller when it spread.</p>
+  <figure class="fig">
+    <img src="img/hs_vaus_kermadectonga2_three_types.png" alt="One FAUS scenario, one HS field and its VAUS field on the kermadectonga2 mesh">
+    <figcaption><b>FAUS, HS and VAUS for one Mw 9.0 scenario</b> on the kermadectonga2_v8 mesh. Top: the FAUS parent, 3 x 17 cells, 10.51 m everywhere. Middle: one HS realisation (random L 508 km, W 160 km): 27 cells with slip, peak 40.1 m at the star; note it spills west of the parent. Bottom: its VAUS field, the dashed rectangle around the HS cells (columns 23-34, 3 rows), uniform 14.64 m. The caption line under the figure checks the moments: all three equal M0(Mw 9.0) = 3.548e22 N m. Made by <code>figures_src/make_hs_vaus.py</code> with step 7b's recipe.</figcaption>
+  </figure>
+  <p class="where">Where in the code: <code>templates/step7b_stochastic_slip.py.tmpl</code>, the <code>--- VAUS ---</code> block of <code>main()</code>. A cell of the rectangle without a real unit source is skipped (<code>vaus_sub_block &gt; 0</code>), as R's table filter does.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="official-comparison">Comparison with PTHA18</h2>
+  <p>PTHA18 publishes its own HS and VAUS catalogues on NCI: <code>all_stochastic_slip_earthquake_events_&lt;zone&gt;.nc</code> and <code>all_variable_uniform_slip_earthquake_events_&lt;zone&gt;.nc</code>. Step 7b reads none of them: it saves, for each of its fields, the four numbers below (<code>comparison_features.npz</code>). Step 8, the official step, compares those with PTHA18's catalogues when they are in <code>official_ptha_data/public_nc/</code> (<code>step8_official.py --download-hs</code> fetches them), and writes the result to <code>outputs_official/ptha18_reference/hs_comparison.csv</code> and <code>vaus_comparison.csv</code>. The numbers are the same as comparing the whole fields directly (a test checks it). The share package ships no <code>public_nc/</code> folder: it is created on the first <code>--download-hs</code>, with the files of that zone only.</p>
+  <div class="callout warn"><span class="lbl">Why only statistics</span>SFFM is random. Even rptha run twice gives different fields, the published tables do not record the seeds, and R's and NumPy's random numbers differ. So no field can be compared with a published field one to one. What can be compared is the <b>distribution</b>: do the fields of both sides look alike on average, magnitude by magnitude?</div>
+  <p>For every magnitude, <b>all</b> of this run's fields are compared with <b>all</b> of PTHA18's fields within 0.05 of that magnitude, on four numbers:</p>
+  <div class="tbl"><table>
+    <tr><th>Measure</th><th>How it is computed (per field, then averaged)</th></tr>
+    <tr><td>mean peak slip (m)</td><td>largest slip of the field. For VAUS, the uniform slip.</td></tr>
+    <tr><td>mean active cells</td><td>number of cells with slip &gt; 0 (the footprint size).</td></tr>
+    <tr><td>mean concentration</td><td>largest cell's slip / sum of all cells' slip: 1 = everything in one cell.</td></tr>
+    <tr><td>spectral distance</td><td>2D FFT amplitude of the field, averaged in rings of equal wavenumber, normalised to sum 1, resampled to 16 bins; averaged over all fields of each side; then the mean absolute difference between the two sides. 0 = identical average spectra. rptha checks its own generator in a similar way (<code>sffm_slip_goodness_of_fit</code>, mean |FFT(slip)|).</td></tr>
+  </table></div>
+  <p class="where">Where in the code: <code>lib/hs_official_compare.py</code> <code>load_official_hs_events()</code>, <code>official_events_to_grids()</code>, <code>summary_stats()</code>, <code>spectral_signature()</code>, <code>field_features()</code> (step 7b), <code>compare_features()</code>; step 8's <code>compare_hs_vaus()</code> runs it once for HS and once for VAUS. The VAUS comparison is not redundant: it is the only check of the rectangle-and-uniform-slip rule itself.</p>
+  <details class="deep"><summary>Two details of the measures<span class="tag">read before judging a number</span></summary><div class="body">
+    <ul class="tight">
+      <li><b>VAUS spectral distance is always 0.</b> A uniform field has an FFT amplitude only at wavenumber 0, so its normalised spectrum is (1, 0, 0, ...) on both sides, whatever the size. The VAUS comparison is therefore about slip and footprint size, not about the spectrum.</li>
+      <li><b>Frames differ slightly.</b> PTHA18's fields are cut to the bounding box of their cells with slip; this run's HS fields are kept on the whole footprint rectangle drawn in step 4 of the list above, which can include cells with zero slip. Cell counts are not affected (only cells with slip count), but the concentration and spectrum are computed on slightly different frames.</li>
+    </ul>
+  </div></details>
+
+  <figure class="fig">
+    <img src="img/hs_vaus_official_comparison.png" alt="Ratio of this run to PTHA18 for mean peak slip, VAUS slip and footprint size, kermadectonga2, magnitude by magnitude">
+    <figcaption><b>This run divided by PTHA18, magnitude by magnitude</b> (1 = identical), kermadectonga2_v8, from <code>outputs_official/ptha18_reference/hs_comparison.csv</code> and <code>vaus_comparison.csv</code>. HS peak slip is within -9% to +2% of PTHA18 at every magnitude, the footprint size within -10% to +2%, and the VAUS slip within -5% to +7% (median +1%): the generator reproduces PTHA18's statistics. Made by <code>figures_src/make_hs_vaus.py</code>.</figcaption>
+  </figure>
+
+  <h3>Reading the result</h3>
+  <div class="tbl"><table>
+    <tr><th></th><th class="n">This run</th><th class="n">PTHA18</th></tr>
+    <tr><td>HS fields, all 27 magnitudes (7.2 to 9.8)</td><td class="n">46,515</td><td class="n">44,685</td></tr>
+    <tr><td>HS mean peak slip at Mw 9.0 / 8.5</td><td class="n">44.6 / 18.6 m</td><td class="n">45.4 / 18.8 m</td></tr>
+    <tr><td>HS mean cells with slip at Mw 9.0 / 8.5</td><td class="n">36.2 / 14.0</td><td class="n">39.4 / 14.8</td></tr>
+    <tr><td>VAUS uniform slip at Mw 9.0 / 8.5</td><td class="n">13.9 / 6.7 m</td><td class="n">13.4 / 6.5 m</td></tr>
+    <tr><td>HS spectral distance, all magnitudes</td><td class="n" colspan="2">0.000 to 0.005 (0 = identical average spectra)</td></tr>
+  </table></div>
+  <p>The two meshes differ slightly (219 cells against PTHA18's 216, <a href="examples.html#kermadectonga2">see the example</a>), so small differences in footprint size and slip are expected. PTHA18 has no published HS/VAUS files for zones it never modelled (calabria2, caribbean2, antilles2); the comparison is then skipped and the report says so.</p>
+  <p class="where">Run for this page with <code>kermadectonga2_v8/steps/step7b_stochastic_slip.py</code>; its log is <code>kermadectonga2_v8/run_step7b.log</code>. Step 7b uses the same mesh as step 7: it reuses step 2's saved grid when its fingerprint matches (log line <code>mesh: reusing step 2's grid</code>) and otherwise rebuilds it with the same settings, including the minimum of 2 rows.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section>
+  <h2 id="outputs">Outputs</h2>
+  <h3><code>outputs/hs_slip_fields/summary.csv</code> and <code>outputs/vaus_slip_fields/summary.csv</code></h3>
+  <p>One row per field, every field (no sampling). Same columns in both files; the first 10 and the two packed strings follow the columns of PTHA18's own netCDF tables.</p>
+  <div class="tbl"><table>
+    <tr><th>Column</th><th>Meaning</th></tr>
+    <tr><td><code>rupture_type</code></td><td><code>HS</code> or <code>VAUS</code>.</td></tr>
+    <tr><td><code>Mw</code></td><td>Magnitude (2 decimals).</td></tr>
+    <tr><td><code>placement</code>, <code>realisation</code></td><td>Which FAUS scenario of that magnitude (1-based, in step 7's order) and which of its realisations. A VAUS row has the same pair as the HS row it comes from.</td></tr>
+    <tr><td><code>target_lon</code>, <code>target_lat</code></td><td>Position of the parent FAUS scenario: the spherical centroid of its cells (rptha's <code>geomean</code>, averaged as unit vectors). The same for all realisations of one parent.</td></tr>
+    <tr><td><code>peak_slip_downdip_ind</code>, <code>peak_slip_alongstrike_ind</code></td><td>The randomly drawn peak cell (1-based row and column).</td></tr>
+    <tr><td><code>physical_corner_wavenumber_x</code>, <code>_y</code></td><td>kcx, kcy of this realisation, per km.</td></tr>
+    <tr><td><code>n_unit_sources</code></td><td>Cells with slip (HS) or cells of the rectangle (VAUS).</td></tr>
+    <tr><td><code>peak_slip_m</code></td><td>Largest slip (HS) or the uniform slip (VAUS), m.</td></tr>
+    <tr><td><code>total_slip_m</code></td><td>Sum of the cells' slip, m (a convenience number; the moment uses slip x area).</td></tr>
+    <tr><td><code>uniform_slip_m_FAUS_equivalent</code></td><td>The parent FAUS scenario's slip, m.</td></tr>
+    <tr><td><code>event_index_string</code></td><td>The cells, as 1-based cell numbers joined by <code>-</code> with a trailing <code>-</code> (rptha's format, e.g. <code>1-2-</code>).</td></tr>
+    <tr><td><code>event_slip_string</code></td><td>The slip of each of those cells, 4 significant digits, joined by <code>_</code> (e.g. <code>1.476_0.002697_</code>).</td></tr>
+  </table></div>
+  <pre class="out">rupture_type,Mw,placement,realisation,target_lon,target_lat,peak_slip_downdip_ind,peak_slip_alongstrike_ind,physical_corner_wavenumber_x,physical_corner_wavenumber_y,n_unit_sources,peak_slip_m,total_slip_m,uniform_slip_m_FAUS_equivalent,event_index_string,event_slip_string
+HS,7.20,1,1,-173.660215,-14.690528,1,1,0.0230735,0.0378327,2,1.476,1.479,1.479,1-2-,1.476_0.002697_
+VAUS,7.20,1,1,-173.660215,-14.690528,1,1,0.0230735,0.0378327,2,0.725,1.451,1.479,1-2-,0.7254_0.7254_</pre>
+  <p class="where">First data rows of kermadectonga2_v8's two files (46,515 fields each): an HS field on cells 1 and 2 with almost all slip on cell 1, and its VAUS field spreading the same moment evenly over both. <code>target_lon</code> is written in -180 to 180.</p>
+
+  <h3><code>comparison_features.npz</code> (in each folder)</h3>
+  <p><code>mw</code>, one value per field, and <code>features</code>, one row per field: peak slip, active cells, concentration and the 16-bin spectrum. Only step 8 uses it.</p>
+
+  <h3><code>hs_comparison.csv</code>, <code>vaus_comparison.csv</code> (step 8, in <code>outputs_official/ptha18_reference/</code>)</h3>
+  <p>One row per magnitude: <code>Mw</code>, <code>n_synthetic</code>, <code>n_official</code>, <code>mean_peak_slip_m_synthetic</code>, <code>mean_peak_slip_m_official</code>, <code>mean_active_cells_synthetic</code>, <code>mean_active_cells_official</code>, <code>mean_concentration_synthetic</code>, <code>mean_concentration_official</code>, <code>spectral_distance</code>.</p>
+
+  <h3>Who reads them</h3>
+  <div class="callout good"><span class="lbl">No rate changes</span>Nothing in LEVELs 0-5 reads these files: <code>rate_curves.csv</code>, <code>scenario_rates_*.csv</code>, <code>exceedance_rate_percentiles.csv</code> and <code>logic_tree_branches_*.csv</code> are identical with or without step 7b. PTHA18 also gives HS and VAUS scenarios rates, a share of the rate of the FAUS rupture each was drawn from; since v10_q (2026-10-06) step 7b computes them the same way and writes them into the two <code>summary.csv</code> files (they enter nothing in LEVELs 0-5). Only step 9 reads the files, to add an HS/VAUS section to <code>report.html</code>: one row per magnitude (number of fields, mean and largest peak slip), and the comparison tables.</div>
+  <h2 id="rates">Rates of HS and VAUS scenarios (v10_q)</h2>
+  <p>v11: step 7c adds the same for PTHA18's variable shear modulus rates (<code>variable_mu_rate_*</code>, <code>variable_mu_weight_in_family</code>, <code>variable_mu_Mw</code>), with PTHA18's second pair of DART curves; the peak-slip limit is the same. Both rigidities rank the fields by the largest value of <code>event_slip_string</code>, as PTHA18 reads it. <a href="v11.html">What is new in v11</a>.</p>
+  <p>Port of <code>compute_rates_all_sources.R</code> 1551-1600 (fixed shear modulus) in <code>pyptha_v12/hs_vaus_rates.py</code>. The fields drawn from one FAUS rupture (its family) share that rupture's rate:</p>
+  <ol>
+    <li>A field whose peak slip is above 7.5 times the scaling relation's mean slip for that Mw (the slip on its median area) gets rate 0 (<code>config_peak_slip_limit_factor.R</code>). For a VAUS that means an area under 0.13 times the median.</li>
+    <li>The others are ranked by peak slip in the family, q = rank / (n + 1), and weighted by f(q): PTHA18 fitted f to DART buoy records, one curve for HS (which it found too high-slip: f falls with q) and one for VAUS (too low-slip: f rises up to q about 0.85).</li>
+    <li>The weights of a family are divided by their sum, so together the family carries exactly the FAUS rupture's rate.</li>
+  </ol>
+  <p>PTHA18 never published f (<code>peak_slip_quantile_adjustment_factors.csv</code>). Each published family gives linear equations on f's 51 knots, so <code>validation/recover_peak_slip_weights.py</code> recovers it into <code>data/ptha18_peak_slip_quantile_weights.csv</code>: fitted on puysegur2 alone it reproduces every kermadectonga2 HS and VAUS rate to 1e-14, and with the file every published rate of both zones is reproduced to 4e-12, all zero rates included. Columns added to both <code>summary.csv</code>: <code>faus_event_id</code>, <code>above_peak_slip_limit</code>, <code>weight_in_family</code>, <code>rate_mean</code> and the five percentiles (the parent's times the weight). Step 7 must have run first. PTHA18's depth-varying shear modulus rates are not ported.</p>
+  <p class="where">Where in the code: <code>templates/step9_report.py.tmpl</code> (the <code>STEP 7b</code> block); <code>templates/step_total.py.tmpl</code> (<code>--skip-hs</code>, <code>--download-official-hs-vaus</code>, passed to step 8).</p>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Figures <code>hs_vaus_*</code> were made by <code>html/docs/figures_src/make_hs_vaus.py</code>: the field drawings with step 7b's recipe on the kermadectonga2_v8 mesh, the comparison from <code>kermadectonga2_v8/outputs_official/ptha18_reference/*_comparison.csv</code>.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

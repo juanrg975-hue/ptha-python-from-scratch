@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Troubleshooting | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Your own runs</div>
+  <h1>Troubleshooting</h1>
+  <p class="lead">What the messages mean and what to do, grouped by where they appear. Every required step stops with a message instead of passing a bad result on, and <code>step_total.py</code> stops at the first such step and names it.</p>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 960 170" role="img" aria-label="Three kinds of messages: missing files from an earlier step, problems with the data, and optional steps that did not run">
+      <g font-size="12.5">
+        <rect x="10" y="10" width="300" height="150" rx="10" fill="#fff" stroke="#2f6fdf"/><text x="24" y="36" font-weight="700">"missing ... Run stepN first."</text><text x="24" y="60" fill="#5b6475">a file from an earlier step is</text><text x="24" y="78" fill="#5b6475">not there: run that step (or</text><text x="24" y="96" fill="#5b6475">step_total.py). Harmless.</text>
+        <rect x="330" y="10" width="300" height="150" rx="10" fill="#fdf6e3" stroke="#b7791f"/><text x="344" y="36" font-weight="700">a problem with the data</text><text x="344" y="60" fill="#5b6475">the SLAB raster, the zone name, a</text><text x="344" y="78" fill="#5b6475">download, a contour level: read the</text><text x="344" y="96" fill="#5b6475">message and the step 1 figure.</text>
+        <rect x="650" y="10" width="300" height="150" rx="10" fill="#f0f2f5" stroke="#8a93a3" stroke-dasharray="5 4"/><text x="664" y="36" font-weight="700">an optional step did not run</text><text x="664" y="60" fill="#5b6475">step 7b or step 8: step_total</text><text x="664" y="78" fill="#5b6475">reports it and goes on; the report</text><text x="664" y="96" fill="#5b6475">leaves out those sections.</text>
+      </g>
+    </svg>
+  </figure>
+</section>
+
+<section>
+  <h2 id="generate">generate.py</h2>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:42%"><col style="width:58%"></colgroup>
+    <tr><th>Message</th><th>What to do</th></tr>
+    <tr><td><code>no SLAB2.0 region matches '...'</code></td><td>run <code>list_regions.py</code> and use one of the 27 region names, or pass <code>--id</code></td></tr>
+    <tr><td><code>'...' matches more than one SLAB2.0 region</code></td><td>be more specific, or pass <code>--id &lt;scibase_item_id&gt;</code></td></tr>
+    <tr><td><code>could not guess a PTHA18 zone name</code>, <code>matches more than one PTHA18 zone</code></td><td>pass <code>--zone &lt;exact name&gt;</code> (for example <code>--zone kermadectonga2</code>); every valid name and its region: <a href="zones.html">Zones you can run</a></td></tr>
+    <tr><td><code>'...' is not an unsegmented sourcename in sourcezone_parameters.csv</code></td><td>with <code>--ptha true</code> the zone must be a PTHA18 zone; use <code>--ptha false</code> for a zone PTHA18 never modelled (it then needs a mapping in <code>lib/berryman_params.py</code>)</td></tr>
+    <tr><td><code>--clip must be LON_MIN,LON_MAX,LAT_MIN,LAT_MAX ...</code></td><td>four numbers, comma-separated, minimum before maximum</td></tr>
+    <tr><td><code>'...' is not one of the 27 known SLAB2.0 ScienceBase item ids</code></td><td>the value after <code>--id</code> is not a ScienceBase item id; copy one from the first column of <code>list_regions.py</code>, or pass the region's name or prefix instead of <code>--id</code></td></tr>
+    <tr><td><code>no seismogenic depth cutoff known for '...'</code> <span class="tag">--ptha true</span></td><td>with <code>--ptha true</code> the cutoff comes from PTHA18's cell table, not downloaded yet: run the <code>fetch_official_inputs.py</code> command the message prints, or generate the folder with <code>--ptha false</code> (cutoff from Berryman et al. 2015)</td></tr>
+    <tr><td><code>'...' has no unsegmented row in sourcezone_parameters.csv</code> <span class="tag">--ptha true</span></td><td>the zone is not one PTHA18 modelled, so <code>--ptha true</code> has no PTHA18 width to read: use <code>--ptha false</code> (<a href="zones.html">zones you can run</a>)</td></tr>
+    <tr><td><code>NOT AVAILABLE</code> in the new folder's README</td><td>no Berryman et al. (2015) mapping for this zone, so step 1 will stop (it needs the seismogenic cutoff, and no input JSON exists yet to edit). Add the zone to <code>ZONE_TO_BERRYMAN_SEGMENTS</code> and <code>ZONE_DOMINANT_SEGMENT</code> in <code>lib/berryman_params.py</code>, pointing at its Berryman row (for example <code>"sandwich": ["South Sandwich"]</code>), then run <code>generate.py</code> again</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="step1">Step 1: the SLAB data and the contours</h2>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:42%"><col style="width:58%"></colgroup>
+    <tr><th>Message</th><th>What to do</th></tr>
+    <tr><td><code>ScienceBase is behind Cloudflare's bot check right now (HTTP 403 ...)</code> <span class="tag">SLAB2.0 zones, name ending in '2'</span></td><td>a block of the download site that does not clear by retrying (can last hours): the message itself already prints your region's ScienceBase item link, a generic search link, and the exact folder to save the <code>.grd</code> into. Open the link in a normal browser (it passes the challenge automatically), download the item's "Download all files" zip, extract the single <code>&lt;region&gt;_slab2_dep_*.grd</code> member into that folder, and re-run the step. Generic listing of every SLAB2.0 item: <a href="https://www.sciencebase.gov/catalog/item/5a8b110ee4b00931df3aca9e">sciencebase.gov, "Slab2 - A Comprehensive Subduction Zone Geometry Model"</a>.</td></tr>
+    <tr><td><code>could not download SLAB1.0 grid for region '...' ... HTTP Error 403: Forbidden</code>, or the browser itself shows an <code>AccessDenied</code> XML page <span class="tag">SLAB1.0 zones, name without a trailing '2'</span></td><td>USGS's own web server blocking the request, not a sign the region is missing (an <code>AccessDenied</code> page is the same block as a 403, just shown by the browser instead of the script): the message itself prints the direct download URL, the page listing every SLAB1.0 region, and the exact file name and folder to save it into (this run's own folder is checked first). Get it by hand in a normal browser and re-run the step. If the browser also shows <code>AccessDenied</code>, the block is on USGS's side for everyone right now; retry later, there is nothing to fix locally. A genuine <b>404</b> (not 403/AccessDenied) for this region can instead mean PTHA18 used a hand-built profile there rather than a SLAB1.0 grid at all (confirmed for puysegur). Generic listing of every SLAB1.0 region: <a href="https://earthquake.usgs.gov/data/slab/models.php">earthquake.usgs.gov/data/slab/models.php</a>.</td></tr>
+    <tr><td><code>expected one &lt;region&gt;_slab2_dep_*.grd, got [...]</code></td><td>the ScienceBase item zip step 1 downloaded has no depth grid for the region (an empty list) or several: delete <code>&lt;folder&gt;/data/slab2/_&lt;region&gt;_sciencebase_item.zip</code> and run step 1 again; if it repeats, download the item by hand and put the single <code>&lt;region&gt;_slab2_dep_*.grd</code> in <code>&lt;folder&gt;/data/slab2/</code></td></tr>
+    <tr><td><code>the trench-like edge vanished after end trimming</code></td><td>the raster (or the <code>--clip</code> window) keeps almost no up-dip edge once its crooked ends are left out: widen or remove <code>--clip</code>, and check in the step 1 figure that the region really contains this zone's trench</td></tr>
+    <tr><td><code>... has no Berryman et al. (2015) segment mapping, so there is no seismogenic cutoff</code></td><td>add the zone to <code>ZONE_TO_BERRYMAN_SEGMENTS</code> in <code>lib/berryman_params.py</code></td></tr>
+    <tr><td><code>no trench-like (shallow, up-dip facing) edge found on the raster boundary</code></td><td>the raster (or the clip window) contains no trench: check the region and <code>--clip</code></td></tr>
+    <tr><td><code>step 1 cannot build a valid contour set:</code> followed by the reasons</td><td>a level missing, closed, much shorter than the one above, in two big pieces, or running along the edge of the data (<a href="step1.html#checks">the checks</a>). Look at the step 1 figure; often a <code>--clip</code> window or a cutoff deeper than the SLAB model</td></tr>
+    <tr><td><code>clean ends: NOT applied (...)</code></td><td>a cut line had no clean crossing with a contour: the raw ends are kept. Check the ends in the step 1 figure and the mesh check of step 2</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="step2">Step 2: the mesh</h2>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:42%"><col style="width:58%"></colgroup>
+    <tr><th>Message</th><th>What to do</th></tr>
+    <tr><td><code>optimal: rptha's own mesh has defects (...) -&gt; trying repairs</code> then <code>optimal: using '...'</code></td><td>nothing: the repair worked (<a href="discretizer.html#repairs">repairs</a>)</td></tr>
+    <tr><td><code>WARNING optimal: no repair removed every defect; using '...'</code></td><td>look at the mesh figure before trusting the zone; usually the contours are the problem (step 1), for example a crooked end the rule kept</td></tr>
+    <tr><td><code>mesh check: N folded ... &lt;-- inspect the mesh figure</code> with <code>lm</code> or <code>mid</code></td><td>these methods do not repair: use <code>optimal</code></td></tr>
+    <tr><td><code>align_contour_ends: contour at ... km would keep only ...% of its length</code></td><td>printed by optimal when repair b is not applicable: the depth levels barely overlap along the zone, so the contours are wrong (step 1)</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="steps3to7">Steps 3 to 7</h2>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:42%"><col style="width:58%"></colgroup>
+    <tr><th>Message</th><th>What to do</th></tr>
+    <tr><td><code>missing ... Run stepN first.</code></td><td>run the named step, or <code>step_total.py</code></td></tr>
+    <tr><td><code>no Bird segments found near this zone, even in Bird (2003)'s own untrimmed catalogue</code></td><td>the zone lies outside Bird's plate boundaries; set <code>CONVERGENCE_OVERRIDE_MM_PER_YR</code> in step 3</td></tr>
+    <tr><td><code>no Bird (2003) convergent-boundary steps found near this zone</code> <span class="tag">--convergence bird</span></td><td>Bird's public catalogue has no subduction or convergent step near the mesh: check the mesh lies where you expect (region and <code>--clip</code>); for a PTHA18 zone, <code>--convergence bird-griffin</code> reads PTHA18's table instead</td></tr>
+    <tr><td><code>observation threshold ... is below Mw_min ...</code> (step 7)</td><td>you lowered <code>observed_seismicity.threshold_Mw</code> in the input JSON below <code>Mw_min</code>; PTHA18 puts the half-bin offset on <code>Mw_min</code> (7.15), so set both to the same value</td></tr>
+    <tr><td><code>update_logic_tree_weights_with_data is true but no 'observed_seismicity' block was given</code> (step 7)</td><td>the input JSON asks for LEVEL 3 but has no catalogue: run step 6 again with <code>--force</code> (it writes the block from step 5), or set the flag to <code>false</code></td></tr>
+    <tr><td><code>Mw_max_anchor must be a pair or 'derive', got ...</code> (step 7)</td><td>a hand edit of <code>Mw_max_anchor</code> in the input JSON: use <code>"derive"</code> (PTHA18's rule, what step 6 writes) or two numbers, the lowest and highest Mw_max of the range (for example <code>[8.8, 9.6]</code>)</td></tr>
+    <tr><td><code>unknown edge correction mode ...</code> (step 7)</td><td><code>edge_correction.mode</code> in the input JSON must be <code>fit</code> (step 6's value), <code>fixed</code>, <code>inherit</code> or <code>off</code></td></tr>
+    <tr><td><code>skipped (HTTP Error 404: Not Found)</code> in step 4</td><td>nothing: a monthly GCMT file that is not published; the window ends in 2017</td></tr>
+    <tr><td><code>could not download any part of the GCMT catalogue</code></td><td>the GCMT site is unreachable: download the NDK files by hand into the folder's <code>data/gcmt/</code> (the message gives the path)</td></tr>
+    <tr><td><code>... already exists -- NOT overwriting it.</code> in step 6</td><td>not an error: your input JSON is kept. Use <code>--force</code> to rebuild it after changing steps 1 to 5 (<a href="customise.html">why</a>)</td></tr>
+    <tr><td><code>could not find ... in step2_build_grid.py -- has it been renamed or removed?</code></td><td>step 6 reads step 2's constants by name; restore the constant in step 2</td></tr>
+    <tr><td><code>convergent_slip_profile has N values but the source has M along-strike columns</code></td><td>the mesh has other columns than when step 3 ran (for example a new cell length in the JSON): re-run step 3 and step 6 with <code>--force</code>, or remove the profiles from the JSON</td></tr>
+    <tr><td><code>convergence_profile has no positive value: no tectonic moment on this source</code></td><td>Bird gives no convergence anywhere on the zone: check the zone, or set a constant convergence</td></tr>
+    <tr><td><code>mesh: step 2's saved grid does not match this input's meshing fields ... rebuilding</code></td><td>not an error: you changed a meshing field of the JSON, so the engine meshes again with it</td></tr>
+    <tr><td><code>WARNING segment ...: its geometry cannot host Berryman's floor Mw ...</code> (step 6) <span class="tag">--segmented true</span></td><td>that segment is too small for the Mw max observed Berryman gives it (its own row's Mmax-min, or the zone's smallest when it has none), so it keeps its own catalogue value. Usually a tail that belongs to another zone (kurilsjapan's Izu-Bonin tail): check step 3's plate-boundary warning in the report and re-run with <code>step_total.py --auto-clip</code> (<a href="step3.html#auto-clip">details</a>)</td></tr>
+    <tr><td><code>scaling-relation Mw_max (...) is below the observed floor (...); the geometry cannot host the observed largest earthquake</code> (step 7)</td><td>a source (usually a segment) is too small for its <code>mw_max_observed</code>. Step 6 no longer writes such a value for a segment; if you see it, the input JSON was written before 2026-09-30 or <code>mw_max_observed</code> was edited by hand: re-run step 6 with <code>--force</code>, or lower the value</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="optional">Steps 7b, 8 and 9</h2>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:42%"><col style="width:58%"></colgroup>
+    <tr><th>Message</th><th>What to do</th></tr>
+    <tr><td><code>Rscript not found</code></td><td>install R and rptha (the message gives the command), or run with <code>--skip-official</code></td></tr>
+    <tr><td><code>fetch_official_inputs.py exited with code ...</code></td><td>usually a zone PTHA18 never modelled (calabria2, or antilles2 in the caribbean2 and antilles2 folders): nothing to compare with; steps 1-7 and 9 are complete</td></tr>
+    <tr><td>R: <code>installation of package 'rptha' had non-zero exit status</code>, or a compiler error</td><td>rptha has Fortran and C code, compiled on your machine (the package ships no compiled files): on Windows install Rtools matching your R version, then run the two <code>install.packages</code> commands of the README again</td></tr>
+    <tr><td><code>curl not found; it is needed to fetch official data</code></td><td>step 8 downloads with <code>curl</code>, part of Windows 10+, macOS and Linux: install it, or download the file by hand (<code>RData.txt</code> gives the URL)</td></tr>
+    <tr><td><code>download failed for ... (curl exit N)</code></td><td>NCI could not be reached or the transfer broke: run step 8 again (a finished download is kept); for the session, the manual download in <code>RData.txt</code></td></tr>
+    <tr><td><code>the session file looks truncated</code></td><td>an interrupted download of the 1.34 GB session: delete it and any <code>.part</code> file beside it, and run step 8 again</td></tr>
+    <tr><td><code>'...' is a retired source zone (row_weight = 0 in sourcezone_parameters.csv)</code></td><td>PTHA18 replaced this zone by a newer one and built no logic tree for it: use the name the message suggests (usually the same with a <code>2</code>, for example <code>kermadectonga2</code>)</td></tr>
+    <tr><td><code>expected .../input_&lt;zone&gt;.json to exist after fetch_official_inputs.py; it did not</code></td><td>the extraction finished without writing the official input: run <code>official_ptha_data/fetch_official_inputs.py &lt;zone&gt; --force</code> by hand to see R's own messages</td></tr>
+    <tr><td><code>WARNING: the Bird profile does not reproduce the official convergence</code></td><td>should not happen on PTHA18's zones (reproduced to about 1e-15): report it</td></tr>
+    <tr><td><code>no FAUS events generated; nothing to generate HS for</code></td><td>the mesh is too small for any scenario of the magnitude range</td></tr>
+    <tr><td><code>note: the map shows this run's mesh only, PTHA18's published cell outlines could not be read: HTTP Error 404</code></td><td>not an error: PTHA18 publishes no mesh for this zone</td></tr>
+    <tr><td>the report's map box says it needs an internet connection</td><td>open the report online (the map loads Leaflet and Esri tiles)</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="segmented">Segmented runs (<code>--segmented true</code>)</h2>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:42%"><col style="width:58%"></colgroup>
+    <tr><th>Message or surprise</th><th>What it means, what to do</th></tr>
+    <tr><td><code>a single segment here (berryman), so there is nothing to segment; step 6 will run this zone unsegmented.</code> (step 5)</td><td>not an error: Berryman et al. (2015) do not divide this zone (puysegur2, makran2, calabria2, caribbean2, cascadia, ...), or only one of its segments lies on this mesh. The run is unsegmented, the report says "UNSEGMENTED RUN" and has no LEVEL 0 section, and step 8 runs PTHA18's unsegmented branch. With <code>--segment-boundaries bird</code> the same happens where Bird has one plate pair (alaskaaleutians)</td></tr>
+    <tr><td><code>... gets no column of this mesh (its trench lies beyond it): left out</code> (step 5)</td><td>not an error: a Berryman segment of the zone lies past the end of this run's mesh (southamerica's Patagonia segments on the SLAB1.0 mesh, which stops near 43&deg;S)</td></tr>
+    <tr><td><code>--auto-clip needs step 3's plate-boundary finding, and data/plate_boundary_change.json is not there</code> (step 1)</td><td>run steps 1 to 3 once first (or a full run), then <code>step_total.py --auto-clip</code>. If step 3 ran and found nothing, there is nothing to cut. On kurilsjapan, cut the Izu-Bonin tail <b>before</b> segmenting, or it becomes a segment of its own</td></tr>
+    <tr><td><code>segment '...': edge_correction mode 'fit' is not PTHA18's method on a segment; use 'inherit'</code> (step 7)</td><td>the <code>segments</code> block of the input JSON was edited by hand: a segment takes the zone's edge multiplier, as in PTHA18. Set its <code>edge_correction</code> back to <code>{"mode": "inherit"}</code> (step 6's value)</td></tr>
+    <tr><td><code>segment '...' inherits the whole zone's observed_seismicity, which would credit it with earthquakes that happened outside it</code> (step 7)</td><td>a hand-written segment without its own earthquakes: re-run step 6 with <code>--force</code> (it writes each segment's own GCMT events), or give the segment an <code>observed_seismicity</code> block</td></tr>
+    <tr><td>the segments' GCMT events add up to more than the zone's (not in this run's two examples, kermadectonga2 3 + 6 + 0 = 9 and kurilsjapan 13 + 8 = 21, but in PTHA18's own tonga 4 + kermadec 6 = 10 against 9)</td><td>expected: an event near a boundary passes PTHA18's rule on both neighbours and counts in both, as in PTHA18 (its own tonga 4 + kermadec 6 against 9)</td></tr>
+    <tr><td>the report's percentile band does not surround the solid line</td><td>expected on a segmented run: the band is the whole zone's (the LEVEL 0 mix) and the solid line is the unsegmented branch (<a href="report_guide.html#rate-curve-segmented">the chart on a segmented run</a>)</td></tr>
+    <tr><td><code>No official segmented run to compare with</code> (report, LEVEL 0)</td><td>step 8 has not run, or PTHA18 did not segment this zone: step 8 builds PTHA18's segmented run only where <code>sourcezone_parameters.csv</code> has segment rows for the zone (among them the seven <code>validate_v9.py official_segments</code> checks: kermadectonga2, kurilsjapan, izumariana, ryuku, sunda2, southamerica, alaskaaleutians)</td></tr>
+    <tr><td>step 8 asks for Rscript although the trees were extracted before</td><td>it always starts R, even when <code>official_ptha_data/trees/</code> already has the zone; install R, or run with <code>--skip-official</code></td></tr>
+  </table></div>
+  <p class="where">Everything about segmented runs: <a href="segmentation.html">Segmented vs unsegmented</a>.</p>
+</section>
+
+<section>
+  <h2 id="check-install">Check the installation</h2>
+  <div class="code"><pre>.venv/Scripts/python.exe -m pytest from_scratch_v12/pyptha_v12/tests -q        <span class="cm"># 187 passed, 15 skipped here (skipped: tests that need PTHA18's extracted files)</span>
+.venv/Scripts/python.exe from_scratch_v12/validation/validate_v9.py mesh     <span class="cm"># SUMMARY: mesh PASS</span></pre></div>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:42%"><col style="width:58%"></colgroup>
+    <tr><th>Message</th><th>What to do</th></tr>
+    <tr><td><code>ENGINE: PTHA18's extracted inputs are not here yet</code> (also <code>EVENTS</code>, <code>GCMT</code>, <code>OFFICIAL_SEGMENTS</code>, <code>EVENTS_SEGMENTED</code>)</td><td>these checks compare with PTHA18's own inputs, which the package does not ship: run the <code>fetch_official_inputs.py</code> command the message prints (R and the RData, like step 8). <code>mesh</code> needs none of it</td></tr>
+    <tr><td>pytest reports <code>15 skipped</code></td><td>not an error: those tests compare with PTHA18's official inputs and run once the extraction above is done</td></tr>
+  </table></div>
+  <p>More checks: <a href="validation.html">Validation and tests</a>.</p>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Messages quoted from the templates, <code>lib/</code> and <code>generate.py</code>.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

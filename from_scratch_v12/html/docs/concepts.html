@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PTHA in plain words | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Start</div>
+  <h1>PTHA in plain words</h1>
+  <p class="lead">A probabilistic tsunami hazard assessment (PTHA) answers: how often should we expect each possible tsunami? The largest tsunamis come from great earthquakes on subduction zones, so the first half of the answer, the part this package builds, is: which earthquakes can each subduction zone produce, and how often? This page explains the ideas behind it, one at a time, with the numbers of the Kermadec-Tonga example.</p>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 960 190" role="img" aria-label="Five ideas in a row: the fault, cut into cells, earthquakes as blocks of cells, how often from the plate speed, and the uncertainty">
+      <defs><marker id="co-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker></defs>
+      <g font-size="12.5">
+        <rect x="10" y="20" width="170" height="150" rx="10" fill="#e4f5ec" stroke="#2e9e6b"/><text x="22" y="44" font-weight="700">1 the fault</text><text x="22" y="66" fill="#5b6475">where one plate</text><text x="22" y="84" fill="#5b6475">sinks under another</text>
+        <rect x="200" y="20" width="170" height="150" rx="10" fill="#e4f5ec" stroke="#2e9e6b"/><text x="212" y="44" font-weight="700">2 cut into cells</text><text x="212" y="66" fill="#5b6475">about 50 x 50 km,</text><text x="212" y="84" fill="#5b6475">the unit sources</text>
+        <rect x="390" y="20" width="170" height="150" rx="10" fill="#e8f0fd" stroke="#2f6fdf"/><text x="402" y="44" font-weight="700">3 earthquakes</text><text x="402" y="66" fill="#5b6475">blocks of cells, sized</text><text x="402" y="84" fill="#5b6475">by the magnitude</text>
+        <rect x="580" y="20" width="170" height="150" rx="10" fill="#fcf0e2" stroke="#d9822b"/><text x="592" y="44" font-weight="700">4 how often</text><text x="592" y="66" fill="#5b6475">the plates' motion</text><text x="592" y="84" fill="#5b6475">must be released</text>
+        <rect x="770" y="20" width="180" height="150" rx="10" fill="#f1eafb" stroke="#8a5cd1"/><text x="782" y="44" font-weight="700">5 how sure</text><text x="782" y="66" fill="#5b6475">32,000 possible</text><text x="782" y="84" fill="#5b6475">answers, weighted</text>
+        <path d="M30,140 L160,110" stroke="#1d2433" stroke-width="3"/>
+        <g stroke="#1d2433" stroke-width="1"><path d="M220,150 L350,150 L350,105 L220,105 Z" fill="#fdd9b5"/><path d="M252,105 L252,150 M285,105 L285,150 M318,105 L318,150 M220,127 L350,127"/></g>
+        <g stroke="#1d2433" stroke-width="1"><path d="M410,150 L540,150 L540,105 L410,105 Z" fill="#fff"/><path d="M442,105 L508,105 L508,150 L442,150 Z" fill="#2f6fdf" fill-opacity="0.5"/></g>
+        <path d="M600,150 L730,112" stroke="#d9822b" stroke-width="3" marker-end="url(#co-ar)"/>
+        <g stroke="#8a5cd1" stroke-width="1.2" fill="none"><path d="M790,110 L930,150"/><path d="M790,118 L930,152"/><path d="M790,102 L930,146"/><path d="M790,125 L930,155"/></g>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#co-ar)"><path d="M180,95 L198,95"/><path d="M370,95 L388,95"/><path d="M560,95 L578,95"/><path d="M750,95 L768,95"/></g>
+    </svg>
+    <figcaption><b>The five ideas of this page.</b> Each section below explains one, and says which step of the pipeline does it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="subduction">1. Subduction zones</h2>
+  <p>The Earth's surface is made of rigid plates that move a few centimetres a year. Where two of them converge and one is oceanic, the oceanic plate bends down and sinks under the other: a <a href="glossary.html#term-trench">subduction zone</a>. The line on the sea floor where it starts to sink is the <b>trench</b>, often the deepest place in the ocean. The surface between the two plates, sloping down from the trench, is the <b>plate interface</b>: a huge fault.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 300" role="img" aria-label="Cross-section of a subduction zone: ocean, trench, sinking plate, the locked seismogenic part of the interface, the island arc">
+      <defs><marker id="co-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1d2433"/></marker></defs>
+      <rect x="0" y="60" width="960" height="40" fill="#e8f0fd"/>
+      <text x="820" y="84" font-size="12" fill="#2f6fdf">ocean</text>
+      <path d="M0,60 L960,60" stroke="#2f6fdf"/>
+      <!-- overriding plate -->
+      <path d="M0,60 L180,60 L230,40 L260,60 L520,100 L0,100 Z" fill="#f2e6d0" stroke="#8a6d3b"/>
+      <text x="40" y="84" font-size="12.5" fill="#6b4a3a">overriding plate</text>
+      <path d="M220,40 L230,22 L240,40 Z" fill="#c43d3d"/>
+      <text x="196" y="16" font-size="12" fill="#c43d3d">island arc (volcanoes)</text>
+      <!-- sinking plate -->
+      <path d="M960,100 L560,100 C480,110 400,150 300,200 C230,235 150,270 60,300 L180,300 C260,270 330,240 400,205 C470,170 540,140 600,130 L960,130 Z" fill="#dfe7ee" stroke="#5b6475"/>
+      <text x="720" y="122" font-size="12.5" fill="#5b6475">sinking (oceanic) plate</text>
+      <path d="M760,145 L640,145" stroke="#1d2433" stroke-width="2" marker-end="url(#co-ar2)"/>
+      <text x="650" y="162" font-size="11.5" fill="#1d2433">convergence, cm per year</text>
+      <!-- trench -->
+      <circle cx="560" cy="100" r="6" fill="#c2185b"/>
+      <text x="566" y="92" font-size="12.5" font-weight="700" fill="#c2185b">trench</text>
+      <!-- seismogenic part -->
+      <path d="M560,100 C480,110 420,140 360,170" stroke="#eb6834" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <text x="430" y="162" font-size="12.5" font-weight="700" fill="#eb6834">locked part: great earthquakes</text>
+      <text x="210" y="250" font-size="12" fill="#5b6475">deeper: too hot, the plates slide without earthquakes</text>
+      <path d="M360,170 L360,60" stroke="#8a93a3" stroke-dasharray="4 4"/>
+      <text x="372" y="200" font-size="11.5" fill="#1d2433">seismogenic cutoff</text>
+    </svg>
+    <figcaption><b>A section across a subduction zone.</b> Between the trench and a depth of a few tens of kilometres the two plates are stuck (orange). They keep converging, the rock bends, and every few decades to centuries a stretch of the interface slips suddenly: a great earthquake, lifting the sea floor and making a tsunami. Deeper, the interface is too hot to stick. That depth is the <a href="glossary.html#term-seismogenic-cutoff">seismogenic cutoff</a>.</figcaption>
+  </figure>
+  <p>The shape of the interface is known from earthquake locations and seismic imaging; the USGS collects it in the <a href="glossary.html#term-slab2">SLAB</a> models: the depth of the plate on a map grid. Step 1 turns that map into depth lines (<a href="step1.html">details</a>).</p>
+</section>
+
+<section>
+  <h2 id="unit-sources">2. Unit sources</h2>
+  <p>A computer cannot model every possible rupture shape. PTHA18 cuts the interface into cells of about 50 x 50 km, the <a href="glossary.html#term-unit-source">unit sources</a>, in rows parallel to the trench (Kermadec-Tonga: 73 columns along the trench, 3 rows down the slope, 219 cells). The tsunami of each cell, slipping 1 m, is computed once; any earthquake is then a combination of cells, and its tsunami the same combination of the cells' tsunamis.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 960 230" role="img" aria-label="The interface seen from above, cut into cells; one earthquake is a rectangle of cells">
+      <g stroke="#6b4a3a" stroke-width="1">
+        <g fill="#fdd9b5"><path d="M60,40 L900,40 L900,90 L60,90 Z"/></g>
+        <g fill="#fb9f5a"><path d="M60,90 L900,90 L900,140 L60,140 Z"/></g>
+        <g fill="#e5590a"><path d="M60,140 L900,140 L900,190 L60,190 Z"/></g>
+        <path d="M120,40 L120,190 M180,40 L180,190 M240,40 L240,190 M300,40 L300,190 M360,40 L360,190 M420,40 L420,190 M480,40 L480,190 M540,40 L540,190 M600,40 L600,190 M660,40 L660,190 M720,40 L720,190 M780,40 L780,190 M840,40 L840,190"/>
+      </g>
+      <path d="M360,40 L600,40 L600,140 L360,140 Z" fill="#2f6fdf" fill-opacity="0.55" stroke="#1d2433" stroke-width="2.5"/>
+      <text x="380" y="98" font-size="13" font-weight="700" fill="#fff">one earthquake: 4 x 2 cells</text>
+      <path d="M60,36 L900,36" stroke="#c2185b" stroke-width="3"/>
+      <text x="60" y="26" font-size="12" fill="#c2185b" font-weight="700">trench</text>
+      <text x="60" y="212" font-size="12" fill="#5b6475">down the slope (down dip): rows get deeper, darker colour</text>
+      <text x="700" y="26" font-size="12" fill="#5b6475">along the trench (along strike)</text>
+    </svg>
+    <figcaption><b>Cells and a scenario.</b> A scenario is a rectangle of neighbouring cells slipping by the same amount (<a href="glossary.html#term-faus">FAUS</a>, fixed area and uniform slip). Every position of a rectangle of the right size is one scenario; on Kermadec-Tonga there are 3,075 scenarios from magnitude 7.2 to 9.8. Step 2 builds the cells (<a href="step2.html">details</a>).</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="magnitude">3. Magnitude and seismic moment</h2>
+  <p>The size of an earthquake is its <a href="glossary.html#term-seismic-moment">seismic moment</a>: the rigidity of the rock times the area that slipped times the slip. The <a href="glossary.html#term-mw">moment magnitude</a> Mw is a logarithm of it: one unit more is 32 times more moment, two units 1,000 times.</p>
+  <div class="formula">M<sub>0</sub> = &mu; &times; A &times; D &nbsp;&nbsp;&nbsp;&nbsp; Mw = (2/3) (log<sub>10</sub> M<sub>0</sub> &minus; 9.05)
+    <span class="where">M<sub>0</sub> in newton metres; &mu; = 3 x 10<sup>10</sup> Pa, the rigidity; A the rupture area (m<sup>2</sup>); D the average slip (m). 9.05 is the constant rptha uses.</span>
+  </div>
+  <div class="tbl"><table>
+    <tr><th>Mw</th><th class="n">Moment (N m)</th><th>A scenario on Kermadec-Tonga</th><th>Real examples</th></tr>
+    <tr><td>7.2</td><td class="n">7.1 x 10<sup>19</sup></td><td>1 cell, about 1.5 m of slip</td><td>many per decade worldwide</td></tr>
+    <tr><td>8.0</td><td class="n">1.1 x 10<sup>21</sup></td><td>a few cells</td><td>Samoa 2009 (Mw 8.1, a normal fault near the north end, not on the interface)</td></tr>
+    <tr><td>9.0</td><td class="n">3.5 x 10<sup>22</sup></td><td>17 x 3 cells, about 10 m of slip</td><td>Tohoku, Japan, 2011</td></tr>
+  </table></div>
+  <p class="where">The rupture's size for a magnitude comes from a scaling relation (Strasser et al. 2010, as PTHA18). Code: <code>pyptha_v12/scaling.py</code>, <code>events.py</code>.</p>
+</section>
+
+<section>
+  <h2 id="rates">4. How often: the plates set the budget</h2>
+  <p>The plates converge at a known speed (Bird's 2003 model: about 10 cm/yr on Kermadec-Tonga). Over a long time, the slip on the interface must keep up with that motion, part of it in earthquakes and part as silent sliding. The fraction released by earthquakes is the <a href="glossary.html#term-coupling">coupling</a>. So the plates give a <b>moment budget</b> per year, and the earthquakes must add up to it: this is the <a href="glossary.html#term-moment-balance">moment balance</a>.</p>
+  <div class="formula">moment rate (N m / yr) = &mu; &times; area &times; convergence / cos(dip) &times; coupling
+    <span class="where">Kermadec-Tonga, with a coupling of 0.25 (illustration): 3 x 10<sup>10</sup> x 5.43 x 10<sup>11</sup> m<sup>2</sup> x 0.103 m/yr / cos(15&deg;) x 0.25 = 4.3 x 10<sup>20</sup> N m per year, the moment of one Mw 9.0 earthquake every 80 years or so.</span>
+  </div>
+  <p>How that budget is shared between small and large earthquakes follows the <a href="glossary.html#term-gr">Gutenberg-Richter</a> law: each magnitude unit up is about 10<sup>b</sup> times rarer, with b close to 1, up to a largest possible magnitude, <a href="glossary.html#term-mw-max">Mw_max</a>. The result is an <a href="glossary.html#term-exceedance-rate">exceedance-rate curve</a>:</p>
+  <figure class="fig narrow">
+    <svg viewBox="0 0 620 300" role="img" aria-label="An exceedance-rate curve: rate per year against magnitude, falling steeply towards the largest magnitude">
+      <defs><marker id="co-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6475"/></marker></defs>
+      <path d="M70,250 L590,250" stroke="#5b6475"/><path d="M70,250 L70,20" stroke="#5b6475"/>
+      <g font-size="11.5" fill="#5b6475"><text x="60" y="44" text-anchor="end">1</text><text x="60" y="94" text-anchor="end">0.1</text><text x="60" y="144" text-anchor="end">0.01</text><text x="60" y="194" text-anchor="end">0.001</text><text x="60" y="244" text-anchor="end">0.0001</text>
+        <text x="70" y="268">7.2</text><text x="200" y="268">8.0</text><text x="330" y="268">8.8</text><text x="460" y="268">9.6</text><text x="300" y="290">magnitude Mw</text>
+        <text x="24" y="150" transform="rotate(-90 24 150)">per year</text></g>
+      <path d="M70,73 C150,95 200,115 250,133 C320,160 380,190 430,220 C450,235 458,245 461,250" fill="none" stroke="#2f6fdf" stroke-width="3"/>
+      <circle cx="70" cy="73" r="5" fill="#2f6fdf"/><text x="80" y="66" font-size="12" fill="#1d2433">Mw 7.2+: 0.23 per year (one every 4.4 years)</text>
+      <circle cx="200" cy="112" r="5" fill="#2f6fdf"/><text x="210" y="106" font-size="12" fill="#1d2433">Mw 8.0+: 0.040 per year (every 25 years)</text>
+      <circle cx="363" cy="182" r="5" fill="#2f6fdf"/><text x="372" y="176" font-size="12" fill="#1d2433">Mw 9.0+: 0.0029 (every 350 years)</text>
+      <text x="440" y="236" font-size="11.5" fill="#5b6475">falls to 0 at Mw_max</text>
+    </svg>
+    <figcaption><b>Reading an exceedance-rate curve</b> (Kermadec-Tonga, this package's result, schematic drawing of the real curve). For any magnitude, how many earthquakes of at least that magnitude are expected per year; its inverse is the average time between them.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="logic-tree">5. The logic tree: many possible answers</h2>
+  <p>Three numbers of the moment balance are not known well: the coupling, the b-value and Mw_max. Instead of choosing one value of each, PTHA18 tries all combinations of 20 couplings, 20 b-values, 40 Mw_max and 2 shapes of the Gutenberg-Richter curve: 32,000 <a href="glossary.html#term-branch">branches</a>, each a complete, different answer, each with a weight (its <b>prior</b> probability) from the literature.</p>
+  <figure class="fig narrow">
+    <svg viewBox="0 0 620 250" role="img" aria-label="A logic tree: coupling branches split into b-value branches, then Mw_max and GR type; each leaf is one branch">
+      <g font-size="12">
+        <circle cx="40" cy="125" r="8" fill="#1d2433"/>
+        <g stroke="#8a93a3" fill="none" stroke-width="1.5">
+          <path d="M40,125 L170,50"/><path d="M40,125 L170,125"/><path d="M40,125 L170,200"/>
+          <path d="M170,50 L320,25"/><path d="M170,50 L320,75"/><path d="M170,125 L320,110"/><path d="M170,125 L320,140"/><path d="M170,200 L320,175"/><path d="M170,200 L320,225"/>
+          <path d="M320,25 L470,15"/><path d="M320,25 L470,35"/><path d="M320,75 L470,65"/><path d="M320,75 L470,85"/>
+        </g>
+        <g fill="#2f6fdf"><circle cx="170" cy="50" r="6"/><circle cx="170" cy="125" r="6"/><circle cx="170" cy="200" r="6"/></g>
+        <g fill="#d9822b"><circle cx="320" cy="25" r="5"/><circle cx="320" cy="75" r="5"/><circle cx="320" cy="110" r="5"/><circle cx="320" cy="140" r="5"/><circle cx="320" cy="175" r="5"/><circle cx="320" cy="225" r="5"/></g>
+        <g fill="#8a5cd1"><circle cx="470" cy="15" r="4"/><circle cx="470" cy="35" r="4"/><circle cx="470" cy="65" r="4"/><circle cx="470" cy="85" r="4"/></g>
+        <text x="130" y="245" fill="#2f6fdf" font-weight="700">coupling (20)</text>
+        <text x="280" y="245" fill="#d9822b" font-weight="700">b-value (20)</text>
+        <text x="430" y="115" fill="#8a5cd1" font-weight="700">Mw_max (40)</text>
+        <text x="430" y="133" fill="#8a5cd1" font-weight="700">x GR shape (2)</text>
+        <text x="490" y="30" fill="#5b6475">each leaf: one</text>
+        <text x="490" y="46" fill="#5b6475">branch, one curve</text>
+      </g>
+    </svg>
+    <figcaption><b>A logic tree</b>, drawn with only a few branches. The real one has 20 x 20 x 40 x 2 = 32,000 leaves. Steps 6 and 7 build and solve it (<a href="engine.html">details</a>).</figcaption>
+  </figure>
+  <h3 id="segments">One long fault, or several shorter ones?</h3>
+  <p>A long zone may not break from end to end: it may break in pieces, <a href="glossary.html#term-segment">segments</a>, each with its own earthquakes. Nobody knows which is right, so PTHA18 keeps both, half and half: the zone as one fault (the <b>unsegmented</b> model), and the zone as the sum of its segments. Several short faults give more moderate earthquakes and fewer giant ones than one long fault, so the two halves disagree most at the largest magnitudes. This package runs the one-fault model by default; <code>--segmented true</code> adds the segments, placed where the published table of Berryman et al. (2015) puts them, the same segments PTHA18 used (<a href="segmentation.html">Segmented vs unsegmented</a>).</p>
+</section>
+
+<section>
+  <h2 id="uncertainty">6. Learning from past earthquakes, and uncertainty</h2>
+  <p>Some branches predict many more earthquakes than have happened. The instrumental catalogue (<a href="glossary.html#term-gcmt">GCMT</a>, since 1976) says how many earthquakes of Mw 7.15 or more the zone really had: 9 on Kermadec-Tonga in 41 years. A <a href="glossary.html#term-bayesian-update">Bayesian update</a> raises the weight of the branches that agree with that record and lowers the others. The weights after the update are the <b>posterior</b>.</p>
+  <figure class="fig narrow">
+    <svg viewBox="0 0 620 220" role="img" aria-label="Before and after the update: branch curves around the observed rate; weights move to the branches close to the observation">
+      <g font-size="12">
+        <text x="20" y="20" font-weight="700">before (prior)</text><text x="330" y="20" font-weight="700">after (posterior)</text>
+        <g stroke="#8a93a3" stroke-width="2"><path d="M30,60 L280,160"/><path d="M30,90 L280,180"/><path d="M30,120 L280,195"/><path d="M30,150 L280,205"/></g>
+        <g stroke="#8a93a3" stroke-width="0.8" opacity="0.5"><path d="M340,60 L590,160"/><path d="M340,150 L590,205"/></g>
+        <g stroke="#2f6fdf" stroke-width="4"><path d="M340,90 L590,180"/></g>
+        <g stroke="#2f6fdf" stroke-width="2.5"><path d="M340,120 L590,195"/></g>
+        <g fill="#2e9e6b"><circle cx="80" cy="112" r="6"/><circle cx="390" cy="112" r="6"/></g>
+        <text x="30" y="46" fill="#2e9e6b">green: observed, 9 events in 41 years</text>
+        
+        <text x="30" y="214" fill="#5b6475">all branches weighted by the literature</text>
+        <text x="340" y="214" fill="#5b6475">branches near the data weigh more (thick)</text>
+      </g>
+    </svg>
+    <figcaption><b>The Bayesian update in a picture</b>: the curves do not change, only their weights. How much the weights moved is measured by the TVD (0.68 on Kermadec-Tonga; 0 means no change, 1 a complete reshuffle).</figcaption>
+  </figure>
+  <p>The result is not one curve but 32,000 weighted curves. The package reports their weighted mean and their <a href="glossary.html#term-percentile">percentiles</a> (2.5, 16, 50, 84, 97.5): the band between the 16th and 84th percentile holds the middle two thirds of the weight. This spread is <b>epistemic uncertainty</b>: what we do not know about the zone, not randomness of the earthquakes.</p>
+</section>
+
+<section>
+  <h2 id="from-scratch">7. What "from scratch" means here</h2>
+  <p>PTHA18 published its results and many of its inputs, but it prepared some inputs by hand: in particular it edited the depth lines of each zone. This package rebuilds every input from public data with fixed rules (<a href="slab_fixes.html">the geometry rules</a>), and runs the same calculations as PTHA18's R code, reproduced in Python. Given PTHA18's own inputs, it gives PTHA18's own numbers (<a href="validation.html">validation</a>); given public data, it gives an independent model of the same zone, and of zones PTHA18 never covered (<a href="examples.html">examples</a>).</p>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Numbers from kermadectonga2_v9 (<code>outputs/rate_curves.csv</code>, <code>outputs/logic_tree_summary.csv</code>, <code>run_final.log</code>).</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

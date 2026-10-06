@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1. Clean ends | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Geometry: from SLAB to mesh</div>
+  <h1>1. Clean ends: cutting the zone's ends square</h1>
+  <p class="lead">A zone ends wherever the SLAB data (or the clip window) stops. That end is often crooked, or the zone narrows to a point there. PTHA18 fixed this by hand, ending each zone with a straight line across its contours. Step 1 does the same automatically, but only where the end really is an artefact: a clean end is left alone.</p>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 960 300" role="img" aria-label="Three kinds of zone end: crooked (cut), narrowing to a point (cut where the width is back to 70 percent), and clean (kept)">
+      <g font-size="12.5">
+        <text x="20" y="24" font-weight="700" fill="#c43d3d">Crooked end: CUT</text>
+        <text x="340" y="24" font-weight="700" fill="#c43d3d">Narrows to a point: CUT</text>
+        <text x="660" y="24" font-weight="700" fill="#2e9e6b">Clean end: KEPT</text>
+      </g>
+      <!-- panel 1: crooked -->
+      <rect x="20" y="36" width="290" height="190" rx="8" fill="#f6f7f9"/>
+      <path d="M40,60 L180,60 L300,60" stroke="#c2185b" stroke-width="3" fill="none"/>
+      <g stroke="#1f3b73" stroke-width="1.4" fill="none">
+        <path d="M70,95 L300,95"/><path d="M100,130 L300,130"/><path d="M130,165 L300,165"/><path d="M160,200 L300,200"/>
+      </g>
+      <path d="M40,60 L70,95 L100,130 L130,165 L160,200" stroke="#c43d3d" stroke-width="2" stroke-dasharray="5 3" fill="none"/>
+      <path d="M160,50 L160,212" stroke="#e65100" stroke-width="3"/>
+      <text x="34" y="244" font-size="11.5" fill="#5b6475">the data's edge runs along the zone: the</text>
+      <text x="34" y="259" font-size="11.5" fill="#5b6475">end cells would be 77-86 deg off square;</text>
+      <text x="34" y="274" font-size="11.5" fill="#5b6475">cut on the orange down-dip line</text>
+      <!-- panel 2: taper -->
+      <rect x="340" y="36" width="290" height="190" rx="8" fill="#f6f7f9"/>
+      <path d="M360,120 C420,90 520,60 620,60" stroke="#c2185b" stroke-width="3" fill="none"/>
+      <g stroke="#1f3b73" stroke-width="1.4" fill="none">
+        <path d="M362,125 C430,115 520,95 620,95"/><path d="M364,130 C440,135 520,130 620,130"/><path d="M366,135 C450,160 530,165 620,165"/><path d="M368,140 C460,185 540,200 620,200"/>
+      </g>
+      <path d="M470,74 L480,188" stroke="#e65100" stroke-width="3"/>
+      <text x="484" y="182" font-size="11" fill="#e65100">70% width</text>
+      <text x="354" y="244" font-size="11.5" fill="#5b6475">the tip is under 50% of the median width:</text>
+      <text x="354" y="259" font-size="11.5" fill="#5b6475">cut where the width is back to 70%</text>
+      <text x="354" y="274" font-size="11.5" fill="#5b6475">(PTHA18 cut kermadectonga2 at 74%)</text>
+      <!-- panel 3: clean -->
+      <rect x="660" y="36" width="290" height="190" rx="8" fill="#f6f7f9"/>
+      <path d="M700,60 L940,60" stroke="#c2185b" stroke-width="3" fill="none"/>
+      <g stroke="#1f3b73" stroke-width="1.4" fill="none">
+        <path d="M708,95 L940,95"/><path d="M716,130 L940,130"/><path d="M724,165 L940,165"/><path d="M732,200 L940,200"/>
+      </g>
+      <path d="M700,60 L732,200" stroke="#2e9e6b" stroke-width="2.4" fill="none"/>
+      <text x="674" y="244" font-size="11.5" fill="#5b6475">the end is within 45 deg of square</text>
+      <text x="674" y="259" font-size="11.5" fill="#5b6475">(PTHA18's own ends: 2-42 deg):</text>
+      <text x="674" y="274" font-size="11.5" fill="#5b6475">left exactly as SLAB gives it</text>
+    </svg>
+    <figcaption><b>The rule in one picture</b> (schematic, trench in pink at the top, contours below). An end is cut only if it is crooked (more than 45 deg off square) or pointed (narrower than 50% of the zone's median width). The cut is always one down-dip line, crossing every contour at a right angle, like PTHA18's hand edits.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="why">Why a crooked end matters</h2>
+  <p>rptha's mesh builder (step 2) pins the first and last column of cells to the contours' own end points: the end column always joins the end of the trench to the end of every deeper contour. If the deep contours stop 50 or 200 km along the zone from where the trench stops, that end column runs along the zone instead of across it, and its cells are slanted slivers, sometimes folded. Their area and dip are then meaningless, and the scenarios that touch them are distorted.</p>
+  <p>Cutting every contour along the same down-dip line fixes the cause: afterwards all contours start and end on one line across the zone.</p>
+</section>
+
+<section>
+  <h2 id="transects">Down-dip lines, every 5 km of trench</h2>
+  <p>To measure the zone's width and to have ready-made cut lines, step 1 traces a line of steepest descent of D (the depth below the trench) from every 5 km of trench. Such a line crosses every contour at a right angle. It is followed in 1 km steps (gradient smoothed over 10 km) until it reaches the cutoff (a "complete" line; its length is the zone's width there) or leaves the data.</p>
+  <figure class="fig">
+    <img src="img/step1_ker_transects.png" alt="kermadectonga2: the down-dip lines at both ends, the cuts, and the zone's width along the trench">
+    <figcaption><b>kermadectonga2, real data</b>: 765 lines, all complete. Top left: the south end narrows to a point (dotted: the contours removed; orange: the cut). Top right: the north end, where the data's edge runs along the zone. Bottom: the zone's width along the trench (median 140 km). At the south tip it is 34% of the median: below the 50% limit, so the cut goes where it is back to 70% (195 km of trench removed). At the north end the width is fine (58%), but the end is crooked.</figcaption>
+  </figure>
+  <p class="where">Where in the code: <code>slab_contours.down_dip_transects()</code>.</p>
+</section>
+
+<section>
+  <h2 id="metric">How crooked is an end? A preview of its end cells</h2>
+  <p>"How far from square" is measured on the cells rptha would actually build there. From the contours alone, step 1 rebuilds the two columns nearest the end: the end column (the contours' end points) and the next one (the points 50 km in along each contour, one cell length), and splits both into the same number of rows step 2's rule would give at 50 km (at least 2). The worst corner of those cells, in degrees away from 90, is the end's deviation.</p>
+  <figure class="fig">
+    <img src="img/step1_ker_minimesh.png" alt="The preview cells at both ends of kermadectonga2, before and after the cuts">
+    <figcaption><b>The preview cells</b>, kermadectonga2 (3 rows). North end: 77 deg off square before the cut, 44 deg after. South end: 79 deg before, 9 deg after. The circle marks the worst corner. These previews agree with the corners of the final mesh within about 5 deg on the zones checked.</figcaption>
+  </figure>
+  <p class="where">Where in the code: <code>slab_contours._end_deviation()</code>.</p>
+</section>
+
+<section>
+  <h2 id="rule">The rule, exactly</h2>
+  <ol class="steps">
+    <li><b>Pointed end?</b> If the zone's width at the outermost complete line (median over 25 km of trench) is below <b>50%</b> of the median width, cut at the first line where the width is back to <b>70%</b>.</li>
+    <li><b>Otherwise, crooked end?</b> If its deviation is above <b>45 deg</b> (<code>MAX_END_DEVIATION_DEG</code>), cut along the outermost complete line: the one from the trench's last point if it reaches the cutoff, else the last one that does inside the data.</li>
+    <li><b>Otherwise keep the end</b> exactly as SLAB gives it (makran2's two slanted ends, 33 and 25 deg, are kept, as PTHA18 kept them).</li>
+    <li><b>Check the cut.</b> The new end is measured again. If it is still more than 45 deg off square (the contours still bend there), the cut moves inward one line (5 km) at a time, up to 150 km, and the best one is kept.</li>
+    <li><b>Apply it</b> to every contour: each is cut where it crosses the chosen line (the trench at the line's start point).</li>
+  </ol>
+  <div class="callout"><span class="lbl">Where the numbers come from</span>45 deg: PTHA18's own hand-made ends measure 2 to 42 deg off square on 14 zones (cascadia's last column 53), while the artefact ends of the SLAB-derived zones measure 53 to 86 deg. 50% and 70%: PTHA18's hand cut at kermadectonga2's southern tip is where the zone is 74% of its median width; the 70% rule cuts 10 km away from it.</div>
+  <p class="where">Where in the code: <code>slab_contours._end_cuts()</code> (<code>taper_tip=0.5</code>, <code>taper_keep=0.7</code>, <code>smooth_km=25</code>), <code>trim_ends()</code>. Called by <code>below_trench_contours(clean_ends=True)</code>, only when every level was found and none is closed.</p>
+</section>
+
+<section>
+  <h2 id="vs-ptha18">Compared with PTHA18's hand edits</h2>
+  <figure class="fig">
+    <img src="img/step1_ker_vs_ptha18_ends.png" alt="kermadectonga2's two ends: this run's contours after the cut against PTHA18's published contours">
+    <figcaption><b>kermadectonga2's two ends</b>, this run (orange) against PTHA18's published contours (blue dashed). South: both end near 42.4 S; north: both near 14.5 S. The automatic cuts land within 10 km of PTHA18's hand-made ends.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="results">Every end of the 8 examples</h2>
+  <div class="tbl"><table>
+    <tr><th>Folder</th><th>End</th><th class="n">Deviation</th><th class="n">Tip width</th><th>Decision</th><th class="n">Trench / deepest contour removed</th><th class="n">New end</th></tr>
+    <tr><td rowspan="2">kermadectonga2_v9</td><td>south</td><td class="n">79&deg;</td><td class="n">34%</td><td>cut: narrows to a point</td><td class="n">195 / 247 km</td><td class="n">9&deg;</td></tr>
+    <tr><td>north</td><td class="n">77&deg;</td><td class="n">58%</td><td>cut: crooked</td><td class="n">5 / 53 km</td><td class="n">44&deg;</td></tr>
+    <tr><td rowspan="2">southamerica_v9</td><td>north</td><td class="n">26&deg;</td><td class="n">80%</td><td>kept</td><td class="n"></td><td class="n"></td></tr>
+    <tr><td>south</td><td class="n">78&deg;</td><td class="n">109%</td><td>cut: crooked</td><td class="n">235 / 235 km</td><td class="n">4&deg;</td></tr>
+    <tr><td rowspan="2">kurilsjapan_v9</td><td>south (the <code>--auto-clip</code> window's edge)</td><td class="n">24&deg;</td><td class="n">88%</td><td>kept</td><td class="n"></td><td class="n"></td></tr>
+    <tr><td>north</td><td class="n">9&deg;</td><td class="n">93%</td><td>kept</td><td class="n"></td><td class="n"></td></tr>
+    <tr><td rowspan="2">makran2_v9</td><td>west</td><td class="n">33&deg;</td><td class="n">99%</td><td>kept</td><td class="n"></td><td class="n"></td></tr>
+    <tr><td>east</td><td class="n">25&deg;</td><td class="n">89%</td><td>kept</td><td class="n"></td><td class="n"></td></tr>
+    <tr><td rowspan="2">puysegur2_v9</td><td>north</td><td class="n">17&deg;</td><td class="n">66%</td><td>kept</td><td class="n"></td><td class="n"></td></tr>
+    <tr><td>south</td><td class="n">53&deg;</td><td class="n">109%</td><td>cut: crooked</td><td class="n">65 / 65 km</td><td class="n">13&deg;</td></tr>
+    <tr><td rowspan="2">calabria2_v9</td><td>west</td><td class="n">82&deg;</td><td class="n">72%</td><td>cut: crooked</td><td class="n">15 / 89 km</td><td class="n">18&deg;</td></tr>
+    <tr><td>north-east</td><td class="n">70&deg;</td><td class="n">43%</td><td>cut: narrows to a point</td><td class="n">55 / 135 km</td><td class="n">30&deg;</td></tr>
+    <tr><td rowspan="2">caribbean2_v9</td><td>south</td><td class="n">86&deg;</td><td class="n">165%</td><td>cut: crooked</td><td class="n">0 / 242 km</td><td class="n">37&deg;</td></tr>
+    <tr><td>west</td><td class="n">22&deg;</td><td class="n">69%</td><td>kept</td><td class="n"></td><td class="n"></td></tr>
+    <tr><td rowspan="2">antilles2_v9</td><td>south</td><td class="n">85&deg;</td><td class="n">112%</td><td>cut: crooked</td><td class="n">0 / 242 km</td><td class="n">36&deg;</td></tr>
+    <tr><td>north</td><td class="n">61&deg;</td><td class="n">68%</td><td>cut: crooked</td><td class="n">0 / 172 km</td><td class="n">7&deg;</td></tr>
+  </table></div>
+  <p class="where">From each folder's <code>data/step1_contours_info.json</code>, key <code>ends</code>: <code>deviation_deg</code>, <code>tip_width_ratio</code>, <code>trench_km</code>, <code>contours_km</code>, <code>deviation_after_deg</code> (step 1's preview of the new end). "0 km of trench" means the cut starts at the trench's last point and only the deeper contours are shortened.</p>
+  <p>Every new end is within 45 deg of square, the range of PTHA18's own ends. None of the 8 meshes has a folded or collapsed cell, so step 2 never needs a repair.</p>
+</section>
+
+<section>
+  <h2 id="change">Changing or switching off the rule</h2>
+  <ul class="tight">
+    <li><b>More or fewer cuts:</b> change <code>MAX_END_DEVIATION_DEG</code> (45.0) at the top of section 3 of <code>lib/slab_contours.py</code>. It applies to every zone generated afterwards; re-run the zone from step 1.</li>
+    <li><b>Pointed ends:</b> <code>taper_tip</code> (0.5) and <code>taper_keep</code> (0.7) are arguments of <code>_end_cuts()</code>.</li>
+    <li><b>No cuts at all:</b> call <code>below_trench_contours(..., clean_ends=False)</code> in the zone's <code>steps/step1_fetch_slab2.py</code>. The raw ends are also always kept in <code>info["contours_untrimmed"]</code> and drawn dotted in the step 1 figure.</li>
+    <li><b>What it never does:</b> extend a zone. Where PTHA18 extended a zone beyond the SLAB data by hand (puysegur2's south end), this package does not invent geometry.</li>
+  </ul>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>Figures: <code>html/docs/figures_src/make_step1.py</code>. Numbers: the examples' <code>data/step1_contours_info.json</code> and <code>run_final.log</code>.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Change a setting, re-run | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Your own runs</div>
+  <h1>Change a setting, re-run</h1>
+  <p class="lead">Every example folder is yours to change. Each setting lives in exactly one place: a constant at the top of one step script, a key of the input JSON, or a flag of <code>generate.py</code>. Change it there, then re-run that step and every step after it. This page says where each setting lives, what to re-run, and shows two real cases.</p>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance: what to re-run</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 960 300" role="img" aria-label="Which steps read which files: change a step and re-run it and every step to its right; step 6 needs --force to rebuild an existing input file">
+      <defs><marker id="cu-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker></defs>
+      <g font-size="12.5">
+        <rect x="10" y="40" width="96" height="50" rx="8" fill="#e4f5ec" stroke="#2e9e6b"/><text x="22" y="62" font-weight="700">1 contours</text><text x="22" y="80" font-size="11" fill="#5b6475">CLIP_BBOX</text>
+        <rect x="126" y="40" width="96" height="50" rx="8" fill="#e4f5ec" stroke="#2e9e6b"/><text x="138" y="62" font-weight="700">2 mesh</text><text x="138" y="80" font-size="11" fill="#5b6475">width, rows</text>
+        <rect x="242" y="10" width="96" height="50" rx="8" fill="#fcf0e2" stroke="#d9822b"/><text x="254" y="32" font-weight="700">3 converg.</text><text x="254" y="50" font-size="11" fill="#5b6475">override</text>
+        <rect x="242" y="80" width="96" height="50" rx="8" fill="#f1eafb" stroke="#8a5cd1"/><text x="254" y="102" font-weight="700">4-5 GCMT</text><text x="254" y="120" font-size="11" fill="#5b6475">window, rule</text>
+        <rect x="370" y="40" width="130" height="50" rx="8" fill="#e8f0fd" stroke="#2f6fdf" stroke-width="2"/><text x="382" y="62" font-weight="700">6 input JSON</text><text x="382" y="80" font-size="11" fill="#c43d3d">--force to rebuild</text>
+        <rect x="530" y="40" width="110" height="50" rx="8" fill="#e8f0fd" stroke="#2f6fdf"/><text x="542" y="62" font-weight="700">7 engine</text><text x="542" y="80" font-size="11" fill="#5b6475">wipes outputs/</text>
+        <rect x="670" y="10" width="110" height="50" rx="8" fill="#f0f2f5" stroke="#8a93a3" stroke-dasharray="5 4"/><text x="682" y="32" font-weight="700">7b HS/VAUS</text><text x="682" y="50" font-size="11" fill="#5b6475">after every 7</text>
+        <rect x="670" y="80" width="110" height="50" rx="8" fill="#f0f2f5" stroke="#8a93a3" stroke-dasharray="5 4"/><text x="682" y="102" font-weight="700">8 official</text><text x="682" y="120" font-size="11" fill="#5b6475">independent</text>
+        <rect x="810" y="40" width="140" height="50" rx="8" fill="#e8f0fd" stroke="#2f6fdf"/><text x="822" y="62" font-weight="700">9 report</text><text x="822" y="80" font-size="11" fill="#5b6475">always last</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#cu-ar)">
+        <path d="M106,65 L124,65"/><path d="M222,55 L240,38"/><path d="M222,75 L240,100"/>
+        <path d="M338,35 L368,55"/><path d="M338,105 L368,75"/><path d="M222,65 C300,65 300,65 368,65" stroke-dasharray="3 3"/>
+        <path d="M500,65 L528,65"/><path d="M640,55 L668,38"/><path d="M640,65 L808,65"/>
+      </g>
+      <g font-size="12.5">
+        <rect x="10" y="160" width="940" height="128" rx="10" fill="#fff" stroke="#dde1e8"/>
+        <text x="26" y="186" font-weight="700">The three rules</text>
+        <text x="26" y="210">1. Change the setting where it lives (tables below), then re-run that step and every step to its right.</text>
+        <text x="26" y="232">2. If the change is in steps 1 to 5, rebuild the input file: <tspan font-family="Consolas, monospace">step6_write_input.py --force</tspan> (step 6 never overwrites an existing one).</text>
+        <text x="26" y="254">3. Step 7 replaces outputs/ as a whole: re-run 7b if you want HS/VAUS, and always finish with step 9.</text>
+        <text x="26" y="276" fill="#5b6475">A change in the input JSON itself only needs steps 7 and 9 (and 7b).</text>
+      </g>
+    </svg>
+    <figcaption><b>The chain of files.</b> Each step reads only what the steps to its left wrote. The engine (7) reads only the input JSON and the saved mesh, which is why the JSON is the quickest place for most changes.</figcaption>
+  </figure>
+  <div class="callout warn"><span class="lbl">The one trap</span>Re-running <code>step_total.py</code> on a folder whose input JSON already exists keeps that JSON (step 6 prints <code>already exists -- NOT overwriting it</code>). That protects your hand edits, but it also means a change made in steps 1 to 5 never reaches the rates until you run <code>step6_write_input.py --force</code>.</div>
+</section>
+
+<section>
+  <h2 id="where">Where every setting lives</h2>
+  <h3>In the input JSON (<code>inputs/input_&lt;zone&gt;_scratch.json</code>): re-run 7 (7b) and 9</h3>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:34%"><col style="width:38%"><col style="width:28%"></colgroup>
+    <tr><th>Key</th><th>What it changes</th><th>Notes</th></tr>
+    <tr><td><code>geometry.desired_unit_source_width</code>, <code>desired_unit_source_length</code></td><td>cell size, so rows and columns</td><td>the engine rebuilds the mesh; steps 3 and 5 keep step 2's mesh (<a href="#width">example</a>)</td></tr>
+    <tr><td><code>geometry.n_downdip</code>, <code>min_downdip</code></td><td>force the number of rows; the minimum (2)</td><td>as above</td></tr>
+    <tr><td><code>geometry.discretizer</code></td><td><code>optimal</code>, <code>lm</code>, <code>mid</code></td><td>as above; <a href="discretizer.html">what each does</a></td></tr>
+    <tr><td><code>rates.tectonic_convergence_mm_per_yr</code></td><td>the plate rate (horizontal) for the moment balance</td><td>keeps the Bird profiles: <a href="#convergence">read this first</a></td></tr>
+    <tr><td><code>rates.coupling.spreadsheet_values</code>, <code>uniform_range</code></td><td>coupling min / preferred / max, and the wide uniform range</td><td>LEVEL 1</td></tr>
+    <tr><td><code>rates.b_anchor</code></td><td>b-value min / preferred / max</td><td>LEVEL 1</td></tr>
+    <tr><td><code>rates.mw_max_observed</code>, <code>Mw_max_anchor</code></td><td>the lower end of the Mw_max range, or a fixed range</td><td>LEVEL 1</td></tr>
+    <tr><td><code>rates.Mw_frequency_distribution_prob</code></td><td>weights of truncated vs characteristic GR (0.7, 0.3)</td><td>LEVEL 1</td></tr>
+    <tr><td><code>rates.n_logic_tree_bins</code></td><td>20 coupling x 20 b x 40 Mw_max</td><td>resolution only</td></tr>
+    <tr><td><code>rates.update_logic_tree_weights_with_data</code></td><td><code>false</code>: skip the Bayesian update (posterior = prior)</td><td>LEVEL 3</td></tr>
+    <tr><td><code>rates.observed_seismicity</code></td><td>count, magnitudes, years of observed earthquakes</td><td>LEVEL 3</td></tr>
+    <tr><td><code>rates.edge_correction</code></td><td><code>"fit"</code> in [0, 30], or <code>"fixed"</code> with a value, or <code>"off"</code></td><td>LEVEL 4</td></tr>
+    <tr><td><code>rates.conditional_probability_model</code></td><td>how a magnitude's rate is shared between scenarios</td><td><a href="engine.html#conditional-probability">models</a></td></tr>
+    <tr><td><code>percentiles.*</code></td><td>thresholds, percentiles, number of samples, seed</td><td>LEVEL 5</td></tr>
+    <tr><td><code>events.Mmin</code>, <code>Mmax</code>, <code>dMw</code></td><td>magnitudes of the scenarios</td><td>PTHA18: 7.2, 9.8, 0.1</td></tr>
+  </table></div>
+  <p class="where">Every key, with its meaning and origin: <a href="input_json.html">6. The input file</a>.</p>
+
+  <h3>In a step script (<code>&lt;folder&gt;/steps/</code>): re-run from that step, with step 6 <code>--force</code></h3>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:34%"><col style="width:22%"><col style="width:44%"></colgroup>
+    <tr><th>Constant</th><th>Script</th><th>What it changes</th></tr>
+    <tr><td><code>CLIP_BBOX</code> (<code>None</code> or lon/lat window)</td><td>step1_fetch_slab2.py</td><td>use only part of the raster (<a href="step1.html#clip">--clip</a>)</td></tr>
+    <tr><td><code>CONTOUR_SPACING_KM</code> (5.0)</td><td>step1_fetch_slab2.py</td><td>distance between depth levels</td></tr>
+    <tr><td><code>DESIRED_LENGTH_KM</code>, <code>DESIRED_WIDTH_KM</code> (50, 50)</td><td>step2_build_grid.py</td><td>cell size; step 6 copies them into the JSON</td></tr>
+    <tr><td><code>N_DOWNDIP_OVERRIDE</code> (None), <code>MIN_DOWNDIP_ROWS</code> (2)</td><td>step2_build_grid.py</td><td>force the row count; the minimum</td></tr>
+    <tr><td><code>DISCRETIZER</code>, <code>SEED</code></td><td>step2_build_grid.py</td><td>mesh method; the optimiser's random seed</td></tr>
+    <tr><td><code>BIRD_TABLE</code> (<code>"bird"</code>)</td><td>step3_convergence.py</td><td>the plate table, <code>"bird"</code> or <code>"bird-griffin"</code>: what <code>generate.py --convergence</code> wrote; change it here to switch in an existing folder, then re-run step 3, step 6 with <code>--force</code>, 7 and 9 (<a href="convergence_sources.html">which zones differ</a>)</td></tr>
+    <tr><td><code>CONVERGENCE_OVERRIDE_MM_PER_YR</code> (None)</td><td>step3_convergence.py</td><td>a constant convergence instead of Bird (<a href="#convergence">example</a>)</td></tr>
+    <tr><td><code>WINDOW_START</code>, <code>WINDOW_END</code></td><td>steps 4, 5 and 6 (all three)</td><td>the earthquake catalogue window (1976-01-01 to 2017-03-01)</td></tr>
+    <tr><td><code>BUFFER_DEG</code>, <code>RAKE_TOL_DEG</code>, <code>STRIKE_TOL_DEG</code>, <code>MAX_DEPTH_KM</code>, <code>THRESHOLD_MW</code></td><td>step5_subset_gcmt.py</td><td>PTHA18's selection rule (0.4, 50, 50, 71, 7.15)</td></tr>
+  </table></div>
+  <h3>For every future zone: in the package</h3>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:34%"><col style="width:22%"><col style="width:44%"></colgroup>
+    <tr><td><code>MAX_END_DEVIATION_DEG</code> (45.0)</td><td>lib/slab_contours.py</td><td>how crooked an end must be to be cut (<a href="clean_ends.html#change">clean ends</a>); applies to existing folders too, from step 1</td></tr>
+    <tr><td>zone literature values</td><td>lib/berryman_params.py</td><td>cutoff, coupling, b-value, largest observed Mw per zone</td></tr>
+    <tr><td>any step's default</td><td>templates/*.py.tmpl</td><td>copied into each new folder by <code>generate.py</code></td></tr>
+    <tr><td><code>--ptha</code>, <code>--segmented</code>, <code>--convergence</code>, <code>--discretizer</code>, <code>--columns</code>, <code>--clip</code>, <code>--zone</code></td><td>generate.py</td><td>make a new folder; an existing folder is never overwritten (<code>_2</code>, <code>_3</code> is appended)</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="width">Example 1: cells 35 km wide</h2>
+  <p>PTHA18 used 35 km wide cells on puysegur2 and 50 km elsewhere. There are two ways to change the width of an existing folder.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h4><span class="badge">quick</span> In the input JSON</h4>
+      <ol class="steps">
+        <li>In <code>inputs/input_puysegur2_scratch.json</code>, set <code>"desired_unit_source_width": 35.0</code>.</li>
+        <li>Run step 7, then step 9 (or <code>step_total.py</code>: step 6 will keep your file).</li>
+      </ol>
+      <p>The engine sees that its geometry no longer matches step 2's saved mesh, prints <code>step 2's saved grid does not match ... rebuilding</code>, and meshes at 35 km. Steps 3 and 5 still used step 2's mesh: exact when the columns do not change (the width only changes rows), approximate otherwise.</p>
+    </div>
+    <div class="card">
+      <h4><span class="badge good">exact</span> At the source, step 2</h4>
+      <ol class="steps">
+        <li>In <code>steps/step2_build_grid.py</code>, set <code>DESIRED_WIDTH_KM = 35.0</code>.</li>
+        <li>Run steps 2, 3, 5, then <code>step6_write_input.py --force</code>, then 7 and 9.</li>
+      </ol>
+      <p>Every step then uses the 35 km mesh. Step 6 copies the width from step 2 into the JSON, so the engine reuses step 2's mesh (<code>mesh: reusing step 2's grid</code>).</p>
+    </div>
+  </div>
+  <div class="code"><pre>.venv/Scripts/python.exe puysegur2_v9/steps/step2_build_grid.py
+.venv/Scripts/python.exe puysegur2_v9/steps/step3_convergence.py
+.venv/Scripts/python.exe puysegur2_v9/steps/step5_subset_gcmt.py
+.venv/Scripts/python.exe puysegur2_v9/steps/step6_write_input.py --force
+.venv/Scripts/python.exe puysegur2_v9/steps/step7_run.py
+.venv/Scripts/python.exe puysegur2_v9/steps/step9_report.py</pre></div>
+  <h3 id="width-result">What changes, on real data</h3>
+  <p>The width sets the number of rows through rptha's rule (<a href="step2.html#rows-width">rows and width</a>). Measured with the exact route on a copy of kermadectonga2_v8, before v9 changed the zone's Berryman values (so the rates are v8's, 0.2200 rather than v9's 0.2251; the comparison between the two widths is what matters here):</p>
+  <div class="tbl"><table>
+    <tr><th>kermadectonga2</th><th class="n">cells</th><th class="n">area, km<sup>2</sup></th><th class="n">mean dip</th><th class="n">convergence</th><th class="n">scenarios</th><th class="n">edge multiplier</th><th class="n">rate Mw 7.2+ / 8.0+</th></tr>
+    <tr><td>width 50 km (the example)</td><td class="n">73 x 3 = 219</td><td class="n">542,559</td><td class="n">15.42&deg;</td><td class="n">99.36</td><td class="n">3,075</td><td class="n">6.14</td><td class="n">0.2200 / 0.0379</td></tr>
+    <tr class="hl"><td>width 35 km</td><td class="n">73 x 4 = 292</td><td class="n">542,792</td><td class="n">15.41&deg;</td><td class="n">99.37</td><td class="n">3,513</td><td class="n">5.90</td><td class="n">0.2200 / 0.0379</td></tr>
+  </table></div>
+  <p>One more row of smaller cells, 438 more scenarios, the same fault surface (area within 0.05%), and practically the same rates: the moment balance depends on the area, the dip and the convergence, which the width does not change.</p>
+  <div class="callout"><span class="lbl">puysegur2 is a special case</span>Its zone is only about 71 km wide down the slope. With 50 km, rptha's rule gives 1 row and the minimum of 2 rows applies; with 35 km the rule itself gives 2 rows. Both give the same 13 x 2 mesh, with cells about 35 km wide, so on puysegur2 the width setting does not change anything.</div>
+</section>
+
+<section>
+  <h2 id="convergence">Example 2: a fixed convergence of 35 mm/yr</h2>
+  <p>PTHA18 used a constant 35 mm/yr on puysegur2 instead of Bird's model (25.60 mm/yr on this mesh). Changing only the number is not enough, because the Bird model has three parts:</p>
+  <div class="tbl"><table>
+    <tr><th>Part of the model</th><th>Bird (default here)</th><th>Constant (PTHA18 on puysegur)</th></tr>
+    <tr><td>rate for the moment balance</td><td>area-weighted Bird convergence</td><td>the constant</td></tr>
+    <tr><td>how scenarios of one magnitude share its rate</td><td><code>convergent_slip_weighted</code> + <code>convergent_slip_profile</code></td><td><code>inverse_slip</code>, no profile</td></tr>
+    <tr><td>LEVEL 4 target shape</td><td><code>convergence_profile</code> (Bird's div per column)</td><td>flat</td></tr>
+  </table></div>
+  <div class="grid g2">
+    <div class="card">
+      <h4><span class="badge good">right</span> Step 3's override</h4>
+      <ol class="steps">
+        <li>In <code>steps/step3_convergence.py</code>, set <code>CONVERGENCE_OVERRIDE_MM_PER_YR = 35</code>.</li>
+        <li>Run step 3, <code>step6_write_input.py --force</code>, 7, 9.</li>
+      </ol>
+      <p>Step 3 writes 35 and marks the zone as constant-convergence; step 6 then writes <code>inverse_slip</code> and no profiles: PTHA18's model.</p>
+    </div>
+    <div class="card">
+      <h4><span class="badge warn">mixed</span> Only the JSON number</h4>
+      <p>Setting <code>"tectonic_convergence_mm_per_yr": 35</code> and re-running step 7 changes the moment balance only: the scenarios are still shared by Bird's convergent slip and LEVEL 4 still aims at Bird's shape. To get PTHA18's model from the JSON alone, also set <code>"conditional_probability_model": "inverse_slip"</code> and delete the two <code>..._profile</code> keys.</p>
+    </div>
+  </div>
+  <div class="callout warn"><span class="lbl">Always the horizontal rate</span>Whatever you type is the horizontal plate rate. The engine divides it by cos(mean dip) itself; typing v / cos(dip) would apply the correction twice (<a href="step3.html#double-dip">why</a>).</div>
+</section>
+
+<section>
+  <h2 id="more">Other common changes</h2>
+  <details class="deep"><summary>Force the number of rows</summary><div class="body">
+    <p>Set <code>N_DOWNDIP_OVERRIDE = 3</code> in step 2 and re-run 2, 3, 5, 6 --force, 7, 9; or set <code>"n_downdip": 3</code> in the JSON and re-run 7 and 9. The override replaces rptha's width rule entirely.</p>
+  </div></details>
+  <details class="deep"><summary>Compare optimal with lm or mid on the same zone</summary><div class="body">
+    <p>The cleanest way is a second folder: <code>generate.py kermadec --zone kermadectonga2 --folder kt2_lm --ptha false --discretizer lm</code>, then <code>step_total.py</code>. Each folder downloads its own SLAB raster (into <code>data/slab1/</code> or <code>data/slab2/</code>) and GCMT files (into <code>data/gcmt/</code>); to skip the second SLAB download, copy the <code>.grd</code> from the first folder, or put it once in <code>from_scratch_v12/data/slab2/</code> (or <code>slab1/</code>), which every folder checks. PTHA18's files are shared. In an existing folder, set <code>"discretizer": "lm"</code> in the JSON and re-run 7 and 9.</p>
+  </div></details>
+  <details class="deep"><summary>Use PTHA18's width and row count (--ptha true)</summary><div class="body">
+    <p>Generate a new folder with <code>--ptha true</code>. Step 2 then uses PTHA18's width for the zone and, when PTHA18's cell table is available, its row count; step 6 uses PTHA18's scaling row. The Bird table is a separate flag, <code>--convergence bird-griffin</code> (<a href="convergence_sources.html">when it matters</a>). The contours are the same as with <code>--ptha false</code>. On a zone PTHA18 never modelled, use <code>--ptha false</code>. What each step reads in each mode: <a href="reference.html#ptha-reads">the list</a>.</p>
+  </div></details>
+  <details class="deep"><summary>Other literature values (coupling, b-value, Mw_max)</summary><div class="body">
+    <p>For one folder: edit <code>rates.coupling.spreadsheet_values</code>, <code>rates.b_anchor</code> or <code>rates.mw_max_observed</code> in the JSON and re-run 7 and 9. For every future folder of a zone: edit its row in <code>lib/berryman_params.py</code>.</p>
+  </div></details>
+  <details class="deep"><summary>A different earthquake window, or no Bayesian update</summary><div class="body">
+    <p>Change <code>WINDOW_START</code> / <code>WINDOW_END</code> in steps 4, 5 and 6 (each has its own copy), then re-run 4, 5, 6 --force, 7, 9; step 6 computes the duration from its copy. To see the rates without the update, set <code>"update_logic_tree_weights_with_data": false</code> in the JSON.</p>
+  </div></details>
+  <details class="deep"><summary>Start again from the data</summary><div class="body">
+    <p>Delete <code>inputs/input_&lt;zone&gt;_scratch.json</code> (or run step 6 with <code>--force</code>) and run <code>step_total.py</code>: every step then rebuilds from its inputs. Downloads (the folder's SLAB raster and GCMT files, PTHA18's files) are kept and not repeated.</p>
+  </div></details>
+</section>
+
+<section>
+  <h2 id="check">Check that a change took effect</h2>
+  <ul class="tight">
+    <li><b>Mesh:</b> step 2's and step 7's log lines <code>grid: ... unit sources</code> and <code>mesh: reusing step 2's grid</code> (or <code>rebuilding</code>); the report's STEP 2 cards.</li>
+    <li><b>Input:</b> the report's step cards show the values the engine used; the JSON's <code>_..._provenance</code> notes say where each came from.</li>
+    <li><b>Rates:</b> <code>outputs/logic_tree_summary.csv</code> (mean dip, convergence, edge multiplier, TVD) and <code>outputs/rate_curves.csv</code>.</li>
+  </ul>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>The 35 km example was run on a temporary copy of kermadectonga2_v8 (steps 2, 3, 5, 6 --force and 7), so the example folder itself is unchanged.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

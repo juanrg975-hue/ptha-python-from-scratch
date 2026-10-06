@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zones you can run | from_scratch_v12</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .muted{color:#8a93a3}
+  tr.cmd td{border-top:0;padding-top:0}
+  tr.cmd .code{margin:0}
+  tr.cmd pre{font-size:11px;padding-right:70px}
+  td code b{white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="side" id="side"></nav>
+<main>
+
+<section id="top">
+  <div class="crumb">Your own runs</div>
+  <h1>Zones you can run</h1>
+  <p class="lead">Every zone name that <code>generate.py --ptha false</code> accepts, with the SLAB region it needs, the command ready to copy, and what is known about running it. The list is exactly the zones in <code>lib/berryman_params.py</code>: with <code>--ptha false</code>, each zone's seismogenic cutoff, coupling, b-value and largest observed magnitude come from Berryman et al. (2015) through that file, so a zone that is not there cannot run. <a href="#add">Adding one</a> takes two lines.</p>
+  <div class="grid g4">
+    <div class="card kpi"><div class="num">32</div><div class="lbl">zone names with a Berryman mapping</div></div>
+    <div class="card kpi"><div class="num">26</div><div class="lbl">of them on a SLAB region, so <code>generate.py</code> can build them</div></div>
+    <div class="card kpi"><div class="num">15</div><div class="lbl">run end to end, steps 1 to 9, while writing these docs</div></div>
+    <div class="card kpi"><div class="num">6</div><div class="lbl">on no SLAB region (eastern Indonesia, south of New Zealand)</div></div>
+  </div>
+</section>
+
+<section>
+  <h2 id="at-a-glance">At a glance</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 960 200" role="img" aria-label="The command has two names: the SLAB region picks the raster, --zone picks the parameters, and a zone name ending in 2 means SLAB2.0">
+      <defs><marker id="zn-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a3"/></marker></defs>
+      <g font-size="12.5">
+        <rect x="10" y="20" width="940" height="44" rx="10" fill="#f0f2f5" stroke="#8a93a3"/>
+        <text x="26" y="47" font-family="monospace" font-size="13.5">generate.py <tspan fill="#2f6fdf" font-weight="700">sco</tspan> --zone <tspan fill="#2e9e6b" font-weight="700">sandwich</tspan> --folder sandwich_v9 --ptha false --discretizer optimal</text>
+        <rect x="80" y="104" width="250" height="84" rx="10" fill="#e8f0fd" stroke="#2f6fdf"/>
+        <text x="94" y="128" font-weight="700">SLAB region (first argument)</text>
+        <text x="94" y="148" fill="#5b6475">which raster to download: one of</text>
+        <text x="94" y="166" fill="#5b6475">the 27 of list_regions.py (Scotia Sea)</text>
+        <rect x="360" y="104" width="270" height="84" rx="10" fill="#e4f5ec" stroke="#2e9e6b"/>
+        <text x="374" y="128" font-weight="700">--zone: the zone name</text>
+        <text x="374" y="148" fill="#5b6475">which Berryman row: cutoff, coupling,</text>
+        <text x="374" y="166" fill="#5b6475">b, Mw_max (South Sandwich)</text>
+        <rect x="660" y="104" width="290" height="84" rx="10" fill="#fdf6e3" stroke="#b7791f"/>
+        <text x="674" y="128" font-weight="700">does the name end in "2"?</text>
+        <text x="674" y="148" fill="#5b6475">yes: SLAB2.0 (ScienceBase)</text>
+        <text x="674" y="166" fill="#5b6475">no: SLAB1.0 (earthquake.usgs.gov)</text>
+      </g>
+      <g stroke="#8a93a3" stroke-width="1.8" fill="none" marker-end="url(#zn-ar)">
+        <path d="M130,64 L180,102"/><path d="M270,64 L470,102"/><path d="M330,64 C560,80 740,80 780,102"/>
+      </g>
+    </svg>
+    <figcaption><b>Two names, two jobs.</b> The first argument chooses the SLAB raster, <code>--zone</code> chooses the zone's parameters, and the zone name's last character chooses SLAB1.0 or SLAB2.0 (PTHA18's own naming rule). The same region can hold several zones: <code>ker</code> holds kermadectonga (SLAB1.0) and kermadectonga2 (SLAB2.0).</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="rules">Choosing the names</h2>
+  <ul class="tight">
+    <li><b>The first argument</b> is a SLAB region: its three-letter prefix or its title from <code>list_regions.py</code> (<code>sco</code> or <code>"scotia sea"</code>). It is never a zone name: <code>generate.py antilles2</code> fails with <code>no SLAB2.0 region matches 'antilles2'</code>.</li>
+    <li><b><code>--zone</code></b> is the zone name from the table below, spelled exactly (<code>ryuku</code>, not ryukyu: that is PTHA18's spelling). Without it, <code>generate.py</code> guesses from the region's title, which works only when one zone name looks like it (<code>cascadia</code>); pass it always and nothing is left to chance.</li>
+    <li><b>The trailing "2"</b> is part of the name, not a version you choose: <code>kermadectonga2</code> and <code>kermadectonga</code> are two different PTHA18 zones on two different SLAB products. A name that is not in the table (for example <code>cascadia2</code>) has no Berryman mapping, and step 1 stops.</li>
+    <li><b><code>--folder</code></b> is any name you like; the commands below use <code>&lt;zone&gt;_v9</code> (add <code>--segmented true</code> for LEVEL 0 with segments). They leave out <code>--discretizer optimal</code> and <code>--convergence bird</code>, which are the defaults, and skip step 7b (<code>--skip-hs</code>) to keep a first run short.</li>
+  </ul>
+</section>
+
+<section>
+  <h2 id="zones">All 32 zones</h2>
+  <p>Sorted by SLAB region. "PTHA18" says whether PTHA18 modelled the zone (then step 8 can compare with it). The Berryman column is the dominant segment and the values step 1 and step 6 use. "Convergence" compares the two plate tables on PTHA18's mesh (<a href="convergence_sources.html">details</a>). The status is what happened when the zone was run for these docs; "not tried" means <code>generate.py</code> works but steps 1 to 9 were not run.</p>
+  <div class="tbl"><table class="fixed">
+    <colgroup><col style="width:17%"><col style="width:14%"><col style="width:8%"><col style="width:7%"><col style="width:21%"><col style="width:17%"><col style="width:16%"></colgroup>
+    <tr><th>Zone (<code>--zone</code>)</th><th>SLAB region (first argument)</th><th>SLAB</th><th>PTHA18</th><th>Berryman et al. (2015)</th><th>Convergence</th><th>Status</th></tr>
+<tr id="alaskaaleutians"><td><code><b>alaskaaleutians</b></code></td><td>Alaska <code>alu</code></td><td>SLAB1.0</td><td>yes</td><td>Alaska/Aleutians Whole Margin<br><span class="where">cutoff 45 km, coupling 0.55 (0.42 to 0.77), b 0.93, Mw<sub>max,obs</sub> 9.2</span></td><td>same with both tables</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py alu --zone alaskaaleutians --folder alaskaaleutians_v9 --ptha false
+.venv/Scripts/python.exe alaskaaleutians_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="calabria"><td><code><b>calabria</b></code></td><td>Calabria <code>cal</code></td><td>SLAB1.0</td><td><span class="muted">no</span></td><td>Calabria<br><span class="where">cutoff 60 km, coupling 0.5 (0.3 to 0.7), b 0.95, Mw<sub>max,obs</sub> 7.1</span></td><td><span class="where">not a PTHA18 zone: both tables give the same</span></td><td><span class="badge warn">not tried</span><br><span class="where">the tested version is <code>calabria2</code> (SLAB2.0)</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py cal --zone calabria --folder calabria_v9 --ptha false
+.venv/Scripts/python.exe calabria_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="calabria2"><td><code><b>calabria2</b></code></td><td>Calabria <code>cal</code></td><td>SLAB2.0</td><td><span class="muted">no</span></td><td>Calabria<br><span class="where">cutoff 60 km, coupling 0.5 (0.3 to 0.7), b 0.95, Mw<sub>max,obs</sub> 7.1</span></td><td><span class="where">not a PTHA18 zone: both tables give the same</span></td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py cal --zone calabria2 --folder calabria2_v9 --ptha false
+.venv/Scripts/python.exe calabria2_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="antilles2"><td><code><b>antilles2</b></code></td><td>Caribbean <code>car</code></td><td>SLAB2.0</td><td><span class="muted">no</span></td><td>Antilles<br><span class="where">cutoff 45 km, coupling 0.5 (0.3 to 0.7), b 0.92, Mw<sub>max,obs</sub> 8</span></td><td><span class="where">not a PTHA18 zone: both tables give the same</span></td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py car --zone antilles2 --folder antilles2_v9 --ptha false
+.venv/Scripts/python.exe antilles2_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="cascadia"><td><code><b>cascadia</b></code></td><td>Cascadia <code>cas</code></td><td>SLAB1.0</td><td>yes</td><td>Cascadia<br><span class="where">cutoff 30 km, coupling 0.8 (0.7 to 0.9), b 0.95, Mw<sub>max,obs</sub> 8.8</span></td><td>same with both tables</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py cas --zone cascadia --folder cascadia_v9 --ptha false
+.venv/Scripts/python.exe cascadia_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="mexico"><td><code><b>mexico</b></code></td><td>Central America <code>cam</code></td><td>SLAB1.0</td><td>yes</td><td>Mexico/Central America Whole Margin<br><span class="where">cutoff 50 km, coupling 0.6 (0.37 to 0.81), b 0.91, Mw<sub>max,obs</sub> 8.2</span></td><td>same with both tables</td><td><span class="badge warn">blocked download</span><br><span class="where">step 1: earthquake.usgs.gov answered <code>AccessDenied</code> for <code>cam_slab1.0_clip.grd</code>, in the browser too (<a href="troubleshooting.html#step1">what to do</a>)</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py cam --zone mexico --folder mexico_v9 --ptha false
+.venv/Scripts/python.exe mexico_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="izumariana"><td><code><b>izumariana</b></code></td><td>Izu-Bonin <code>izu</code></td><td>SLAB1.0</td><td>yes</td><td>Marianas<br><span class="where">cutoff 40 km, coupling 0.2 (0.1 to 0.7), b 1.015, Mw<sub>max,obs</sub> 7.2</span></td><td>same with both tables</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py izu --zone izumariana --folder izumariana_v9 --ptha false
+.venv/Scripts/python.exe izumariana_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="kurilsjapan"><td><code><b>kurilsjapan</b></code></td><td>Kamchatka-Kuril Islands-Japan <code>kur</code></td><td>SLAB1.0</td><td>yes</td><td>Kurile-Kamchatka<br><span class="where">cutoff 55 km, coupling 0.77 (0.67 to 0.9), b 0.915, Mw<sub>max,obs</sub> 9</span></td><td>same with both tables</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py kur --zone kurilsjapan --folder kurilsjapan_v9 --ptha false
+.venv/Scripts/python.exe kurilsjapan_v9/steps/step1_fetch_slab2.py
+.venv/Scripts/python.exe kurilsjapan_v9/steps/step2_build_grid.py
+.venv/Scripts/python.exe kurilsjapan_v9/steps/step3_convergence.py
+.venv/Scripts/python.exe kurilsjapan_v9/steps/step_total.py --skip-hs --auto-clip</pre></div></td></tr>
+<tr id="kermadectonga"><td><code><b>kermadectonga</b></code></td><td>Kermadec <code>ker</code></td><td>SLAB1.0</td><td>yes</td><td>Tonga<br><span class="where">cutoff 40 km, coupling 0.31 (0.21 to 0.72), b 0.95, Mw<sub>max,obs</sub> 8.1</span></td><td>same with both tables</td><td><span class="badge grey">not tried</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py ker --zone kermadectonga --folder kermadectonga_v9 --ptha false
+.venv/Scripts/python.exe kermadectonga_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="kermadectonga2"><td><code><b>kermadectonga2</b></code></td><td>Kermadec <code>ker</code></td><td>SLAB2.0</td><td>yes</td><td>Tonga<br><span class="where">cutoff 40 km, coupling 0.31 (0.21 to 0.72), b 0.95, Mw<sub>max,obs</sub> 8.1</span></td><td>same with both tables</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py ker --zone kermadectonga2 --folder kermadectonga2_v9 --ptha false
+.venv/Scripts/python.exe kermadectonga2_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="makran"><td><code><b>makran</b></code></td><td>Makran <code>mak</code></td><td>SLAB1.0</td><td>yes</td><td>Makran<br><span class="where">cutoff 40 km, coupling 0.5 (0.3 to 0.7), b 0.95, Mw<sub>max,obs</sub> 8.1</span></td><td>same with both tables</td><td><span class="badge grey">not tried</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py mak --zone makran --folder makran_v9 --ptha false
+.venv/Scripts/python.exe makran_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="makran2"><td><code><b>makran2</b></code></td><td>Makran <code>mak</code></td><td>SLAB2.0</td><td>yes</td><td>Makran<br><span class="where">cutoff 40 km, coupling 0.5 (0.3 to 0.7), b 0.95, Mw<sub>max,obs</sub> 8.1</span></td><td>tables differ by 1%</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py mak --zone makran2 --folder makran2_v9 --ptha false
+.venv/Scripts/python.exe makran2_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="newguinea"><td><code><b>newguinea</b></code></td><td>New Guinea <code>png</code></td><td>SLAB1.0</td><td>yes</td><td>New Guinea Trench Whole Margin<br><span class="where">cutoff 45 km, coupling 0.7 (0.6 to 0.8), b 0.95, Mw<sub>max,obs</sub> 8.2</span></td><td><b>use <code>--convergence bird-griffin</code></b> to match PTHA18 (49 vs 101 mm/yr)</td><td><span class="badge grey">not tried</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py png --zone newguinea --folder newguinea_v9 --ptha false
+.venv/Scripts/python.exe newguinea_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="newguinea2"><td><code><b>newguinea2</b></code></td><td>New Guinea <code>png</code></td><td>SLAB2.0</td><td>yes</td><td>New Guinea Trench Whole Margin<br><span class="where">cutoff 45 km, coupling 0.7 (0.6 to 0.8), b 0.95, Mw<sub>max,obs</sub> 8.2</span></td><td><b>use <code>--convergence bird-griffin</code></b> to match PTHA18 (38 vs 96 mm/yr)</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py png --zone newguinea2 --folder newguinea2_v9 --ptha false
+.venv/Scripts/python.exe newguinea2_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="philippine"><td><code><b>philippine</b></code></td><td>Philippines <code>phi</code></td><td>SLAB1.0</td><td>yes</td><td>Philippine<br><span class="where">cutoff 40 km, coupling 0.25 (0.1 to 0.75), b 0.94, Mw<sub>max,obs</sub> 7.6</span></td><td>same with both tables</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py phi --zone philippine --folder philippine_v9 --ptha false
+.venv/Scripts/python.exe philippine_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="puysegur"><td><code><b>puysegur</b></code></td><td>Puysegur <code>puy</code></td><td>SLAB1.0</td><td>yes</td><td>Puysegur<br><span class="where">cutoff 40 km, coupling 0.7 (0.5 to 0.8), b 0.95, Mw<sub>max,obs</sub> 7.8</span></td><td>PTHA18 used a constant 35 mm/yr (<a href="step3.html#puysegur">step 3</a>)</td><td><span class="badge warn">not tried</span><br><span class="where">SLAB1.0 has no <code>puy</code> grid (PTHA18 used a hand-built profile there); use <code>puysegur2</code></span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py puy --zone puysegur --folder puysegur_v9 --ptha false
+.venv/Scripts/python.exe puysegur_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="puysegur2"><td><code><b>puysegur2</b></code></td><td>Puysegur <code>puy</code></td><td>SLAB2.0</td><td>yes</td><td>Puysegur<br><span class="where">cutoff 40 km, coupling 0.7 (0.5 to 0.8), b 0.95, Mw<sub>max,obs</sub> 7.8</span></td><td>PTHA18 used a constant 35 mm/yr (<a href="step3.html#puysegur">step 3</a>)</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py puy --zone puysegur2 --folder puysegur2_v9 --ptha false
+.venv/Scripts/python.exe puysegur2_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="ryuku"><td><code><b>ryuku</b></code></td><td>Ryukyu <code>ryu</code></td><td>SLAB1.0</td><td>yes</td><td>Nankai/Ryukyu Ryukyu<br><span class="where">cutoff 20 km, coupling 0.44 (0.34 to 0.8), b 0.91, Mw<sub>max,obs</sub> 8.5</span></td><td>same with both tables</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py ryu --zone ryuku --folder ryuku_v9 --ptha false
+.venv/Scripts/python.exe ryuku_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="sandwich"><td><code><b>sandwich</b></code></td><td>Scotia Sea <code>sco</code></td><td>SLAB1.0</td><td>yes</td><td>South Sandwich<br><span class="where">cutoff 40 km, coupling 0.2 (0.1 to 0.7), b 1.09, Mw<sub>max,obs</sub> 7.5</span></td><td>tables differ by 4%</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py sco --zone sandwich --folder sandwich_v9 --ptha false
+.venv/Scripts/python.exe sandwich_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="solomon"><td><code><b>solomon</b></code></td><td>Solomon Islands <code>sol</code></td><td>SLAB1.0</td><td>yes</td><td>Solomon Southeast<br><span class="where">cutoff 60 km, coupling 0.7 (0.6 to 0.8), b 0.9, Mw<sub>max,obs</sub> 8.1</span></td><td>tables differ by 3%</td><td><span class="badge grey">not tried</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py sol --zone solomon --folder solomon_v9 --ptha false
+.venv/Scripts/python.exe solomon_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="solomon2"><td><code><b>solomon2</b></code></td><td>Solomon Islands <code>sol</code></td><td>SLAB2.0</td><td>yes</td><td>Solomon Southeast<br><span class="where">cutoff 60 km, coupling 0.7 (0.6 to 0.8), b 0.9, Mw<sub>max,obs</sub> 8.1</span></td><td>tables differ by 3%</td><td><span class="badge grey">not tried</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py sol --zone solomon2 --folder solomon2_v9 --ptha false
+.venv/Scripts/python.exe solomon2_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="southamerica"><td><code><b>southamerica</b></code></td><td>South America <code>sam</code></td><td>SLAB1.0</td><td>yes</td><td>S. America Peru<br><span class="where">cutoff 55 km, coupling 0.8 (0.7 to 0.9), b 0.89, Mw<sub>max,obs</sub> 9.5</span></td><td>same with both tables</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py sam --zone southamerica --folder southamerica_v9 --ptha false
+.venv/Scripts/python.exe southamerica_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="sunda"><td><code><b>sunda</b></code></td><td>Sumatra-Java <code>sum</code></td><td>SLAB1.0</td><td>yes</td><td>Andaman-Sunda Java<br><span class="where">cutoff 35 km, coupling 0.54 (0.44 to 0.79), b 0.94, Mw<sub>max,obs</sub> 9</span></td><td>same with both tables</td><td><span class="badge grey">not tried</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py sum --zone sunda --folder sunda_v9 --ptha false
+.venv/Scripts/python.exe sunda_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="sunda2"><td><code><b>sunda2</b></code></td><td>Sumatra-Java <code>sum</code></td><td>SLAB2.0</td><td>yes</td><td>Andaman-Sunda Java<br><span class="where">cutoff 35 km, coupling 0.54 (0.44 to 0.79), b 0.94, Mw<sub>max,obs</sub> 9</span></td><td>same with both tables</td><td><span class="badge good">run end to end</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py sum --zone sunda2 --folder sunda2_v9 --ptha false
+.venv/Scripts/python.exe sunda2_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="newhebrides"><td><code><b>newhebrides</b></code></td><td>Vanuatu <code>van</code></td><td>SLAB1.0</td><td>yes</td><td>New Hebrides South<br><span class="where">cutoff 35 km, coupling 0.37 (0.27 to 0.73), b 0.9, Mw<sub>max,obs</sub> 8.3</span></td><td>same with both tables</td><td><span class="badge grey">not tried</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py van --zone newhebrides --folder newhebrides_v9 --ptha false
+.venv/Scripts/python.exe newhebrides_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="newhebrides2"><td><code><b>newhebrides2</b></code></td><td>Vanuatu <code>van</code></td><td>SLAB2.0</td><td>yes</td><td>New Hebrides South<br><span class="where">cutoff 35 km, coupling 0.37 (0.27 to 0.73), b 0.9, Mw<sub>max,obs</sub> 8.3</span></td><td>tables differ by 4%</td><td><span class="badge grey">not tried</span></td></tr>
+<tr class="cmd"><td colspan="7"><div class="code"><pre>.venv/Scripts/python.exe from_scratch_v12/generate.py van --zone newhebrides2 --folder newhebrides2_v9 --ptha false
+.venv/Scripts/python.exe newhebrides2_v9/steps/step_total.py --skip-hs</pre></div></td></tr>
+<tr id="hjort"><td><code><b>hjort</b></code></td><td><span class="muted">none</span></td><td>SLAB1.0</td><td>yes</td><td>Hjort<br><span class="where">cutoff 20 km, coupling 0.5 (0.3 to 0.7), b 0.95, Mw<sub>max,obs</sub> 7.2</span></td><td><b>use <code>--convergence bird-griffin</code></b> to match PTHA18 (19 vs 16 mm/yr)</td><td><span class="badge bad">no SLAB region</span></td></tr>
+<tr class="cmd"><td colspan="7"><span class="where">none: no SLAB2.0 or SLAB1.0 region covers this structure</span></td></tr>
+<tr id="manokwari"><td><code><b>manokwari</b></code></td><td><span class="muted">none</span></td><td>SLAB1.0</td><td>yes</td><td>Manokwari Trench<br><span class="where">cutoff 45 km, coupling 0.5 (0.3 to 0.7), b 0.95, Mw<sub>max,obs</sub> 7.6</span></td><td><b>use <code>--convergence bird-griffin</code></b> to match PTHA18 (22 vs 18 mm/yr)</td><td><span class="badge bad">no SLAB region</span></td></tr>
+<tr class="cmd"><td colspan="7"><span class="where">none: no SLAB2.0 or SLAB1.0 region covers this structure</span></td></tr>
+<tr id="manus"><td><code><b>manus</b></code></td><td><span class="muted">none</span></td><td>SLAB1.0</td><td>yes</td><td>Manus Whole Margin<br><span class="where">cutoff 45 km, coupling 0.5 (0.3 to 0.7), b 0.95, Mw<sub>max,obs</sub> 7.5</span></td><td><b>use <code>--convergence bird-griffin</code></b> to match PTHA18 (12 vs 6 mm/yr)</td><td><span class="badge bad">no SLAB region</span></td></tr>
+<tr class="cmd"><td colspan="7"><span class="where">none: no SLAB2.0 or SLAB1.0 region covers this structure</span></td></tr>
+<tr id="sangihe"><td><code><b>sangihe</b></code></td><td><span class="muted">none</span></td><td>SLAB1.0</td><td>yes</td><td>Kepulauan Sangihe<br><span class="where">cutoff 45 km, coupling 0.5 (0.3 to 0.7), b 0.95, Mw<sub>max,obs</sub> 8.3</span></td><td><b>use <code>--convergence bird-griffin</code></b> to match PTHA18 (59 vs 54 mm/yr)</td><td><span class="badge bad">no SLAB region</span></td></tr>
+<tr class="cmd"><td colspan="7"><span class="where">none: no SLAB2.0 or SLAB1.0 region covers this structure</span></td></tr>
+<tr id="timor"><td><code><b>timor</b></code></td><td><span class="muted">none</span></td><td>SLAB1.0</td><td>yes</td><td>Timor<br><span class="where">cutoff 45 km, coupling 0.5 (0.3 to 0.7), b 0.95, Mw<sub>max,obs</sub> 7.5</span></td><td><b>use <code>--convergence bird-griffin</code></b> to match PTHA18 (23 vs 15 mm/yr)</td><td><span class="badge bad">no SLAB region</span></td></tr>
+<tr class="cmd"><td colspan="7"><span class="where">none: no SLAB2.0 or SLAB1.0 region covers this structure</span></td></tr>
+<tr id="timortrough"><td><code><b>timortrough</b></code></td><td><span class="muted">none</span></td><td>SLAB1.0</td><td>yes</td><td>Timor<br><span class="where">cutoff 45 km, coupling 0.5 (0.3 to 0.7), b 0.95, Mw<sub>max,obs</sub> 7.5</span></td><td><b>use <code>--convergence bird-griffin</code></b> to match PTHA18 (23 vs 15 mm/yr)</td><td><span class="badge bad">no SLAB region</span></td></tr>
+<tr class="cmd"><td colspan="7"><span class="where">none: no SLAB2.0 or SLAB1.0 region covers this structure</span></td></tr>
+  </table></div>
+  <p class="where">Made by <code>figures_src/make_zones_page.py</code> from <code>lib/berryman_params.py</code>, <code>lib/slab2_catalog.py</code> and <code>figures_src/convergence_sources.json</code>. Every command was checked with <code>generate.py</code> while writing this page.</p>
+</section>
+
+<section>
+  <h2 id="add">Adding a zone</h2>
+  <p>A zone that is not in the table needs two lines in <code>lib/berryman_params.py</code>, pointing at its row of Berryman et al. (2015) (the rows are the dictionary <code>BERRYMAN_ROWS</code> in the same file). This is how <code>sandwich</code> was added:</p>
+  <div class="code"><pre># in ZONE_TO_BERRYMAN_SEGMENTS: the Berryman row(s) the zone spans
+"sandwich": ["South Sandwich"],
+# in ZONE_DOMINANT_SEGMENT: the one row whose cutoff the zone uses
+"sandwich": "South Sandwich",</pre></div>
+  <p>Then run <code>generate.py</code> again: its report should show a cutoff, coupling and Mw<sub>max,obs</sub>, not <code>NOT AVAILABLE</code>. If the name ends in "2", step 1 uses SLAB2.0; otherwise SLAB1.0. The zone also needs a SLAB region that covers it: the six zones marked "no SLAB region" have a Berryman mapping but nothing to build a mesh from.</p>
+</section>
+
+<nav class="pager" id="pager"></nav>
+<footer>from_scratch_v12 documentation. Checked on 2026-09-28: every command with <code>generate.py</code>; the zones marked "run end to end" through steps 1 to 9.</footer>
+</main>
+<aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>
