@@ -37,7 +37,7 @@ sys.path.insert(0, os.path.join(PKG, "lib"))
 from pyptha_v12 import mesh_file, unit_sources as us  # noqa: E402
 
 Z = "alaskaaleutians"
-DAT = os.path.join(V9, "alaskaaleutians_quadrilateral_coors.dat")
+DAT = os.path.join(V9, "inputs_meshes", "alaskaaleutians_quadrilateral_coors.dat")
 USS = os.path.join(BASE, "inputs", "geometry", f"unit_source_statistics_{Z}.nc")
 INPUT = os.path.join(BASE, "inputs", f"input_{Z}.json")
 

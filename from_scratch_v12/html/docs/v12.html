@@ -74,7 +74,7 @@ figure.fig svg .node{fill:var(--warn)}
 <section id="use-sec">
   <h2 id="use">How to use it</h2>
 <pre class="code"># from V9/ (venv ../.venv)
-../.venv/Scripts/python.exe from_scratch_v12/generate.py alaska --zone alaskaaleutians --folder alaskaaleutians_v12 --ptha false --rupture-size local --mesh-file alaskaaleutians_quadrilateral_coors.dat
+../.venv/Scripts/python.exe from_scratch_v12/generate.py alaska --zone alaskaaleutians --folder alaskaaleutians_v12 --ptha false --rupture-size local --mesh-file inputs_meshes/alaskaaleutians_quadrilateral_coors.dat
 ../.venv/Scripts/python.exe alaskaaleutians_v12/steps/step_total.py</pre>
   <p>The zone name still matters: it gives the Berryman et al. (2015) parameters (coupling, b, largest magnitude), the plate convergence and the earthquake catalogue window, and PTHA18's official run for step 8 if the zone is one of PTHA18's. <code>--mesh-depth-units m|km</code> overrides the unit detection (metres if any |depth| &gt; 200).</p>
 </section>

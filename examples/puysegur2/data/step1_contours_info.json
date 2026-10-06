@@ -1,0 +1,116 @@
+{
+ "zone": "puysegur2",
+ "raster": "from_scratch_v12\\data\\slab2\\puy_slab2_dep_02.26.18.grd",
+ "clip_bbox": null,
+ "trench_ends": null,
+ "trench_ramp_rise_km": 3.0,
+ "ramp_trim_km": [
+  0.0,
+  0.0
+ ],
+ "cutoff_km_below_trench": 40.0,
+ "berryman_dominant_segment": "Puysegur",
+ "berryman_trench_depth_km": 6.0,
+ "contour_spacing_km": 5.0,
+ "trench_length_km": 629.0450759437814,
+ "trench_length_untrimmed_km": 693.9465362416657,
+ "trench_depth_below_msl_km": {
+  "p5": 4.11869703472842,
+  "median": 6.904201789539606,
+  "p95": 10.772834819227162
+ },
+ "levels": [
+  {
+   "level": 5.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 620.6276364212854,
+   "n_points": 425,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 10.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 614.5488474071617,
+   "n_points": 423,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 15.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 609.7208422371021,
+   "n_points": 419,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 20.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 606.2863089930429,
+   "n_points": 418,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 25.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 604.8544624526639,
+   "n_points": 415,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 30.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 602.6817255431811,
+   "n_points": 414,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 35.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 600.9370965947544,
+   "n_points": 412,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 40.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 598.9495367396094,
+   "n_points": 410,
+   "edge_fraction": 0.0
+  }
+ ],
+ "ends": {
+  "start": {
+   "cut": false,
+   "trench_km": 0.0,
+   "contours_km": 0.0,
+   "reason": "kept as it is (17 deg off square, within PTHA18's own range)",
+   "tip_width_ratio": 0.660377358490566,
+   "deviation_deg": 17.11145385301876,
+   "deviation_after_deg": null
+  },
+  "end": {
+   "cut": true,
+   "trench_km": 64.8842722935218,
+   "contours_km": 64.90146030270925,
+   "reason": "its natural end is 53 deg off square: cut along the last down-dip line that reaches the cutoff inside the SLAB data",
+   "tip_width_ratio": 1.0943396226415094,
+   "deviation_deg": 53.217286602023215,
+   "deviation_after_deg": 12.727584319925398
+  }
+ }
+}

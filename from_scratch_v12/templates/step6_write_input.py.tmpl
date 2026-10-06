@@ -73,7 +73,7 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 EXAMPLE = os.path.abspath(os.path.join(HERE, ".."))
-ROOT = os.path.abspath(os.path.join(EXAMPLE, ".."))  # ptha18_logic_tree_test/
+ROOT = os.path.abspath(os.path.join(EXAMPLE, {{ROOT_UP}}))  # ptha18_logic_tree_test/
 V5_DIR = os.path.join(ROOT, "{{PKG}}")
 
 sys.path.insert(0, V5_DIR)
@@ -104,7 +104,7 @@ OUT_JSON = os.path.join(EXAMPLE, "inputs", OUT_JSON_NAME)
 # The engine writes to runs/python/<run_name>/. v3-v7 used "<zone>_scratch",
 # shared by every version and every example folder of the same zone, so each
 # run overwrote the previous one there; v8 adds this folder's name.
-RUN_NAME = "{{ZONE}}_scratch_{{FOLDER}}"
+RUN_NAME = "{{ZONE}}_scratch_{{NAME}}"
 PTHA18_ZONE_NAME = "{{PTHA18_ZONE}}"
 
 # --ptha flag from generate.py (see its module docstring).

@@ -1,0 +1,125 @@
+{
+ "zone": "alaskaaleutians",
+ "raster": "examples\\alaskaaleutians_slab\\data\\slab1\\alu_slab1.0_clip.grd",
+ "clip_bbox": null,
+ "trench_ends": null,
+ "trench_ramp_rise_km": 3.0,
+ "ramp_trim_km": [
+  0.0,
+  0.0
+ ],
+ "cutoff_km_below_trench": 45.0,
+ "berryman_dominant_segment": "Alaska/Aleutians Whole Margin",
+ "berryman_trench_depth_km": 6.0,
+ "contour_spacing_km": 5.0,
+ "trench_length_km": 3364.5128895175885,
+ "trench_length_untrimmed_km": 3544.48682848699,
+ "trench_depth_below_msl_km": {
+  "p5": 6.837276876535502,
+  "median": 8.547970386829988,
+  "p95": 9.42862424111568
+ },
+ "levels": [
+  {
+   "level": 5.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3309.7078948950516,
+   "n_points": 2802,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 10.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3280.8467653945727,
+   "n_points": 2792,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 15.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3283.913172602344,
+   "n_points": 2782,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 20.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3311.177857764357,
+   "n_points": 2802,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 25.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3291.052173763796,
+   "n_points": 2789,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 30.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3274.6447123512735,
+   "n_points": 2780,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 35.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3320.7232002105384,
+   "n_points": 2786,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 40.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3286.0590287243867,
+   "n_points": 2761,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 45.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3259.2142759355966,
+   "n_points": 2745,
+   "edge_fraction": 0.0
+  }
+ ],
+ "ends": {
+  "start": {
+   "cut": true,
+   "trench_km": 179.91321855083854,
+   "contours_km": 179.97393897080354,
+   "reason": "its natural end is 86 deg off square: cut along the last down-dip line that reaches the cutoff inside the SLAB data",
+   "tip_width_ratio": 0.8,
+   "deviation_deg": 85.65614867784618,
+   "deviation_after_deg": 16.17224753189842
+  },
+  "end": {
+   "cut": false,
+   "trench_km": 0.0,
+   "contours_km": 0.0,
+   "reason": "kept as it is (11 deg off square, within PTHA18's own range)",
+   "tip_width_ratio": 2.510344827586207,
+   "deviation_deg": 11.418932902216227,
+   "deviation_after_deg": null
+  }
+ }
+}

@@ -107,7 +107,7 @@ columns) is refused with a message.
 
 **Example:** `alaskaaleutians_v12` (`generate.py alaska --zone alaskaaleutians
 --folder alaskaaleutians_v12 --ptha false --rupture-size local --mesh-file
-alaskaaleutians_quadrilateral_coors.dat`): steps 1-9 complete, step 8 against
+inputs_meshes/alaskaaleutians_quadrilateral_coors.dat`): steps 1-9 complete, step 8 against
 PTHA18's official run; report.html has a "STEP 1-2: geometry from an external
 mesh" card.
 
@@ -1252,7 +1252,7 @@ docstring at the top explaining its method and sources in full.
   (rate_curves, exceedance tables, logic-tree branches) is identical to rptha's rule; what
   changes is each scenario's area, slip and rate, the conditional probabilities, the
   integrated slip and the fitted edge multiplier.
-- The engine writes to `runs/python/<zone>_scratch_<folder>/`; step 7 then copies everything into `<folder>/outputs/`:
+- The engine writes to `runs/python/<zone>_scratch_<folder>/` (a fixed location); step 7 copies everything into `<folder>/outputs/` and deletes that staging folder:
   - `rate_curves.csv`: mean exceedance rate vs Mw
   - `exceedance_rate_percentiles.csv`: mean + percentile curves
   - `logic_tree_branches_<zone>.csv`: every branch with prior and posterior weight

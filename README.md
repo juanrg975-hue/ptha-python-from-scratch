@@ -39,15 +39,26 @@ python calabria2_v12/steps/step_total.py --skip-hs --skip-official
 ```
 
 `generate.py` writes the folder in the repository root; the root `.gitignore`
-ignores every generated folder. The scripts inside it print commands as
+ignores every generated folder except `examples/` (`--folder examples/<name>`
+also works). The scripts inside it print commands as
 `.venv/Scripts/python.exe ...` (Windows); use `python ...` on other systems.
 
 External mesh instead of SLAB (the example file is PTHA18's own Alaska mesh):
 
 ```bash
-python from_scratch_v12/generate.py alaska --zone alaskaaleutians --folder alaskaaleutians_v12 --ptha false --rupture-size local --mesh-file alaskaaleutians_quadrilateral_coors.dat
+python from_scratch_v12/generate.py alaska --zone alaskaaleutians --folder alaskaaleutians_v12 --ptha false --rupture-size local --mesh-file inputs_meshes/alaskaaleutians_quadrilateral_coors.dat
 python alaskaaleutians_v12/steps/step_total.py --skip-hs --skip-official
 ```
+
+## Examples
+
+[`examples/`](examples/) holds eight finished runs: Kermadec-Tonga, Kamchatka and
+Kuril-Japan, Alaska-Aleutians (once from the external mesh, once from SLAB),
+Calabria, Lesser Antilles, Makran and Puysegur. Each folder has its
+`report.html`, and its `RUN.html` starts with the exact commands used (the
+`generate.py` line with its flags and every `step_total.py` run). See
+[examples/README.md](examples/README.md). External meshes such as the Alaska one
+live in [`inputs_meshes/`](inputs_meshes/).
 
 ## What needs the network
 
@@ -106,7 +117,7 @@ published files and use the same R setup.
 - `from_scratch_v12/data/slab2/`: USGS SLAB2.0 depth rasters (public domain).
 - `from_scratch_v12/validation/ptha18_reference/`: small tables published with
   PTHA18 by Geoscience Australia.
-- `alaskaaleutians_quadrilateral_coors.dat`: Alaska-Aleutians mesh equal to
+- `inputs_meshes/alaskaaleutians_quadrilateral_coors.dat`: Alaska-Aleutians mesh equal to
   PTHA18's own unit-source mesh (see `from_scratch_v12/README.md`, "What v12
   changes").
 

@@ -62,11 +62,12 @@ everything else in this example lives:
   every scenario's rate for the zone as a whole (0.5 x unsegmented + 0.5 x
   each segment it touches, PTHA18's partial-segmentation percentiles).
 
-The engine's own copy stays in runs/python/<run_name>/ too (that is just
-how the engine works; v8 names it <zone>_scratch_<folder>, so two example
-folders of the same zone no longer overwrite each other there); outputs/ is
-the copy that belongs to this example. Re-running this step replaces
-outputs/ as a whole, including step 7b's results (re-run step 7b after it).
+The engine's own copy in runs/python/<run_name>/ (its fixed location; v8
+names it <zone>_scratch_<folder>, so two example folders of the same zone no
+longer overwrite each other there) is only a staging area: once outputs/ holds
+the same files this step deletes it, and runs/ with it when nothing else is in
+there. Re-running this step replaces outputs/ as a whole, including step 7b's
+results (re-run step 7b after it).
 
 Run from ptha18_logic_tree_test/:
     .venv/Scripts/python.exe {{FOLDER}}/steps/step7_run.py
@@ -79,7 +80,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 EXAMPLE = os.path.abspath(os.path.join(HERE, ".."))
-ROOT = os.path.abspath(os.path.join(EXAMPLE, ".."))  # ptha18_logic_tree_test/
+ROOT = os.path.abspath(os.path.join(EXAMPLE, {{ROOT_UP}}))  # ptha18_logic_tree_test/
 
 # v5's own forked engine (with the 3 fidelity fixes -- see
 # {{PKG}}/html/docs/code_map.html), NOT the shared python_logic_tree/ every other
@@ -98,6 +99,18 @@ def engine_out_dir():
     with open(INPUT_JSON, encoding="utf-8") as fh:
         run_name = json.load(fh)["run_name"]
     return os.path.join(ROOT, "runs", "python", run_name)
+
+
+def remove_engine_copy(out_dir):
+    """Drop the engine's staging folder (outputs/ has the same files now), and
+    runs/python/ and runs/ too if that leaves them empty (step 8 puts the
+    official run there, so they stay when it has run)."""
+    shutil.rmtree(out_dir)
+    for parent in (os.path.dirname(out_dir), os.path.join(ROOT, "runs")):
+        try:
+            os.rmdir(parent)
+        except OSError:
+            pass
 
 
 def main():
@@ -136,6 +149,8 @@ def main():
         shutil.rmtree(EXAMPLE_OUT_DIR)
     shutil.copytree(out_dir, EXAMPLE_OUT_DIR)
     print(f"  copied      -> {EXAMPLE_OUT_DIR}  (this example's own copy)")
+    remove_engine_copy(out_dir)
+    print(f"  removed the engine's staging folder {out_dir}")
 
     print("\n  For a comparison against the official run, see step8_official.py")
     print("  (it needs R with rptha installed; run it, then re-run step9_report.py)")

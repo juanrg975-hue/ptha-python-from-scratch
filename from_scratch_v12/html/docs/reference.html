@@ -148,7 +148,7 @@
   <span class="d">outputs_official/</span>  <span class="c"># the same, for step 8</span>
     <span class="d">ptha18_reference/</span>  <span class="c"># everything of PTHA18 the report compares with (step 8)</span></div>
   <p>A segmented folder has the same layout and the same files, plus those in <a href="#segmented-files">Files a segmented run adds</a> (kermadectonga2_v9seg: 61 more).</p>
-  <p class="where">Outside the folder: the engine's working copy <code>runs/python/&lt;run_name&gt;/</code> (step 7 copies it into <code>outputs/</code>), PTHA18's official input <code>inputs/input_&lt;zone&gt;.json</code> and cell tables <code>inputs/geometry/</code> (read only by step 8), and the shared <code>from_scratch_v12/data/slab1/</code>, <code>slab2/</code>: empty unless you put a SLAB raster there by hand, which every folder of that region then reuses.</p>
+  <p class="where">Outside the folder: the engine's staging folder <code>runs/python/&lt;run_name&gt;/</code> (step 7 copies it into <code>outputs/</code> and deletes it; it stays only for step 8's official run), PTHA18's official input <code>inputs/input_&lt;zone&gt;.json</code> and cell tables <code>inputs/geometry/</code> (read only by step 8), and the shared <code>from_scratch_v12/data/slab1/</code>, <code>slab2/</code>: empty unless you put a SLAB raster there by hand, which every folder of that region then reuses.</p>
 </section>
 
 <section>

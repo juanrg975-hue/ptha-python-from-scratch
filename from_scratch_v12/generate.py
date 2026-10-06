@@ -230,8 +230,10 @@ Usage
 
 import argparse
 import csv
+import html
 import os
 import re
+import shlex
 import sys
 import urllib.parse
 
@@ -540,7 +542,9 @@ def main():
                     help="zone name: with --ptha true an exact "
                          "sourcezone_parameters.csv sourcename, with --ptha "
                          "false a name in lib/berryman_params.py")
-    ap.add_argument("--folder", default=None, help="folder name to create")
+    ap.add_argument("--folder", default=None,
+                    help="folder to create, relative to the repository root; "
+                         "may be nested (e.g. examples/calabria2)")
     ap.add_argument("--id", default=None, help="ScienceBase item id")
     ap.add_argument("--ptha", default="true", choices=["true", "false"],
                     help="true (default): steps may read PTHA18's files -- "
@@ -600,7 +604,7 @@ def main():
                          "one from SLAB (steps 1-2). A text file with one line "
                          "per unit source and 12 numbers: its 4 corners as "
                          "lon lat depth, going round the cell (e.g. "
-                         "alaskaaleutians_quadrilateral_coors.dat). It must be "
+                         "inputs_meshes/alaskaaleutians_quadrilateral_coors.dat). It must be "
                          "a structured mesh (rows down dip x columns along "
                          "strike, cells sharing their corners). Copied into "
                          "the example's inputs/geometry/.")
@@ -699,6 +703,10 @@ def main():
 
     requested = args.folder or (
         re.sub(r"[^a-z0-9_]+", "_", args.name.lower()).strip("_") + "_v12")
+    # --folder may be nested (e.g. examples/calabria2): the steps then climb
+    # one more level to find the package (ROOT_UP), and the run and figure
+    # labels use the last component only (NAME)
+    requested = requested.replace("\\", "/").strip("/")
     folder = pick_folder_name(requested)
     example_dir = os.path.join(ROOT, folder)
 
@@ -733,6 +741,12 @@ def main():
 
     mapping = {
         "FOLDER": folder,
+        "NAME": folder.rsplit("/", 1)[-1],
+        # the exact command line, shown at the top of RUN.html
+        "GENERATE_CMD": html.escape(
+            f"python {PKG}/generate.py "
+            + " ".join(shlex.quote(a) for a in sys.argv[1:])),
+        "ROOT_UP": ", ".join(['".."'] * (folder.count("/") + 1)),
         "ZONE": ptha18_zone,
         "PTHA18_ZONE": ptha18_zone,
         # v9: the generated steps import the engine from the package that

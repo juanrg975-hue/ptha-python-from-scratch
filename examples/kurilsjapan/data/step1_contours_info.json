@@ -1,0 +1,148 @@
+{
+ "zone": "kurilsjapan",
+ "raster": "examples\\kurilsjapan\\data\\slab1\\kur_slab1.0_clip.grd",
+ "clip_bbox": [
+  139.66623771414416,
+  164.24999389648437,
+  34.22764979480337,
+  55.89135224117881
+ ],
+ "trench_ends": null,
+ "trench_ramp_rise_km": 3.0,
+ "ramp_trim_km": [
+  0.0,
+  0.0
+ ],
+ "cutoff_km_below_trench": 55.0,
+ "berryman_dominant_segment": "Kurile-Kamchatka",
+ "berryman_trench_depth_km": 8.0,
+ "contour_spacing_km": 5.0,
+ "trench_length_km": 2968.03715821799,
+ "trench_length_untrimmed_km": 2968.03715821799,
+ "trench_depth_below_msl_km": {
+  "p5": 6.955361146428781,
+  "median": 8.399762095925057,
+  "p95": 10.08392580335886
+ },
+ "levels": [
+  {
+   "level": 5.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 2975.428810974188,
+   "n_points": 2132,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 10.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 2982.8319151986957,
+   "n_points": 2137,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 15.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 2990.361386867352,
+   "n_points": 2142,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 20.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 2998.448424513665,
+   "n_points": 2148,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 25.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3004.914046128766,
+   "n_points": 2150,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 30.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3011.8663191431565,
+   "n_points": 2154,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 35.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3019.4570351280104,
+   "n_points": 2157,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 40.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3029.9684282832623,
+   "n_points": 2160,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 45.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3038.897730459991,
+   "n_points": 2164,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 50.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3047.0552523579736,
+   "n_points": 2167,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 55.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3055.5262527415225,
+   "n_points": 2170,
+   "edge_fraction": 0.0
+  }
+ ],
+ "ends": {
+  "start": {
+   "cut": false,
+   "trench_km": 0.0,
+   "contours_km": 0.0,
+   "reason": "kept as it is (24 deg off square, within PTHA18's own range)",
+   "tip_width_ratio": 0.8839779005524862,
+   "deviation_deg": 24.402365981492395,
+   "deviation_after_deg": null
+  },
+  "end": {
+   "cut": false,
+   "trench_km": 0.0,
+   "contours_km": 0.0,
+   "reason": "kept as it is (9 deg off square, within PTHA18's own range)",
+   "tip_width_ratio": 0.9281767955801105,
+   "deviation_deg": 9.269220892127507,
+   "deviation_after_deg": null
+  }
+ }
+}

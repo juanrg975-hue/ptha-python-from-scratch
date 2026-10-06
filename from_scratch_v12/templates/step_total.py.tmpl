@@ -51,6 +51,7 @@ the report:
 """
 
 import argparse
+import html
 import os
 import subprocess
 import sys
@@ -75,6 +76,29 @@ STEPS = [
     ("step8_official.py", False),  # optional: needs R + rptha
     ("step9_report.py", True),
 ]
+
+
+RUN_HTML = os.path.join(os.path.dirname(HERE), "RUN.html")
+
+
+def record_run(elapsed_min):
+    """Add this run's command line to the "Commands used" part of RUN.html, so
+    the page lists the flags every full run was really given."""
+    marker = "<!-- RUNS:END -->"
+    try:
+        with open(RUN_HTML, encoding="utf-8") as fh:
+            text = fh.read()
+        if marker not in text:
+            return
+        cmd = " ".join(["python", "{{FOLDER}}/steps/step_total.py"] + sys.argv[1:])
+        line = ('<div class="cmd"><code><span class="p">$ </span>' + html.escape(cmd)
+                + '</code></div>\n  <p class="sec-note" style="margin-bottom:10px">'
+                + time.strftime("%Y-%m-%d %H:%M") + ", " + f"{elapsed_min:.1f}"
+                + " min</p>\n  ")
+        with open(RUN_HTML, "w", encoding="utf-8") as fh:
+            fh.write(text.replace(marker, line + marker))
+    except OSError as exc:
+        print(f"  (could not record this run in RUN.html: {exc})")
 
 
 def main():
@@ -168,6 +192,7 @@ def main():
     print("\n" + "#" * 70)
     print(f"# Done in {elapsed/60:.1f} min. See {{FOLDER}}/report.html")
     print("#" * 70)
+    record_run(elapsed / 60)
 
 
 if __name__ == "__main__":

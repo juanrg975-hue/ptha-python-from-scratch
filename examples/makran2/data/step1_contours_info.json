@@ -1,0 +1,116 @@
+{
+ "zone": "makran2",
+ "raster": "from_scratch_v12\\data\\slab2\\mak_slab2_dep_02.24.18.grd",
+ "clip_bbox": null,
+ "trench_ends": null,
+ "trench_ramp_rise_km": 3.0,
+ "ramp_trim_km": [
+  0.0,
+  0.0
+ ],
+ "cutoff_km_below_trench": 40.0,
+ "berryman_dominant_segment": "Makran",
+ "berryman_trench_depth_km": 3.0,
+ "contour_spacing_km": 5.0,
+ "trench_length_km": 961.2680176392676,
+ "trench_length_untrimmed_km": 961.2680176392676,
+ "trench_depth_below_msl_km": {
+  "p5": 3.1106538280315226,
+  "median": 5.585977069100182,
+  "p95": 6.954072744414532
+ },
+ "levels": [
+  {
+   "level": 5.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 990.0010777503288,
+   "n_points": 220,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 10.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 995.7496665768987,
+   "n_points": 217,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 15.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1020.5349464013447,
+   "n_points": 235,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 20.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1054.6498444061945,
+   "n_points": 248,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 25.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1078.4362317368716,
+   "n_points": 260,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 30.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1096.3099156480332,
+   "n_points": 267,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 35.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1108.5590967210003,
+   "n_points": 272,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 40.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1125.6898468588317,
+   "n_points": 277,
+   "edge_fraction": 0.0
+  }
+ ],
+ "ends": {
+  "start": {
+   "cut": false,
+   "trench_km": 0.0,
+   "contours_km": 0.0,
+   "reason": "kept as it is (33 deg off square, within PTHA18's own range)",
+   "tip_width_ratio": 0.9946524064171123,
+   "deviation_deg": 33.29908230312017,
+   "deviation_after_deg": null
+  },
+  "end": {
+   "cut": false,
+   "trench_km": 0.0,
+   "contours_km": 0.0,
+   "reason": "kept as it is (25 deg off square, within PTHA18's own range)",
+   "tip_width_ratio": 0.893048128342246,
+   "deviation_deg": 25.314193610939896,
+   "deviation_after_deg": null
+  }
+ }
+}

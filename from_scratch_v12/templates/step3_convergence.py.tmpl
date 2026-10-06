@@ -83,7 +83,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 EXAMPLE = os.path.abspath(os.path.join(HERE, ".."))
-ROOT = os.path.abspath(os.path.join(EXAMPLE, ".."))
+ROOT = os.path.abspath(os.path.join(EXAMPLE, {{ROOT_UP}}))
 sys.path.insert(0, os.path.join(ROOT, "{{PKG}}"))
 sys.path.insert(0, os.path.join(ROOT, "{{PKG}}", "lib"))  # helper modules
 

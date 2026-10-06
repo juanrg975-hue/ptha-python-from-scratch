@@ -86,7 +86,7 @@ def test_alaska_file_matches_ptha18_table():
     unit source's centre, strike and length as in PTHA18's table; depth and
     dip too except the trench row (the file puts the trench at 0.1 km)."""
     nc = pytest.importorskip("netCDF4")
-    dat = os.path.join(_V9, "alaskaaleutians_quadrilateral_coors.dat")
+    dat = os.path.join(_V9, "inputs_meshes", "alaskaaleutians_quadrilateral_coors.dat")
     ref = os.path.join(_PKG, "validation", "ptha18_reference", "nc",
                        "unit_source_statistics_alaskaaleutians.nc")
     if not (os.path.exists(dat) and os.path.exists(ref)):

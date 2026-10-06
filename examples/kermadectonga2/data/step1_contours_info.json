@@ -1,0 +1,116 @@
+{
+ "zone": "kermadectonga2",
+ "raster": "from_scratch_v12\\data\\slab2\\ker_slab2_dep_02.24.18.grd",
+ "clip_bbox": null,
+ "trench_ends": null,
+ "trench_ramp_rise_km": 3.0,
+ "ramp_trim_km": [
+  10.970004116153895,
+  0.0
+ ],
+ "cutoff_km_below_trench": 40.0,
+ "berryman_dominant_segment": "Tonga",
+ "berryman_trench_depth_km": 8.0,
+ "contour_spacing_km": 5.0,
+ "trench_length_km": 3616.995315221212,
+ "trench_length_untrimmed_km": 3796.845907089175,
+ "trench_depth_below_msl_km": {
+  "p5": 5.003620469769821,
+  "median": 8.460311922762276,
+  "p95": 10.699292702309716
+ },
+ "levels": [
+  {
+   "level": 5.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3493.3266664696175,
+   "n_points": 848,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 10.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3434.941821138249,
+   "n_points": 840,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 15.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3405.735327091606,
+   "n_points": 836,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 20.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3386.3947834891487,
+   "n_points": 832,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 25.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3370.9227720872163,
+   "n_points": 828,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 30.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3357.8400130509644,
+   "n_points": 827,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 35.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3346.3370863321115,
+   "n_points": 824,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 40.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 3335.82500829438,
+   "n_points": 822,
+   "edge_fraction": 0.0
+  }
+ ],
+ "ends": {
+  "start": {
+   "cut": true,
+   "trench_km": 179.79122673112533,
+   "contours_km": 243.18473164053697,
+   "reason": "the zone narrows to a point there (38% of its median width at the tip): cut where it is back to 70%",
+   "tip_width_ratio": 0.37857142857142856,
+   "deviation_deg": 81.14283100381144,
+   "deviation_after_deg": 8.63221457798656
+  },
+  "end": {
+   "cut": true,
+   "trench_km": 0.0,
+   "contours_km": 50.93772774694563,
+   "reason": "its natural end is 72 deg off square: cut along the down-dip line from the trench's last point",
+   "tip_width_ratio": 0.6071428571428571,
+   "deviation_deg": 72.2519921225772,
+   "deviation_after_deg": 44.53680390054632
+  }
+ }
+}

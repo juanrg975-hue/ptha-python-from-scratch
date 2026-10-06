@@ -1,0 +1,491 @@
+"""STEP 8 - Build the OFFICIAL PTHA18 comparison target, from zero.
+
+Steps 1-7 built a from-scratch Caribbean run out of public data only: SLAB2.0
+geometry, a Bird (2003) convergence average, a fresh GCMT subset. None of
+that touches PTHA18's own saved results. This step produces the official run
+those numbers get compared against, so that step 9's comparison uses a run
+this session actually built, not one left over from earlier work.
+
+This step is different in kind from steps 1-7
+------------------------------------------------
+Steps 1-7 are pure Python, no R, no PTHA18-internal data. This step is not,
+and cannot be: PTHA18's official logic-tree branches and Bayesian-update
+weights live inside R closures attached to each source zone's rate function
+in the saved session -- objects that only exist once that function has been
+called inside a live R session. No Python RData reader can get at them. So
+this step is a thin wrapper around two pieces of the SHARED engine that
+already do this correctly:
+
+  official_ptha_data/fetch_official_inputs.py   downloads the saved session
+                                                  (1.34 GB, cached after the
+                                                  first zone), calls Rscript
+                                                  to extract the official
+                                                  tree/sourcepar/GCMT
+                                                  observations, verifies area
+                                                  and mean dip to machine
+                                                  precision, and writes
+                                                  inputs/input_antilles2.json
+  python_logic_tree_v12/run_logic_tree.py         v8's engine, the SAME one
+  (in from_scratch_v12/)                           step 7 runs, here on the
+                                                  official input instead of
+                                                  the from-scratch one (v7
+                                                  ran the package's older
+                                                  python_logic_tree/ engine
+                                                  here, so the comparison
+                                                  mixed two engines)
+
+v8: PTHA18's Bird model on the official input
+----------------------------------------------
+fetch_official_inputs.py writes the official convergence as one number and
+selects 1/slip event weights with a flat LEVEL 4 target. That is PTHA18's
+model only for its constant-convergence zones (puysegur). For every zone with
+use_bird_convergence = 1, R weights events by the Bird convergent slip under
+them and fits LEVEL 4 to the Bird convergent component
+(compute_rates_all_sources.R:371-420, 537-573). This step therefore adds the
+per-column Bird profiles, computed on PTHA18's own mesh with
+lib/bird_convergence.py, to this example's copy of the input, after checking
+that their area-weighted mean reproduces the official convergence. With them
+v8's engine reproduces PTHA18's published per-event rates to about 1e-6
+(cascadia, makran2, philippine); without them the median error was 4-26%.
+
+Everything of PTHA18 the report compares with
+----------------------------------------------
+Steps 1-7, 7b and 9 read nothing of PTHA18 themselves. This step writes,
+besides the official run, examples/caribbean2/outputs_official/ptha18_reference/:
+
+  unit_source_statistics_antilles2.nc   PTHA18's mesh table (NCI)
+  official_convergence_per_cell.npy     Bird convergent slip on that mesh
+  official_convergence_per_column.json  the same, per along-strike column
+                                        (PTHA18's Bird table), per unit source
+  official_grid_lonlat.npy              PTHA18's published cell outlines
+                                        (NCI unit_source_grid shapefile)
+  official_gcmt.json                    PTHA18's LEVEL 3 event count and window
+  hs_comparison.csv, vaus_comparison.csv
+                                        step 7b's fields against PTHA18's HS
+                                        and VAUS catalogues, if step 7b ran and
+                                        the catalogues are in
+                                        official_ptha_data/public_nc/ (pass
+                                        --download-hs to fetch them)
+
+Step 9 reads PTHA18 only from outputs_official/.
+
+v9: a segmented example gets PTHA18's SEGMENTED run
+----------------------------------------------------
+When step 6 wrote segments (--segmented true), the official run is PTHA18's
+own segmented model, not its unsegmented branch alone: every segment row of
+sourcezone_parameters.csv for this zone (its columns of PTHA18's mesh, its
+coupling, b range and mw_max_observed) with the GCMT events the saved session
+gave that segment. The engine then reports PTHA18's unsegmented branch, each
+segment, their union and the 0.5/0.5 mix, the same four curves step 7 reports,
+so step 9 compares like with like. validate_v9.py official_segments checks
+that this reproduces PTHA18's official tree of every segment. The run goes to
+runs/python/antilles2_official_segmented/, so it never mixes with the
+unsegmented official run of an unsegmented example of the same zone, and
+ptha18_reference/official_segments.json lists the segments for step 9.
+
+Requires R with the rptha package installed (see this script's own error
+message if Rscript is not found). Nothing else here needs R.
+
+If this zone is not in PTHA18's saved session at all -- some SLAB2.0 regions
+were never modelled by PTHA18 -- fetch_official_inputs.py will fail with a
+404-style error. That is expected for a genuinely new zone: it means there is
+no official comparison to build, not that this step is broken. Steps 1-7 and
+9 (minus its comparison section) still stand on their own.
+
+Run from ptha18_logic_tree_test/:
+    .venv/Scripts/python.exe examples/caribbean2/steps/step8_official.py
+"""
+
+import argparse
+import csv
+import json
+import os
+import shutil
+import subprocess
+import sys
+
+import netCDF4
+import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+EXAMPLE = os.path.abspath(os.path.join(HERE, ".."))
+ROOT = os.path.abspath(os.path.join(EXAMPLE, "..", ".."))  # the package's folder
+# v11: PTHA18's extracted inputs, trees, public files and rptha live in
+# ptha18_logic_tree_test/; examples may sit there or one level down (V9/), so
+# look in both. The engine still resolves its own paths from ROOT, which is
+# why the official input's file paths are made absolute below.
+DATA_ROOT = next((r for r in (ROOT, os.path.dirname(ROOT))
+                  if os.path.isdir(os.path.join(r, "official_ptha_data"))), ROOT)
+
+sys.path.insert(0, os.path.join(ROOT, "from_scratch_v12", "lib"))  # helper modules
+sys.path.insert(0, os.path.join(ROOT, "from_scratch_v12", "validation"))
+import bird_convergence as bc  # noqa: E402
+import hs_official_compare as hoc  # noqa: E402
+
+ZONE = "antilles2"
+FETCH_SCRIPT = os.path.join(DATA_ROOT, "official_ptha_data", "fetch_official_inputs.py")
+RUNNER = os.path.join(ROOT, "from_scratch_v12", "python_logic_tree_v12", "run_logic_tree.py")
+
+OFFICIAL_INPUT_JSON = os.path.join(DATA_ROOT, "inputs", f"input_{ZONE}.json")
+RUN_NAME = f"{ZONE}_official"
+ENGINE_OUT_DIR = os.path.join(ROOT, "runs", "python", RUN_NAME)
+# v9: step 6's input, read only to learn whether this run was segmented
+SCRATCH_INPUT_JSON = os.path.join(EXAMPLE, "inputs", "input_antilles2_scratch.json")
+SZP_CSV = os.path.join(DATA_ROOT, "rptha", "R", "examples", "austptha_template", "DATA",
+                       "SOURCEZONE_PARAMETERS", "sourcezone_parameters.csv")
+TREES_DIR = os.path.join(DATA_ROOT, "official_ptha_data", "trees")
+
+# This example's own copies, so examples/caribbean2/ stays self-contained and step 9
+# does not have to reach outside it.
+EXAMPLE_INPUT_COPY = os.path.join(EXAMPLE, "inputs", f"input_{ZONE}_official.json")
+EXAMPLE_OUT_DIR = os.path.join(EXAMPLE, "outputs_official")
+REFERENCE_DIR = os.path.join(EXAMPLE_OUT_DIR, "ptha18_reference")
+
+OFFICIAL_GCMT_CSV = os.path.join(
+    DATA_ROOT, "official_ptha_data", "trees", "official_gcmt_observations.csv")
+OFFICIAL_NC_DIR = os.path.join(DATA_ROOT, "official_ptha_data", "public_nc")
+# step 7b's own fields, reduced to what the comparison needs
+FEATURES = {"HS": os.path.join(EXAMPLE, "outputs", "hs_slip_fields", "comparison_features.npz"),
+            "VAUS": os.path.join(EXAMPLE, "outputs", "vaus_slip_fields", "comparison_features.npz")}
+OFFICIAL_MW_TOL = 0.05
+# v11: written when this zone is not one of PTHA18's, so step 9 says so
+# instead of asking for this step
+STATUS_FILE = os.path.join(EXAMPLE, "outputs_official_status.txt")
+
+
+def ptha18_zone_names():
+    """PTHA18's source zones (its sourcezone_parameters.csv), or None."""
+    if not os.path.exists(SZP_CSV):
+        return None
+    with open(SZP_CSV, newline="") as f:
+        return {row["sourcename"] for row in csv.DictReader(f)}
+
+
+def check_rscript():
+    for c in (shutil.which("Rscript"), r"C:\Program Files\R\R-4.6.1\bin\Rscript.exe"):
+        if c and os.path.exists(c):
+            return c
+    base = r"C:\Program Files\R"
+    if os.path.isdir(base):
+        for d in sorted(os.listdir(base), reverse=True):
+            p = os.path.join(base, d, "bin", "Rscript.exe")
+            if os.path.exists(p):
+                return p
+    return None
+
+
+def official_nc_path(cfg):
+    nc = cfg["geometry"]["official_statistics_nc"]
+    return nc if os.path.isabs(nc) else os.path.join(DATA_ROOT, nc)
+
+
+def official_stats(cfg):
+    with netCDF4.Dataset(official_nc_path(cfg)) as ds:
+        return {k: np.asarray(ds[k][:], dtype=float) for k in (
+            "lon_c", "lat_c", "strike", "dip", "width", "length", "rake",
+            "downdip_number", "alongstrike_number")}
+
+
+def add_bird_model(cfg):
+    """Add PTHA18's Bird profiles, computed on the official mesh, to the
+    official input's rates block (see the module docstring)."""
+    stats = official_stats(cfg)
+    print(f"\n  {ZONE}: use_bird_convergence = 1 in PTHA18; Bird profiles on "
+          f"the official mesh:")
+    col = bc.column_convergence(stats, log=lambda msg: print("  " + msg))
+    official = float(cfg["rates"]["tectonic_convergence_mm_per_yr"])
+    rel = (col["area_weighted_mean_mm_per_yr"] - official) / official
+    print(f"    area-weighted mean {col['area_weighted_mean_mm_per_yr']:.10f} "
+          f"mm/yr vs official {official:.10f} (relative difference {rel:+.1e})")
+    if abs(rel) > 1e-6:
+        print("    WARNING: the Bird profile does not reproduce the official "
+              "convergence, so it may not be the one PTHA18 used")
+    cfg["rates"].update(bc.rates_entries(col))
+    cfg["_v8_bird_model"] = (
+        "Added by step8_official.py: per-column Bird (2003) profiles on the "
+        "official mesh (lib/bird_convergence.py). Their area-weighted mean "
+        f"reproduces the official convergence to {abs(rel):.1e} (relative).")
+
+
+def add_official_segments(cfg):
+    """v9: if step 6 segmented this run, add PTHA18's own segments to the
+    official input (see the module docstring). Returns the segments block,
+    {} when this run is unsegmented or PTHA18 does not segment the zone."""
+    if not os.path.exists(SCRATCH_INPUT_JSON):
+        return {}
+    with open(SCRATCH_INPUT_JSON) as f:
+        if not json.load(f).get("segments"):
+            return {}
+    sys.path.insert(0, os.path.join(ROOT, "official_ptha_data"))
+    import segmentation as sg
+    from fetch_official_inputs import read_gcmt_observations
+    print(f"\n  this run is segmented: PTHA18's own segmentation of {ZONE}")
+    block = sg.ptha18_official_segments_block(
+        ZONE, cfg["rates"], SZP_CSV,
+        lambda name: read_gcmt_observations(TREES_DIR, name),
+        log=lambda m: print("  " + m))
+    if not block:
+        print(f"    PTHA18 does not segment {ZONE}: the official run stays "
+              f"unsegmented (PTHA18's whole answer for this zone)")
+        return {}
+    cfg["segments"] = block
+    return block
+
+
+def compare_hs_vaus(label, features_path, official_path, off_dd, off_ask):
+    """Step 7b's fields (their saved comparison features) against every
+    PTHA18 event of the same magnitude in its published catalogue. Same
+    numbers step 7b used to compute itself (lib/hs_official_compare.py)."""
+    saved = np.load(features_path)
+    mw_col, feats = saved["mw"], saved["features"]
+    rows = []
+    for mw in np.unique(mw_col):
+        off_events = hoc.load_official_hs_events(
+            official_path, float(mw), mw_tol=OFFICIAL_MW_TOL, max_events=None)
+        if not off_events:
+            print(f"      Mw {mw:.2f}: no official {label} events within "
+                  f"{OFFICIAL_MW_TOL:g} -- skipped")
+            continue
+        off_grids = hoc.official_events_to_grids(off_events, off_dd, off_ask)
+        result = hoc.compare_features(feats[mw_col == mw], hoc.field_features(off_grids))
+        syn_s, off_s = result["synthetic"], result["official"]
+        print(f"      Mw {mw:.2f}: {syn_s['n']} this run vs {off_s['n']} official, "
+              f"mean peak slip {syn_s['mean_peak_slip_m']:.2f} vs "
+              f"{off_s['mean_peak_slip_m']:.2f} m, spectral distance "
+              f"{result['spectral_distance']:.4f}")
+        rows.append({
+            "Mw": f"{mw:.2f}",
+            "n_synthetic": syn_s["n"], "n_official": off_s["n"],
+            "mean_peak_slip_m_synthetic": f"{syn_s['mean_peak_slip_m']:.3f}",
+            "mean_peak_slip_m_official": f"{off_s['mean_peak_slip_m']:.3f}",
+            "mean_active_cells_synthetic": f"{syn_s['mean_active_cells']:.1f}",
+            "mean_active_cells_official": f"{off_s['mean_active_cells']:.1f}",
+            "mean_concentration_synthetic": f"{syn_s['mean_concentration']:.3f}",
+            "mean_concentration_official": f"{off_s['mean_concentration']:.3f}",
+            "spectral_distance": f"{result['spectral_distance']:.4f}",
+        })
+    if rows:
+        out = os.path.join(REFERENCE_DIR, f"{label.lower()}_comparison.csv")
+        with open(out, "w", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
+            w.writeheader()
+            w.writerows(rows)
+        print(f"    wrote {label} comparison ({len(rows)} magnitudes) -> {out}")
+
+
+def write_reference(cfg, download_hs):
+    """Everything of PTHA18 the report compares with, in this example's
+    outputs_official/ptha18_reference/ (see the module docstring)."""
+    os.makedirs(REFERENCE_DIR, exist_ok=True)
+    print(f"\n  PTHA18 reference for the report -> {REFERENCE_DIR}")
+
+    nc = official_nc_path(cfg)
+    shutil.copy2(nc, os.path.join(REFERENCE_DIR, os.path.basename(nc)))
+    print(f"    mesh table {os.path.basename(nc)}")
+
+    stats = official_stats(cfg)
+    col = bc.column_convergence(stats, log=lambda *a: None, table="bird-griffin")
+    np.save(os.path.join(REFERENCE_DIR, "official_convergence_per_cell.npy"),
+            col["per_unit_source_convergent_slip"])
+    print("    Bird convergent slip per unit source on PTHA18's mesh")
+
+    # The same match PER ALONG-STRIKE COLUMN (v8.1). column_convergence()
+    # already returns it -- earlier versions kept only the per-cell array and
+    # threw this away, so step 9 could export this run's convergence profile
+    # but had nothing official to put beside it.
+    with open(os.path.join(REFERENCE_DIR,
+                           "official_convergence_per_column.json"), "w") as f:
+        json.dump({
+            "_what_this_is": (
+                "Bird (2003) convergence per along-strike column of PTHA18's "
+                "OWN mesh (unit_source_statistics_<zone>.nc), computed with "
+                "lib/bird_convergence.py and PTHA18's own Bird+Griffin table "
+                "-- the same code and table step 3 runs on this run's mesh. "
+                "PTHA18 published only the area-weighted scalar; this "
+                "reconstruction reproduces that scalar to machine precision "
+                "on every Bird zone tested, so it is the per-column field "
+                "PTHA18 used, not an approximation of it."),
+            "bird_table": "bird-griffin",
+            "alongstrike_number": [int(v) for v in col["alongstrike_number"]],
+            "div_mm_per_yr": [float(v) for v in col["div_mm_per_yr"]],
+            "convergent_slip_mm_per_yr": [
+                float(v) for v in col["convergent_slip_mm_per_yr"]],
+            "distance_km": [float(v) for v in col["distance_km"]],
+            "area_weighted_mean_mm_per_yr": col["area_weighted_mean_mm_per_yr"],
+        }, f, indent=1)
+    print("    Bird convergence per along-strike column on PTHA18's mesh")
+
+    try:
+        from validate_v9 import official_grid_lonlat
+        np.save(os.path.join(REFERENCE_DIR, "official_grid_lonlat.npy"),
+                official_grid_lonlat(ZONE))
+        print("    published cell outlines (NCI unit_source_grid shapefile)")
+    except Exception as exc:
+        print(f"    note: PTHA18's published cell outlines could not be read: {exc}")
+
+    gcmt = None
+    if os.path.exists(OFFICIAL_GCMT_CSV):
+        with open(OFFICIAL_GCMT_CSV, newline="") as f:
+            for row in csv.DictReader(f):
+                if row["source"] == ZONE:
+                    gcmt = {"count": int(float(row["count"])),
+                            "duration_years": float(row["duration_years"])}
+                    break
+    if gcmt is not None:
+        with open(os.path.join(REFERENCE_DIR, "official_gcmt.json"), "w") as f:
+            json.dump(gcmt, f, indent=1)
+        print(f"    LEVEL 3 data: {gcmt['count']} events in {gcmt['duration_years']:.4f} years")
+
+    if not any(os.path.exists(p) for p in FEATURES.values()):
+        print("    (step 7b has not run: no HS/VAUS comparison)")
+        return
+    if download_hs:
+        print(f"    --download-hs: fetching PTHA18's HS/VAUS catalogues for '{ZONE}'")
+        hoc.download_official_hs_vaus(ZONE, OFFICIAL_NC_DIR)
+    with netCDF4.Dataset(nc) as geo:
+        off_dd = np.asarray(geo.variables["downdip_number"][:], dtype=int)
+        off_ask = np.asarray(geo.variables["alongstrike_number"][:], dtype=int)
+    for label, find in (("HS", hoc.has_official_hs), ("VAUS", hoc.has_official_vaus)):
+        official_path = find(ZONE, OFFICIAL_NC_DIR)
+        if official_path is None or not os.path.exists(FEATURES[label]):
+            print(f"    no {label} comparison (PTHA18's catalogue is not in "
+                  f"{os.path.relpath(OFFICIAL_NC_DIR, ROOT)}; --download-hs fetches it)"
+                  if official_path is None else
+                  f"    no {label} comparison (step 7b wrote no {label} features)")
+            continue
+        print(f"    {label}: step 7b's fields vs {os.path.basename(official_path)}")
+        compare_hs_vaus(label, FEATURES[label], official_path, off_dd, off_ask)
+
+
+def main():
+    zones = ptha18_zone_names()
+    if zones is not None and ZONE not in zones:
+        with open(STATUS_FILE, "w", encoding="utf-8") as f:
+            f.write("not_a_ptha18_zone\n"
+                    f"{ZONE} is not one of PTHA18's source zones "
+                    f"(sourcezone_parameters.csv), so there is no official run "
+                    f"to compare with.\n")
+        print(f"\n  {ZONE} is not one of PTHA18's {len(zones)} source zones: "
+              f"there is no official run to compare with. Wrote "
+              f"{os.path.relpath(STATUS_FILE, EXAMPLE)} so the report says so.")
+        return 0
+    if os.path.exists(STATUS_FILE):
+        os.remove(STATUS_FILE)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--download-hs", action="store_true",
+                    help="fetch PTHA18's published HS and VAUS catalogues for "
+                         "this zone (NCI THREDDS, can be hundreds of MB) and "
+                         "compare step 7b's fields with them")
+    args = ap.parse_args()
+
+    print("=" * 70)
+    print("STEP 8 - Official PTHA18 run, from zero")
+    print("=" * 70)
+
+    rscript = check_rscript()
+    if not rscript:
+        raise SystemExit(
+            "\nRscript not found. This step needs R with the rptha package "
+            "installed, because PTHA18's official logic-tree weights only "
+            "exist inside R closures in the saved session -- no Python RData "
+            "reader can extract them.\n\n"
+            "Install R (https://cran.r-project.org/), and on Windows also "
+            "Rtools (rptha has Fortran code). Then clone "
+            "https://github.com/GeoscienceAustralia/ptha somewhere (the "
+            "rptha/ folder of this repository only holds a few data files, "
+            "not the R package) and, from that clone:\n"
+            "    Rscript -e \"install.packages(c('geosphere','sp','sf','raster',"
+            "'FNN','minpack.lm','geometry','ncdf4'), "
+            "repos='https://cloud.r-project.org')\"\n"
+            "    Rscript -e \"install.packages('R/rptha', repos=NULL, "
+            "type='source')\"\n")
+    print(f"  Rscript found: {rscript}")
+
+    # --- fetch_official_inputs.py: download + R extraction + verify + write ---
+    print(f"\n  [1/2] official_ptha_data/fetch_official_inputs.py {ZONE}")
+    print("        (downloads the 1.34 GB saved session on first use, ever, "
+          "on this machine; loading it into R takes minutes, not seconds)\n")
+    result = subprocess.run(
+        [sys.executable, FETCH_SCRIPT, ZONE], cwd=DATA_ROOT)
+    if result.returncode != 0:
+        raise SystemExit(
+            f"\nfetch_official_inputs.py exited with code "
+            f"{result.returncode}\n"
+            f"If this failed because '{ZONE}' has no entry in the saved "
+            f"session, this zone was never modelled by PTHA18 -- there is "
+            f"no official comparison to build for it. Steps 1-7 and 9 "
+            f"(without the comparison section) are still complete on "
+            f"their own.")
+
+    if not os.path.exists(OFFICIAL_INPUT_JSON):
+        raise SystemExit(f"\nexpected {OFFICIAL_INPUT_JSON} to exist after "
+                         f"fetch_official_inputs.py; it did not")
+
+    with open(OFFICIAL_INPUT_JSON) as f:
+        cfg = json.load(f)
+    if bc.ptha18_uses_bird_convergence(ZONE):
+        add_bird_model(cfg)
+    else:
+        print(f"\n  {ZONE}: use_bird_convergence = 0 in PTHA18, so the official "
+              f"input's constant-convergence model is already PTHA18's")
+    # The same percentile magnitudes as step 6's (every 0.1 from 7.2 to
+    # 9.8), so the report compares the two runs at every one of them.
+    # Only LEVEL 5's output rows change; no rate does.
+    cfg.setdefault("percentiles", {})["threshold_Mw"] = [round(7.2 + 0.1 * i, 1) for i in range(27)]
+
+    # v9: PTHA18's segmented model when this run was segmented (docstring)
+    engine_out_dir = ENGINE_OUT_DIR
+    official_segments = add_official_segments(cfg)
+    if official_segments:
+        cfg["run_name"] = f"{ZONE}_official_segmented"
+        engine_out_dir = os.path.join(ROOT, "runs", "python", cfg["run_name"])
+    # the engine resolves relative paths from its own ROOT: point it at
+    # PTHA18's unit-source table wherever it is (v11)
+    cfg["geometry"]["official_statistics_nc"] = official_nc_path(cfg)
+    os.makedirs(os.path.dirname(EXAMPLE_INPUT_COPY), exist_ok=True)
+    with open(EXAMPLE_INPUT_COPY, "w") as f:
+        json.dump(cfg, f, indent=1)
+    print(f"\n  wrote input -> {EXAMPLE_INPUT_COPY}  (this example's own copy)")
+
+    # --- run_logic_tree.py: the same engine step 7 runs ---
+    input_rel = os.path.relpath(EXAMPLE_INPUT_COPY, ROOT).replace(os.sep, "/")
+    print(f"\n  [2/2] from_scratch_v12/python_logic_tree_v12/run_logic_tree.py "
+          f"{input_rel}\n")
+    result = subprocess.run(
+        [sys.executable, RUNNER, input_rel], cwd=ROOT)
+    if result.returncode != 0:
+        raise SystemExit(f"\nrun_logic_tree.py exited with code "
+                         f"{result.returncode}")
+
+    print(f"\n  engine wrote -> {engine_out_dir}  (its own fixed location)")
+
+    if os.path.isdir(EXAMPLE_OUT_DIR):
+        shutil.rmtree(EXAMPLE_OUT_DIR)
+    shutil.copytree(engine_out_dir, EXAMPLE_OUT_DIR)
+    print(f"  copied      -> {EXAMPLE_OUT_DIR}  (this example's own copy)")
+
+    write_reference(cfg, args.download_hs)
+    if official_segments:
+        with open(os.path.join(REFERENCE_DIR, "official_segments.json"), "w") as f:
+            json.dump({
+                "_what_this_is": (
+                    "PTHA18's own segments of this zone (sourcezone_parameters.csv "
+                    "rows, columns of PTHA18's mesh), as run by step 8."),
+                "segments": [
+                    {"name": k, "alongstrike_slice": v["alongstrike_slice"],
+                     "coupling_spreadsheet": v["rates"]["coupling"]["spreadsheet_values"],
+                     "mw_max_observed": v["rates"]["mw_max_observed"],
+                     "gcmt_count": (v["rates"]["observed_seismicity"]["count"]
+                                    if "observed_seismicity" in v["rates"] else None)}
+                    for k, v in official_segments.items()]}, f, indent=1)
+        print("    PTHA18's segments -> official_segments.json")
+
+    print("\n  This is the official run: PTHA18's own unit-source table (NCI),")
+    print("  its own convergence and Bird model, its own GCMT extraction.")
+    print("  Steps 1-7 built a from-scratch alternative to this using only")
+    print("  public data.")
+    print("\nNext:  step9_report.py (compares this against steps 1-7's run)")
+
+
+if __name__ == "__main__":
+    sys.exit(main())

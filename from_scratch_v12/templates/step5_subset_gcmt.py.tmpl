@@ -82,7 +82,7 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 EXAMPLE = os.path.abspath(os.path.join(HERE, ".."))
-ROOT = os.path.abspath(os.path.join(EXAMPLE, ".."))
+ROOT = os.path.abspath(os.path.join(EXAMPLE, {{ROOT_UP}}))
 # v5's own forked pyptha (see step2's comment / {{PKG}}/html/docs/code_map.html).
 sys.path.insert(0, os.path.join(ROOT, "{{PKG}}"))
 sys.path.insert(0, os.path.join(ROOT, "{{PKG}}", "lib"))  # helper modules

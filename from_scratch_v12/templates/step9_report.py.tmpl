@@ -35,7 +35,7 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 EXAMPLE = os.path.abspath(os.path.join(HERE, ".."))
-ROOT = os.path.abspath(os.path.join(EXAMPLE, ".."))
+ROOT = os.path.abspath(os.path.join(EXAMPLE, {{ROOT_UP}}))
 
 sys.path.insert(0, os.path.join(ROOT, "{{PKG}}"))
 sys.path.insert(0, os.path.join(ROOT, "{{PKG}}", "lib"))  # helper modules
@@ -1759,7 +1759,7 @@ def build_html(d):
         try:
             from plot_meshes import fig_profile_downdip_scratch
             mesh_profile_uri = embed_image(fig_profile_downdip_scratch(
-                grid, "{{FOLDER}}", figures_dir))
+                grid, "{{NAME}}", figures_dir))
         except Exception as exc:
             print(f"  note: could not draw the mesh profile: {exc}")
 
@@ -1802,7 +1802,7 @@ def build_html(d):
             mesh_official_uri = embed_image(off_mesh_png)
             mesh_compare_map_uri = embed_image(fig_map_meshes(
                 off_polys, off_depth, scratch_polys, scratch_depth,
-                PTHA18_ZONE_NAME, "{{FOLDER}}", figures_dir,
+                PTHA18_ZONE_NAME, "{{NAME}}", figures_dir,
                 **({"scratch_label": f"external mesh ({MESH_FILE})"} if MESH_FILE else {})))
             mesh_compare_profile_uri = embed_image(fig_profile_downdip(
                 off_polys, off_depth, off_dd, grid, figures_dir))
@@ -1831,7 +1831,7 @@ def build_html(d):
                 # the user actually asked for, not two separately-scaled maps.
                 conv_png = fig_map_meshes_by_value(
                     off_polys, off_slip, scratch_polys, per_cell_conv,
-                    PTHA18_ZONE_NAME, "{{FOLDER}}", conv_value_label,
+                    PTHA18_ZONE_NAME, "{{NAME}}", conv_value_label,
                     figures_dir, out_name="mesh_comparison_map_convergence.png")
             else:
                 # This run's own per-cell array is unavailable or stale

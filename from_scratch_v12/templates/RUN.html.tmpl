@@ -269,6 +269,28 @@ a{color:var(--accent-2)}
 </header>
 
 <section class="sec" style="margin-top:0">
+  <h2>Commands used for this folder</h2>
+  <p class="sec-note" style="margin-bottom:10px">What was typed to make this folder and to run it, all from the repository root.</p>
+  <p class="sec-note" style="margin-bottom:10px"><strong>1. Generate</strong>, which wrote this folder, its steps and this page:</p>
+  <div class="cmd"><code><span class="p">$ </span>{{GENERATE_CMD}}</code></div>
+  <p class="sec-note" style="margin-bottom:10px"><strong>2. Run all the steps at once.</strong> <code>step_total.py</code> adds a line below each time it finishes a run, with the flags it was given:</p>
+  <!-- RUNS:BEGIN -->
+  <!-- RUNS:END -->
+  <p class="sec-note" style="margin-bottom:10px"><strong>Or run the steps one at a time</strong>, in this order (these are not recorded; step 7b makes the HS and VAUS slip fields, step 7c needs <code>--variable-mu on</code> at generation, step 8 needs R):</p>
+  <div class="cmd"><code><span class="p">$ </span>python {{FOLDER}}/steps/step1_fetch_slab2.py
+<span class="p">$ </span>python {{FOLDER}}/steps/step2_build_grid.py
+<span class="p">$ </span>python {{FOLDER}}/steps/step3_convergence.py
+<span class="p">$ </span>python {{FOLDER}}/steps/step4_fetch_gcmt.py
+<span class="p">$ </span>python {{FOLDER}}/steps/step5_subset_gcmt.py
+<span class="p">$ </span>python {{FOLDER}}/steps/step6_write_input.py
+<span class="p">$ </span>python {{FOLDER}}/steps/step7_run.py
+<span class="p">$ </span>python {{FOLDER}}/steps/step7b_stochastic_slip.py
+<span class="p">$ </span>python {{FOLDER}}/steps/step7c_variable_mu.py
+<span class="p">$ </span>python {{FOLDER}}/steps/step8_official.py
+<span class="p">$ </span>python {{FOLDER}}/steps/step9_report.py</code></div>
+</section>
+
+<section class="sec">
   <h2>Where everything comes from</h2>
   <p class="sec-note">The question this diagram answers: geometry does not appear out of nowhere, it is downloaded from SLAB2.0 in step 1. The amber boxes are the only two moments the process reaches out to the internet.</p>
 

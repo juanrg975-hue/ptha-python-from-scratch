@@ -1,0 +1,152 @@
+{
+ "zone": "calabria2",
+ "raster": "from_scratch_v12\\data\\slab2\\cal_slab2_dep_02.24.18.grd",
+ "clip_bbox": null,
+ "trench_ends": null,
+ "trench_ramp_rise_km": 3.0,
+ "ramp_trim_km": [
+  0.0,
+  0.0
+ ],
+ "cutoff_km_below_trench": 60.0,
+ "berryman_dominant_segment": "Calabria",
+ "berryman_trench_depth_km": 4.0,
+ "contour_spacing_km": 5.0,
+ "trench_length_km": 980.5922958291095,
+ "trench_length_untrimmed_km": 1050.2790160856648,
+ "trench_depth_below_msl_km": {
+  "p5": 6.210924187074151,
+  "median": 11.144827674015215,
+  "p95": 12.054174485823355
+ },
+ "levels": [
+  {
+   "level": 5.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 563.7947460198753,
+   "n_points": 147,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 10.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 479.4310444489476,
+   "n_points": 121,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 15.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 424.11134030528865,
+   "n_points": 105,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 20.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 382.55111614646586,
+   "n_points": 94,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 25.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 346.898575988041,
+   "n_points": 86,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 30.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 316.743481098675,
+   "n_points": 83,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 35.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 294.118885003092,
+   "n_points": 79,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 40.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 277.71401523103617,
+   "n_points": 74,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 45.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 265.644939334989,
+   "n_points": 71,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 50.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 256.4402369689006,
+   "n_points": 69,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 55.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 249.08048900389946,
+   "n_points": 68,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 60.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 242.9712534185239,
+   "n_points": 66,
+   "edge_fraction": 0.0
+  }
+ ],
+ "ends": {
+  "start": {
+   "cut": true,
+   "trench_km": 14.92909549061768,
+   "contours_km": 89.40078949512241,
+   "reason": "its natural end is 82 deg off square: cut along the last down-dip line that reaches the cutoff inside the SLAB data",
+   "tip_width_ratio": 0.7168674698795181,
+   "deviation_deg": 82.35897633904509,
+   "deviation_after_deg": 18.407559781913463
+  },
+  "end": {
+   "cut": true,
+   "trench_km": 54.73788463526046,
+   "contours_km": 134.9062075608891,
+   "reason": "the zone narrows to a point there (43% of its median width at the tip): cut where it is back to 70%",
+   "tip_width_ratio": 0.42771084337349397,
+   "deviation_deg": 69.95592541346556,
+   "deviation_after_deg": 29.92000935952349
+  }
+ }
+}

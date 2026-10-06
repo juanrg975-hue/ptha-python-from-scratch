@@ -4,6 +4,8 @@
 !/from_scratch_v12/
 !/rptha/
 !/official_ptha_data/
+!/inputs_meshes/
+!/examples/
 
 .venv/
 __pycache__/
@@ -12,6 +14,9 @@ __pycache__/
 
 # downloaded on demand (SLAB1.0 rasters, PTHA18 event files, the R session)
 from_scratch_v12/data/slab1/*.grd
+examples/*/data/gcmt/
+examples/*/data/slab1/*.grd
+examples/*/data/slab2/*.grd
 from_scratch_v12/validation/ptha18_reference/events/
 *.RData
 official_ptha_data/*/

@@ -1,0 +1,547 @@
+<title>Kermadec From Scratch</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --abyss:#0d2436;
+  --deep:#12374f;
+  --shelf:#2a6f8f;
+  --shallow:#5ba3bd;
+  --foam:#a8d4de;
+  --sand:#f2f0eb;
+  --paper:#faf9f6;
+  --ink:#10222e;
+  --ink-soft:#4a6270;
+  --rule:#d5dee2;
+  --amber:#c2701b;
+  --amber-soft:#f5e4d0;
+  --surface:var(--paper);
+  --surface-2:var(--sand);
+  --text:var(--ink);
+  --text-soft:var(--ink-soft);
+  --line:var(--rule);
+  --accent:var(--deep);
+  --accent-2:var(--shelf);
+  --term-bg:#0d2436;
+  --term-text:#cfe3ea;
+  --term-dim:#6b93a6;
+  --term-accent:#7fc4d8;
+  --warn-bg:#fdf6ec;
+  --warn-line:#e0b784;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --surface:#0a1a25;
+    --surface-2:#102632;
+    --text:#e2edf1;
+    --text-soft:#93aeba;
+    --line:#1e3c4d;
+    --accent:#7fc4d8;
+    --accent-2:#5ba3bd;
+    --amber:#e0a058;
+    --amber-soft:#2a2013;
+    --term-bg:#061420;
+    --term-text:#cfe3ea;
+    --term-dim:#5d8195;
+    --term-accent:#7fc4d8;
+    --warn-bg:#231a0f;
+    --warn-line:#6b4f26;
+  }
+}
+:root[data-theme="dark"]{
+  --surface:#0a1a25;
+  --surface-2:#102632;
+  --text:#e2edf1;
+  --text-soft:#93aeba;
+  --line:#1e3c4d;
+  --accent:#7fc4d8;
+  --accent-2:#5ba3bd;
+  --amber:#e0a058;
+  --amber-soft:#2a2013;
+  --term-bg:#061420;
+  --term-text:#cfe3ea;
+  --term-dim:#5d8195;
+  --term-accent:#7fc4d8;
+  --warn-bg:#231a0f;
+  --warn-line:#6b4f26;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--surface);
+  color:var(--text);
+  font-family:"IBM Plex Sans",system-ui,sans-serif;
+  line-height:1.6;
+}
+.wrap{max-width:960px;margin:0 auto;padding:0 28px 100px}
+
+/* ---------- header ---------- */
+header{
+  border-bottom:1px solid var(--line);
+  padding:56px 0 32px;
+  margin-bottom:44px;
+}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:11px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--accent-2);
+  margin:0 0 14px;
+}
+h1{
+  font-family:"Fraunces",Georgia,serif;
+  font-weight:600;
+  font-size:clamp(34px,5.5vw,52px);
+  line-height:1.08;
+  margin:0 0 18px;
+  text-wrap:balance;
+  letter-spacing:-.015em;
+}
+.lede{
+  font-size:17px;
+  color:var(--text-soft);
+  max-width:64ch;
+  margin:0;
+}
+.lede strong{color:var(--text);font-weight:500}
+
+/* ---------- sections ---------- */
+h2{
+  font-family:"Fraunces",Georgia,serif;
+  font-weight:600;
+  font-size:26px;
+  margin:0 0 6px;
+  letter-spacing:-.01em;
+  text-wrap:balance;
+}
+.sec{margin-top:56px}
+.sec-note{
+  color:var(--text-soft);
+  font-size:15px;
+  max-width:66ch;
+  margin:0 0 26px;
+}
+
+/* ---------- origin diagram ---------- */
+.origin{
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:26px 24px 20px;
+  margin-bottom:14px;
+  overflow-x:auto;
+}
+.origin svg{display:block;min-width:640px;width:100%;height:auto}
+
+/* ---------- steps ---------- */
+.step{
+  display:grid;
+  grid-template-columns:44px 1fr;
+  gap:20px;
+  padding:26px 0;
+  border-top:1px solid var(--line);
+}
+.step:last-of-type{border-bottom:1px solid var(--line)}
+.num{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:13px;
+  font-weight:600;
+  color:var(--surface);
+  background:var(--accent);
+  width:30px;height:30px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:50%;
+  margin-top:2px;
+}
+.step[data-net="yes"] .num{background:var(--amber)}
+.step h3{
+  font-size:17px;
+  font-weight:600;
+  margin:0 0 4px;
+  letter-spacing:-.005em;
+}
+.tags{
+  display:flex;flex-wrap:wrap;gap:7px;
+  margin:0 0 12px;
+}
+.tag{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:10.5px;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  padding:2px 8px;
+  border-radius:2px;
+  border:1px solid var(--line);
+  color:var(--text-soft);
+}
+.tag.lvl{border-color:var(--accent-2);color:var(--accent-2)}
+.tag.net{border-color:var(--amber);color:var(--amber)}
+.step p{margin:0 0 14px;color:var(--text-soft);font-size:15px;max-width:62ch}
+.step p em{color:var(--text);font-style:normal;font-weight:500}
+
+/* ---------- terminal ---------- */
+.cmd{
+  background:var(--term-bg);
+  border-radius:4px;
+  padding:13px 16px;
+  overflow-x:auto;
+  margin:0 0 10px;
+}
+.cmd code{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:13px;
+  color:var(--term-text);
+  white-space:pre;
+  display:block;
+}
+.cmd .p{color:var(--term-dim);user-select:none}
+.cmd .x{color:var(--term-accent)}
+.out{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:12px;
+  color:var(--text-soft);
+  border-left:2px solid var(--line);
+  padding:2px 0 2px 13px;
+  margin:0;
+  white-space:pre-wrap;
+}
+.out b{color:var(--accent-2);font-weight:500}
+
+/* ---------- callout ---------- */
+.note{
+  background:var(--warn-bg);
+  border:1px solid var(--warn-line);
+  border-left-width:3px;
+  border-radius:0 3px 3px 0;
+  padding:15px 18px;
+  margin:14px 0 0;
+  font-size:14px;
+  color:var(--text);
+  max-width:66ch;
+}
+.note .lbl{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:10.5px;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--amber);
+  display:block;
+  margin-bottom:5px;
+}
+
+/* ---------- prep block ---------- */
+.prep{
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:22px 24px;
+}
+.prep h3{margin:0 0 4px;font-size:15px;font-weight:600}
+.prep p{margin:0 0 14px;color:var(--text-soft);font-size:14.5px;max-width:62ch}
+
+/* ---------- table ---------- */
+.tbl-wrap{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;width:100%;min-width:440px;font-size:14px}
+th,td{text-align:left;padding:9px 14px 9px 0;border-bottom:1px solid var(--line)}
+th{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--text-soft);font-weight:500;
+}
+td.n{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+td.src{color:var(--text-soft)}
+
+footer{
+  margin-top:64px;padding-top:22px;
+  border-top:1px solid var(--line);
+  font-size:13.5px;color:var(--text-soft);
+}
+a{color:var(--accent-2)}
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">PTHA18 &middot; independent reproduction</p>
+  <h1>Kermadec From Scratch</h1>
+  <p class="lede">Nine commands that build the seismic rate model for the Kermadec subduction zone without starting from any saved result. <strong>Every input is either downloaded from a public source or derived by a rule written in the code.</strong></p>
+</header>
+
+<section class="sec" style="margin-top:0">
+  <h2>Commands used for this folder</h2>
+  <p class="sec-note" style="margin-bottom:10px">What was typed to make this folder and to run it, all from the repository root.</p>
+  <p class="sec-note" style="margin-bottom:10px"><strong>1. Generate</strong>, which wrote this folder, its steps and this page:</p>
+  <div class="cmd"><code><span class="p">$ </span>python from_scratch_v12/generate.py kermadec --zone kermadectonga2 --folder examples/kermadectonga2 --ptha false --rupture-size local</code></div>
+  <p class="sec-note" style="margin-bottom:10px"><strong>2. Run all the steps at once.</strong> <code>step_total.py</code> adds a line below each time it finishes a run, with the flags it was given:</p>
+  <!-- RUNS:BEGIN -->
+  <div class="cmd"><code><span class="p">$ </span>python examples/kermadectonga2/steps/step_total.py --skip-official</code></div>
+  <p class="sec-note" style="margin-bottom:10px">2026-10-06 16:21, 2.5 min</p>
+  <!-- RUNS:END -->
+  <p class="sec-note" style="margin-bottom:10px"><strong>Or run the steps one at a time</strong>, in this order (these are not recorded; step 7b makes the HS and VAUS slip fields, step 7c needs <code>--variable-mu on</code> at generation, step 8 needs R):</p>
+  <div class="cmd"><code><span class="p">$ </span>python examples/kermadectonga2/steps/step1_fetch_slab2.py
+<span class="p">$ </span>python examples/kermadectonga2/steps/step2_build_grid.py
+<span class="p">$ </span>python examples/kermadectonga2/steps/step3_convergence.py
+<span class="p">$ </span>python examples/kermadectonga2/steps/step4_fetch_gcmt.py
+<span class="p">$ </span>python examples/kermadectonga2/steps/step5_subset_gcmt.py
+<span class="p">$ </span>python examples/kermadectonga2/steps/step6_write_input.py
+<span class="p">$ </span>python examples/kermadectonga2/steps/step7_run.py
+<span class="p">$ </span>python examples/kermadectonga2/steps/step7b_stochastic_slip.py
+<span class="p">$ </span>python examples/kermadectonga2/steps/step7c_variable_mu.py
+<span class="p">$ </span>python examples/kermadectonga2/steps/step8_official.py
+<span class="p">$ </span>python examples/kermadectonga2/steps/step9_report.py</code></div>
+</section>
+
+<section class="sec">
+  <h2>Where everything comes from</h2>
+  <p class="sec-note">The question this diagram answers: geometry does not appear out of nowhere, it is downloaded from SLAB2.0 in step 1. The amber boxes are the only two moments the process reaches out to the internet.</p>
+
+  <div class="origin">
+  <svg viewBox="0 0 700 316" role="img" aria-label="Diagram: SLAB2.0 and GCMT are the two downloads; Bird 2003 and literature are local data; everything converges in the moment balance that produces the rates.">
+    <defs>
+      <marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="3.2" orient="auto">
+        <path d="M0,0 L7.5,3.2 L0,6.4 z" fill="var(--accent-2)"/>
+      </marker>
+    </defs>
+
+    <!-- row labels -->
+    <text x="0" y="20" font-family="IBM Plex Mono, monospace" font-size="10" letter-spacing="1.4" fill="var(--text-soft)">SOURCE</text>
+    <text x="0" y="126" font-family="IBM Plex Mono, monospace" font-size="10" letter-spacing="1.4" fill="var(--text-soft)">STEP</text>
+    <text x="0" y="232" font-family="IBM Plex Mono, monospace" font-size="10" letter-spacing="1.4" fill="var(--text-soft)">LEVEL</text>
+
+    <!-- SOURCES -->
+    <rect x="8" y="32" width="150" height="52" rx="3" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.5"/>
+    <text x="83" y="52" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" font-weight="600" fill="var(--text)">SLAB2.0</text>
+    <text x="83" y="68" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--amber)">↓ USGS &middot; download</text>
+
+    <rect x="176" y="32" width="150" height="52" rx="3" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+    <text x="251" y="52" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" font-weight="600" fill="var(--text)">Bird (2003)</text>
+    <text x="251" y="68" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--text-soft)">already in the repo</text>
+
+    <rect x="344" y="32" width="150" height="52" rx="3" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+    <text x="419" y="52" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" font-weight="600" fill="var(--text)">Literature</text>
+    <text x="419" y="68" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--text-soft)">coupling, b</text>
+
+    <rect x="512" y="32" width="150" height="52" rx="3" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.5"/>
+    <text x="587" y="52" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" font-weight="600" fill="var(--text)">GCMT</text>
+    <text x="587" y="68" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--amber)">↓ globalcmt &middot; download</text>
+
+    <!-- arrows down to steps -->
+    <line x1="83" y1="86" x2="83" y2="130" stroke="var(--accent-2)" stroke-width="1.5" marker-end="url(#ar)"/>
+    <line x1="251" y1="86" x2="251" y2="130" stroke="var(--accent-2)" stroke-width="1.5" marker-end="url(#ar)"/>
+    <line x1="419" y1="86" x2="419" y2="130" stroke="var(--accent-2)" stroke-width="1.5" marker-end="url(#ar)"/>
+    <line x1="587" y1="86" x2="587" y2="130" stroke="var(--accent-2)" stroke-width="1.5" marker-end="url(#ar)"/>
+
+    <!-- STEPS -->
+    <rect x="8" y="138" width="150" height="46" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+    <text x="83" y="157" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent-2)">steps 1 – 2</text>
+    <text x="83" y="173" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="500" fill="var(--text)">mesh + area + dip</text>
+
+    <rect x="176" y="138" width="150" height="46" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+    <text x="251" y="157" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent-2)">step 3</text>
+    <text x="251" y="173" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="500" fill="var(--text)">convergence mm/yr</text>
+
+    <rect x="344" y="138" width="150" height="46" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+    <text x="419" y="157" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent-2)">step 6</text>
+    <text x="419" y="173" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="500" fill="var(--text)">logic-tree axes</text>
+
+    <rect x="512" y="138" width="150" height="46" rx="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+    <text x="587" y="157" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--accent-2)">steps 4 – 5</text>
+    <text x="587" y="173" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="500" fill="var(--text)">filtered events</text>
+
+    <!-- converge -->
+    <line x1="83" y1="186" x2="83" y2="206" stroke="var(--accent-2)" stroke-width="1.5"/>
+    <line x1="251" y1="186" x2="251" y2="206" stroke="var(--accent-2)" stroke-width="1.5"/>
+    <line x1="419" y1="186" x2="419" y2="206" stroke="var(--accent-2)" stroke-width="1.5"/>
+    <line x1="83" y1="206" x2="419" y2="206" stroke="var(--accent-2)" stroke-width="1.5"/>
+    <line x1="251" y1="206" x2="251" y2="238" stroke="var(--accent-2)" stroke-width="1.5" marker-end="url(#ar)"/>
+    <line x1="587" y1="186" x2="587" y2="238" stroke="var(--amber)" stroke-width="1.5" marker-end="url(#ar)"/>
+
+    <!-- LEVELS -->
+    <rect x="46" y="246" width="410" height="52" rx="3" fill="var(--surface-2)" stroke="var(--accent)" stroke-width="2"/>
+    <text x="251" y="266" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--text)">LEVEL 2 &middot; moment balance</text>
+    <text x="251" y="284" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--text-soft)">RATES are born here</text>
+
+    <rect x="486" y="246" width="176" height="52" rx="3" fill="var(--surface-2)" stroke="var(--amber)" stroke-width="2"/>
+    <text x="574" y="266" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="var(--text)">LEVEL 3 &middot; Bayesian</text>
+    <text x="574" y="284" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--text-soft)">only re-weights branches</text>
+  </svg>
+  </div>
+
+  <div class="note">
+    <span class="lbl">The most common misunderstanding</span>
+    The seismic catalogue <strong>does not produce the rates</strong>. Rates come from the moment balance: the Gutenberg-Richter <em>a</em> parameter is solved by equating the moment the plate accumulates with the moment the earthquakes release. The GCMT events only move the branches' <strong>weights</strong>, from prior to posterior. Turn LEVEL 3 off and you still have complete rates.
+  </div>
+</section>
+
+<section class="sec">
+  <h2>Before you start</h2>
+  <p class="sec-note">Every command runs from <code style="font-family:'IBM Plex Mono',monospace;font-size:13px">ptha18_logic_tree_test</code>, the folder holding both this example and the <code style="font-family:'IBM Plex Mono',monospace;font-size:13px">pyptha</code> package.</p>
+
+  <div class="prep">
+    <h3>Go to the folder</h3>
+    <p>The virtual environment lives right here, in ptha18_logic_tree_test/.venv.</p>
+    <div class="cmd"><code><span class="p">$ </span>cd &lt;repository root&gt;\ptha18_review_package\ptha18_logic_tree_test</code></div>
+    <h3 style="margin-top:18px">Check the environment responds</h3>
+    <p>If this prints <em>deps OK</em>, you have everything you need.</p>
+    <div class="cmd"><code><span class="p">$ </span>.venv\Scripts\python.exe <span class="x">-c</span> "import geopandas, numpy, pandas, scipy; print('deps OK')"</code></div>
+  </div>
+</section>
+
+<section class="sec">
+  <h2>The nine steps</h2>
+  <p class="sec-note">In order. Each script prints what it did and writes into <code style="font-family:'IBM Plex Mono',monospace;font-size:13px">data/</code> or <code style="font-family:'IBM Plex Mono',monospace;font-size:13px">inputs/</code>, so you can stop and inspect after any of them.</p>
+
+  <div class="step" data-net="yes">
+    <div class="num">1</div>
+    <div>
+      <h3>Download the fault geometry</h3>
+      <div class="tags"><span class="tag lvl">level 0</span><span class="tag net">download</span></div>
+      <p>This is where the geometry is born. Downloads the Kermadec interface's depth contours from <em>SLAB2.0/SLAB1.0</em> (Hayes et al. 2018/2012), published by the USGS. Unwraps the antimeridian crossing (only matters if this zone straddles longitude 180) and clips to the zone's real seismogenic cutoff, derived from Berryman et al. (2015) -- see <code style="font-family:'IBM Plex Mono',monospace;font-size:13px">berryman_params.py</code>, not a placeholder.</p>
+      <div class="cmd"><code><span class="p">$ </span>.venv\Scripts\python.exe examples/kermadectonga2\steps\<span class="x">step1_fetch_slab2.py</span></code></div>
+      <div class="note">
+        <span class="lbl">Two traps this step resolves</span>
+        <strong>The antimeridian:</strong> a zone straddling longitude 180 breaks a naive discretiser, because the code subtracts longitudes with no wrap-around handling: a contour jumping from +180 to −180 would read as a 355&deg; gap. Everything is recast to [0, 360) so the arc stays continuous, whether or not this particular zone actually needs it.<br><br>
+        <strong>The depth cutoff and datum:</strong> the zone's real seismogenic cutoff (30-55&nbsp;km, not one constant for every zone) comes from Berryman et al. (2015)'s Table 3.1, the primary source PTHA18 itself cites -- see <code style="font-family:'IBM Plex Mono',monospace;font-size:13px">berryman_params.py</code>'s <code style="font-family:'IBM Plex Mono',monospace;font-size:13px">berryman_cutoff_km()</code>. Depths are measured below the NEARBY trench, as in PTHA18: step 1 finds the trench on the SLAB raster itself (its up-dip edge, which becomes the 0&nbsp;km contour), measures every depth from the local trench depth, and draws one unbroken contour every 5&nbsp;km down to the cutoff (<code style="font-family:'IBM Plex Mono',monospace;font-size:13px">lib/slab_contours.py</code>, v8). Where the SLAB data end the zone crookedly, or the zone narrows to a point, every contour is cut along one down-dip line, as PTHA18 did by hand; a clean end is kept. It checks the result and stops with a message instead of meshing a bad contour set; <code style="font-family:'IBM Plex Mono',monospace;font-size:13px">figures/step1_trench_and_contours.png</code> shows what it found. <code style="font-family:'IBM Plex Mono',monospace;font-size:13px">--ptha</code> does not change this step.
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="num">2</div>
+    <div>
+      <h3>Build the unit-source grid</h3>
+      <div class="tags"><span class="tag lvl">level 0</span></div>
+      <p>Discretises the contours into ~50&nbsp;km cells and computes per-cell statistics: length, width, dip, strike, depth. This is where the two numbers that govern everything else come from: <em>total area</em> and <em>mean dip</em>. With <code style="font-family:'IBM Plex Mono',monospace;font-size:13px">--ptha=true</code> (default) the down-dip row count is fixed to PTHA18's own published value when available; with <code style="font-family:'IBM Plex Mono',monospace;font-size:13px">--ptha=false</code> it is always inferred from the mesh geometry itself instead.</p>
+      <div class="cmd"><code><span class="p">$ </span>.venv\Scripts\python.exe examples/kermadectonga2\steps\<span class="x">step2_build_grid.py</span></code></div>
+      <p class="out">prints this run's area and mean dip; add the official values (step 8) for a side-by-side comparison</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="num">3</div>
+    <div>
+      <h3>Compute tectonic convergence</h3>
+      <div class="tags"><span class="tag lvl">level 1</span></div>
+      <p>Area-weighted average of <em>Bird (2003)</em> plate velocities, matched to the top edge of every along-strike column of the step 2 mesh exactly as PTHA18 does (on PTHA18's own mesh this gives the official value to machine precision). The per-column values also go to step 6, because PTHA18 uses them to weight how likely each rupture is and as the LEVEL 4 target. The data is already in the repository, no download.</p>
+      <div class="cmd"><code><span class="p">$ </span>.venv\Scripts\python.exe examples/kermadectonga2\steps\<span class="x">step3_convergence.py</span></code></div>
+      <p class="out">→ data/convergence.txt, data/convergence_per_column.json</p>
+    </div>
+  </div>
+
+  <div class="step" data-net="yes">
+    <div class="num">4</div>
+    <div>
+      <h3>Download the GCMT catalogue</h3>
+      <div class="tags"><span class="tag lvl">level 3</span><span class="tag net">download</span></div>
+      <p>Downloads the complete Global Centroid Moment Tensor catalogue from globalcmt.org, 1976-01-01 to today. This is the entire worldwide catalogue, not yet filtered.</p>
+      <div class="cmd"><code><span class="p">$ </span>.venv\Scripts\python.exe examples/kermadectonga2\steps\<span class="x">step4_fetch_gcmt.py</span></code></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="num">5</div>
+    <div>
+      <h3>Filter the catalogue to this zone</h3>
+      <div class="tags"><span class="tag lvl">level 3</span></div>
+      <p>Reimplements the selection from <em>gcmt_subsetter.R</em>, the piece that does not exist anywhere else in this repository. Four chained criteria let through only earthquakes that represent interplate rupture on this fault.</p>
+      <div class="cmd"><code><span class="p">$ </span>.venv\Scripts\python.exe examples/kermadectonga2\steps\<span class="x">step5_subset_gcmt.py</span></code></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Criterion</th><th>Threshold</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Distance to the plane</td><td class="n">≤ 0.4°</td><td class="src">the earthquake occurred on this fault</td></tr>
+            <tr><td>Rake vs. pure thrust</td><td class="n">≤ 50°</td><td class="src">thrust, not strike-slip</td></tr>
+            <tr><td>Strike vs. unit source</td><td class="n">≤ 50°</td><td class="src">ruptured aligned with the interface</td></tr>
+            <tr><td>Depth</td><td class="n">≤ 71 km</td><td class="src">interplate, not deep intraslab</td></tr>
+            <tr><td>Magnitude</td><td class="n">≥ 7.15</td><td class="src">= 7.2 − dMw/2, the half-bin shift is already in</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
+        <span class="lbl">What to expect from the result</span>
+        On PTHA18's own mesh this rule gives PTHA18's own event list exactly, for the zone and for every one of its segments (<code style="font-family:'IBM Plex Mono',monospace;font-size:13px">validate_v9.py gcmt</code>); on this run's own mesh the list can differ by an event or two where the two meshes' outlines differ. On a segmented run each segment gets the events the same rule selects on its own cells, so an event near a boundary can count in both. If this zone was never modelled by PTHA18, there is no official count to compare against at all -- that is fine, the filter still stands on its own.
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="num">6</div>
+    <div>
+      <h3>Write the input file</h3>
+      <div class="tags"><span class="tag lvl">levels 0 to 3</span></div>
+      <p>Assembles everything above into a single JSON: geometry, convergence, coupling, b values, Mw_max, and the <em>observed_seismicity</em> block with step 5's events. Coupling (Berryman's Whole Margin row where it has one), b_anchor and the Mw_max_observed floor are read directly from Berryman et al. (2015), Mw_max_observed then raised to step 5's largest event if that is larger, via <code style="font-family:'IBM Plex Mono',monospace;font-size:13px">berryman_params.py</code>, not from any PTHA18-internal file; every field carries its own provenance note. On a segmented run it also writes the <em>segments</em> block: each segment's columns (between the trench end points Berryman et al. 2015 Table 3.1 gives it, or Bird's plate pairs with <code>--segment-boundaries bird</code>), its own GCMT events, and its own Berryman row for coupling and Mw_max observed.</p>
+      <div class="cmd"><code><span class="p">$ </span>.venv\Scripts\python.exe examples/kermadectonga2\steps\<span class="x">step6_write_input.py</span></code></div>
+      <p class="out">→ inputs/input_kermadectonga2_scratch.json</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="num">7</div>
+    <div>
+      <h3>Run the full logic tree</h3>
+      <div class="tags"><span class="tag lvl">levels 0 to 5</span></div>
+      <p>Runs every level: enumerates the branches, solves the moment balance that sets the rates, applies the Bayesian update with the observed earthquakes, fits the edge correction and computes percentiles. On a segmented run it does this for the unsegmented zone and every segment (each on the zone's scenario table) and writes the zone's own scenario rates, 0.5 x unsegmented + 0.5 x the segments. Writes curves and a summary.</p>
+      <div class="cmd"><code><span class="p">$ </span>.venv\Scripts\python.exe examples/kermadectonga2\steps\<span class="x">step7_run.py</span></code></div>
+      <p class="out">→ outputs/  ·  rate curves, branch table, percentiles</p>
+    </div>
+  </div>
+
+  <div class="step" data-net="yes">
+    <div class="num">8</div>
+    <div>
+      <h3>Build the OFFICIAL PTHA18 run, also from zero<span style="font-weight:400;color:var(--text-soft);font-size:14px"> (optional)</span></h3>
+      <div class="tags"><span class="tag lvl">comparison</span><span class="tag net">download, needs R</span></div>
+      <p>This step is different in kind from the six before it: it is not pure Python. The official logic-tree weights live inside R <em>closures</em> attached to each zone's rate function in PTHA18's saved session, objects that only exist once that function has been called inside a live R session. No Python RData reader can read them. This step downloads the session (1.34&nbsp;GB, once), calls Rscript to extract the official tree, verifies area and mean dip to machine precision, and runs the same engine on the official input. If this run is segmented, the official run is PTHA18's own segmented model (its segment table and per-segment GCMT events), so the report compares segments with segments.</p>
+      <div class="cmd"><code><span class="p">$ </span>.venv\Scripts\python.exe examples/kermadectonga2\steps\<span class="x">step8_official.py</span></code></div>
+      <p class="out">→ outputs_official/  ·  the real comparison target, not one left over from before</p>
+      <div class="note">
+        <span class="lbl">A genuine requirement, not avoidable</span>
+        Needs R with the <code style="font-family:'IBM Plex Mono',monospace;font-size:12px">rptha</code> package installed (this repository's own <code style="font-family:'IBM Plex Mono',monospace;font-size:12px">rptha/</code> folder). If Rscript is not available, the script says so clearly and gives the install instructions, instead of failing halfway through. If "kermadectonga2" was never modelled by PTHA18, there is no official session entry for it -- steps 1-7 and 9 still stand on their own without this step.
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="num">9</div>
+    <div>
+      <h3>Generate the final HTML report</h3>
+      <div class="tags"><span class="tag lvl">all</span></div>
+      <p>Reads back everything steps 1-8 wrote to disk (nothing is recomputed) and assembles a report: each step's real numbers, the rate curve drawn out, and, if step 8 has run, a full comparison against the official run. A segmented run adds a LEVEL 0 section: how this run and PTHA18 divide the trench (a bar and a map), a table per segmentation and the segmented curves side by side. Without step 8, the report is still complete for steps 1-7, just without that section.</p>
+      <div class="cmd"><code><span class="p">$ </span>.venv\Scripts\python.exe examples/kermadectonga2\steps\<span class="x">step9_report.py</span></code></div>
+      <p class="out">→ report.html</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <h2>Or run all nine in one go</h2>
+  <p class="sec-note">Same steps, same order, run as subprocesses. Stops at the first failure in a required step; step 8 is allowed to fail without stopping the run.</p>
+  <div class="cmd"><code><span class="p">$ </span>.venv\Scripts\python.exe examples/kermadectonga2\steps\<span class="x">step_total.py</span></code></div>
+  <p class="out">add <b>--skip-official</b> to skip step 8 outright</p>
+</section>
+
+<section class="sec">
+  <h2>Why this does not reproduce the published curve</h2>
+  <p class="sec-note">And why that is fine.</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Ingredient</th><th>Official PTHA18</th><th>Here</th></tr></thead>
+      <tbody>
+        <tr><td>Mesh</td><td class="src">hand-edited contours (shapefile is published; the editing process is not)</td><td class="src">SLAB2.0 public geometry</td></tr>
+        <tr><td>Convergence</td><td class="src">per-cell Bird field (only the zone average published; reconstructed exactly by step 8)</td><td class="src">own PB2002 average</td></tr>
+        <tr><td>Catalogue</td><td class="src">extracted from the R closure</td><td class="src">filter reimplemented from the raw catalogue</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note" style="margin-top:20px">
+    <span class="lbl">The honest conclusion</span>
+    Same method, honestly-sourced inputs, a result that is <strong>comparable but not identical</strong>. Where the two curves diverge (see step 9's report if step 8 has run), that divergence is exactly the interesting part: it measures how much each piece of data PTHA18 never published actually matters.
+  </div>
+</section>
+
+<footer>
+  Generated by from_scratch/generate.py for "Kermadec" (PTHA18 zone "kermadectonga2"). Steps 1-7 and 9 are pure Python. Step 8 (the official run, for comparison) needs R with <code style="font-family:'IBM Plex Mono',monospace;font-size:12px">rptha</code> installed.
+</footer>
+
+</div>

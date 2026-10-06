@@ -1,0 +1,125 @@
+{
+ "zone": "antilles2",
+ "raster": "from_scratch_v12\\data\\slab2\\car_slab2_dep_02.24.18.grd",
+ "clip_bbox": null,
+ "trench_ends": null,
+ "trench_ramp_rise_km": 3.0,
+ "ramp_trim_km": [
+  68.08149356168799,
+  0.0
+ ],
+ "cutoff_km_below_trench": 45.0,
+ "berryman_dominant_segment": "Antilles",
+ "berryman_trench_depth_km": 4.5,
+ "contour_spacing_km": 5.0,
+ "trench_length_km": 2232.8291850355827,
+ "trench_length_untrimmed_km": 2232.8291850355827,
+ "trench_depth_below_msl_km": {
+  "p5": 7.158332737400314,
+  "median": 8.938019406391792,
+  "p95": 11.214082599969041
+ },
+ "levels": [
+  {
+   "level": 5.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 2082.2719617156217,
+   "n_points": 468,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 10.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 2002.726197527253,
+   "n_points": 446,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 15.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1937.086970701995,
+   "n_points": 430,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 20.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1879.0817948016559,
+   "n_points": 415,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 25.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1828.1230977493144,
+   "n_points": 405,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 30.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1783.379552277751,
+   "n_points": 397,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 35.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1726.2482571701341,
+   "n_points": 387,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 40.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1667.8423242569727,
+   "n_points": 374,
+   "edge_fraction": 0.0
+  },
+  {
+   "level": 45.0,
+   "found": true,
+   "extra_pieces_km": [],
+   "closed": false,
+   "length_km": 1631.4764726768171,
+   "n_points": 365,
+   "edge_fraction": 0.0
+  }
+ ],
+ "ends": {
+  "start": {
+   "cut": true,
+   "trench_km": 0.0,
+   "contours_km": 239.7232088047861,
+   "reason": "its natural end is 80 deg off square: cut along the down-dip line from the trench's last point",
+   "tip_width_ratio": 1.8627450980392157,
+   "deviation_deg": 80.44060120938514,
+   "deviation_after_deg": 37.309711974067085
+  },
+  "end": {
+   "cut": false,
+   "trench_km": 0.0,
+   "contours_km": 0.0,
+   "reason": "kept as it is (16 deg off square, within PTHA18's own range)",
+   "tip_width_ratio": 0.6911764705882353,
+   "deviation_deg": 16.31570075537074,
+   "deviation_after_deg": null
+  }
+ }
+}

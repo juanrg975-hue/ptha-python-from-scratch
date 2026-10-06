@@ -109,7 +109,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 EXAMPLE = os.path.abspath(os.path.join(HERE, ".."))
-ROOT = os.path.abspath(os.path.join(EXAMPLE, ".."))  # the package's folder
+ROOT = os.path.abspath(os.path.join(EXAMPLE, {{ROOT_UP}}))  # the package's folder
 # v11: PTHA18's extracted inputs, trees, public files and rptha live in
 # ptha18_logic_tree_test/; examples may sit there or one level down (V9/), so
 # look in both. The engine still resolves its own paths from ROOT, which is
