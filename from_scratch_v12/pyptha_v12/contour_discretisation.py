@@ -999,6 +999,72 @@ def discretized_source_from_contours_optimal(
     return _optimal_core(contours, desired_unit_source_length, n_alongstrike=n, **kw)
 
 
+def strasser_cell_cap(cap_mw, k, relation="Strasser"):
+    """(max length, max width) of a cell in km for ``--cell-size strasser``:
+    the scaling relation's rupture at ``cap_mw`` (the smallest magnitude the
+    run builds) divided by ``k``. Strasser at Mw 7.2: 54.3 x 44.2 km, so
+    k = 1.5 gives 36.2 x 29.5 km and k = 2 gives 27.2 x 22.1 km."""
+    from .scaling import Mw_2_rupture_size
+    if not k > 0:
+        raise ValueError(f"cell k must be positive, not {k!r}")
+    size = Mw_2_rupture_size(float(cap_mw), relation=relation)
+    return size["length"] / k, size["width"] / k
+
+
+def discretized_source_from_contours_bounded(
+        contours, max_length, max_width, seed=1234, verbose=True,
+        min_downdip=None, max_tries=40):
+    """v12 ``--cell-size strasser``: the "optimal" mesh with NO cell longer
+    than ``max_length`` or wider than ``max_width`` (km).
+
+    rptha's rule (``--cell-size mean``) counts the columns from the trench
+    length and the rows from the MEAN down-dip length, so on a fan-shaped
+    zone (calabria2: trench 981 km, 60 km contour 243 km) or one whose width
+    changes along strike (antilles2, alaskaaleutians) some cells come out far
+    larger than the target: calabria2's trench cells reach 4042 km2, more
+    than a whole Mw 7.2 rupture, and alaskaaleutians' widest cells 97 km. This
+    keeps the same mesher and the same rows x columns structure and only asks
+    for more of them: it starts from rptha's rule with the caps as targets,
+    then raises the row count until the widest cell (v12's own unit-source
+    width) meets ``max_width`` and the column count until the longest cell
+    meets ``max_length`` (2% tolerance), re-meshing each time.
+
+    The cells stay unequal (a rows x columns mesh has as many columns at
+    depth as at the trench), but none is larger than the cap, so local-size
+    ruptures (``rupture_size="local"``) and the HS/VAUS footprints can match
+    the scaling relation everywhere. Validated on 10 zones in
+    ``examples_newtest/`` (see its html/report_strasser_meshes.html).
+    """
+    from .unit_sources import discretized_source_approximate_summary_statistics as stats
+
+    def dims(g):
+        s = stats(g)
+        return float(np.max(s["length"])), float(np.max(s["width"]))
+
+    grid = discretized_source_from_contours_optimal(
+        contours, max_length, max_width, n_downdip=None, seed=seed,
+        verbose=False, min_downdip=min_downdip, column_rule="trench")
+    ncol, nrow = grid.shape[2] - 1, grid.shape[0] - 1
+    for tries in range(1, max_tries + 1):
+        L, W = dims(grid)
+        if verbose:
+            print(f"    cell cap: {ncol} x {nrow} cells, longest {L:.1f} km "
+                  f"(cap {max_length:.1f}), widest {W:.1f} km (cap {max_width:.1f})",
+                  flush=True)
+        ok_l, ok_w = L <= max_length * 1.02, W <= max_width * 1.02
+        if ok_l and ok_w:
+            return grid
+        if not ok_w:
+            nrow = max(nrow + 1, int(np.ceil(nrow * W / max_width)))
+        if not ok_l:
+            ncol = max(ncol + 1, int(np.ceil(ncol * np.sqrt(L / max_length))))
+        grid = _optimal_core(contours, max_length, desired_unit_source_width=max_width,
+                             n_downdip=nrow, seed=seed, verbose=False,
+                             min_downdip=min_downdip, n_alongstrike=ncol)
+    raise ValueError(f"cell cap not met after {max_tries} meshes "
+                     f"(last {ncol} x {nrow}: longest {L:.1f} km, widest {W:.1f} km)")
+
+
 def _optimal_core(
         contours, desired_unit_source_length, desired_unit_source_width=None,
         n_downdip=None, seed=1234, verbose=True, min_downdip=None,

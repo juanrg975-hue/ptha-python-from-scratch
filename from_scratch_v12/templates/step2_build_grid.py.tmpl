@@ -123,6 +123,22 @@ DISCRETIZER = {{DISCRETIZER}}
 #   contour_discretisation.discretized_source_from_contours_optimal.
 COLUMN_RULE = {{COLUMN_RULE}}
 
+# --cell-size / --cell-k flags from generate.py (v12, 2026-10-07).
+# "mean" (default): rptha's and PTHA18's rule, unit sources of
+#   DESIRED_LENGTH_KM x DESIRED_WIDTH_KM ON AVERAGE (the rest of this script).
+# "strasser": NO unit source longer or wider than the rupture the scaling
+#   relation gives at CELL_CAP_MW, divided by CELL_K (Strasser at Mw 7.2:
+#   54.3 x 44.2 km; CELL_K = 1.5 -> 36.2 x 29.5 km). Same "optimal" mesher,
+#   more rows and columns; COLUMN_RULE, DESIRED_*_KM and any fixed row count
+#   are not used. Not PTHA18's procedure. See
+#   contour_discretisation.discretized_source_from_contours_bounded.
+# CELL_CAP_MW and CELL_CAP_RELATION must be the smallest magnitude and the
+# scaling relation of the event table (step 6: Mmin = 7.2, Strasser).
+CELL_SIZE = {{CELL_SIZE}}
+CELL_K = {{CELL_K}}
+CELL_CAP_MW = 7.2
+CELL_CAP_RELATION = "Strasser"
+
 # PTHA18's target unit-source size. Length is 50 km everywhere (though PTHA18
 # ignores it -- see the docstring).
 # Width: with USE_PTHA=True (default), per-zone and READ from
@@ -305,7 +321,18 @@ def main():
                                       "official row count, even if "
                                       "downloaded)"))
 
-    if DISCRETIZER == "optimal":
+    if CELL_SIZE == "strasser":
+        if DISCRETIZER != "optimal":
+            raise SystemExit("CELL_SIZE = 'strasser' needs DISCRETIZER = 'optimal'")
+        cap_l, cap_w = cd.strasser_cell_cap(CELL_CAP_MW, CELL_K, CELL_CAP_RELATION)
+        print(f"  --cell-size=strasser: no unit source longer than {cap_l:.1f} km or "
+              f"wider than {cap_w:.1f} km ({CELL_CAP_RELATION} at Mw {CELL_CAP_MW:g} / "
+              f"{CELL_K:g}); rows and columns raised until every cell meets the cap"
+              + (" (the fixed row count above is not used)" if official_rows is not None else ""))
+        official_rows = None
+        grid = cd.discretized_source_from_contours_bounded(
+            contours, cap_l, cap_w, seed=SEED, min_downdip=MIN_DOWNDIP_ROWS)
+    elif DISCRETIZER == "optimal":
         print(f"  --discretizer=optimal: rptha's own mesh, repaired only if it "
               f"has folded, collapsed or overlapping cells (see "
               f"contour_discretisation.discretized_source_from_contours_optimal)")
@@ -427,8 +454,13 @@ def main():
         min_downdip=MIN_DOWNDIP_ROWS, seed=SEED,
         # v8.2: only a non-rptha column rule enters the fingerprint, so a
         # "trench" mesh keeps exactly the v8 fingerprint.
-        **({} if (DISCRETIZER != "optimal" or COLUMN_RULE == "trench")
-           else {"column_rule": COLUMN_RULE}))
+        **({} if (DISCRETIZER != "optimal" or COLUMN_RULE == "trench" or CELL_SIZE == "strasser")
+           else {"column_rule": COLUMN_RULE}),
+        # v12: likewise only --cell-size strasser enters it ("mean" keeps the
+        # fingerprint every earlier mesh has). Must match run_logic_tree.py.
+        **({} if CELL_SIZE == "mean" else
+           {"cell_size": CELL_SIZE, "cell_k": CELL_K, "cell_cap_mw": CELL_CAP_MW,
+            "cell_cap_relation": CELL_CAP_RELATION}))
     grid_cache.save(OUT_NPY, grid, fp)
     print(f"\n  saved grid -> {OUT_NPY} (+ fingerprint {os.path.basename(grid_cache.meta_path(OUT_NPY))})")
 

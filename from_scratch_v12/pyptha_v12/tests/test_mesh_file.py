@@ -66,6 +66,21 @@ def test_columns_reversed_to_dip_right(tmp_path):
     assert np.allclose(out, g, atol=1e-9)
 
 
+def test_skewed_cells_keep_their_rows(tmp_path):
+    """A column lifted so that some cells deepen more across strike than down
+    dip (as on fine meshes of flat slabs, e.g. hellenic_west2): their
+    shallowest edge is a side, which made the old per-cell rule put a side
+    on top and break the rows. The orientation now comes from the cells'
+    connections."""
+    g = planar_grid()
+    g[:, 2, :] += 20.0
+    g[1:, 2, 3] -= 12.0
+    p = tmp_path / "skew.dat"
+    write_dat(g, p, order=np.random.default_rng(5).permutation(18))
+    out = mesh_file.read_quadrilateral_mesh(p, log=lambda *a: None)
+    assert np.allclose(out, g, atol=1e-9)
+
+
 def test_rejects_wrong_column_count(tmp_path):
     p = tmp_path / "bad.dat"
     p.write_text("1 2 3 4 5 6 7 8 9\n")

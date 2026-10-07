@@ -214,6 +214,7 @@ Usage
         [--folder F] [--ptha true|false] [--segmented true|false]
         [--segment-boundaries berryman|bird]
         [--columns trench|average] [--convergence bird|bird-griffin]
+        [--cell-size mean|strasser] [--cell-k K]
         [--rupture-size rptha|local] [--trench-ramp on|off]
         [--discretizer optimal|lm|mid]
         [--clip LON_MIN,LON_MAX,LAT_MIN,LAT_MAX]
@@ -575,6 +576,24 @@ def main():
                          "than any PTHA18 mesh (step 2 prints the taper; "
                          "PTHA18: at most 1.17), e.g. calabria2: 20 -> 12 "
                          "columns. Not PTHA18's procedure.")
+    ap.add_argument("--cell-size", default="mean", choices=["mean", "strasser"],
+                    help="v12 (2026-10-07): how big the unit sources may be. "
+                         "mean (default): rptha's and PTHA18's rule, cells of "
+                         "~50 x 50 km ON AVERAGE (columns from the trench "
+                         "length, rows from the mean down-dip length), so on a "
+                         "fan or a zone of varying width some cells are much "
+                         "larger (calabria2: up to 4042 km2, 72 km wide). "
+                         "strasser: NO cell larger than the smallest rupture "
+                         "the run builds (Strasser at Mmin = 7.2: 54 x 44 km) "
+                         "divided by --cell-k; same mesher, more rows and "
+                         "columns. Not PTHA18's procedure; 3-7 times more unit "
+                         "sources. Needs --discretizer optimal.")
+    ap.add_argument("--cell-k", type=float, default=1.5,
+                    help="v12, with --cell-size strasser: the cap is the "
+                         "smallest rupture divided by this. 1.5 (default): "
+                         "cells of at most 36 x 29 km, i.e. no larger than an "
+                         "Mw 7.2 rupture one sigma smaller than Strasser's mean "
+                         "in length and width; 2: at most 27 x 22 km.")
     ap.add_argument("--clip", default=None,
                     help="optional LON_MIN,LON_MAX,LAT_MIN,LAT_MAX window: "
                          "step 1 uses only this part of the SLAB raster. For "
@@ -670,6 +689,14 @@ def main():
         from pyptha_v12 import mesh_file as _mesh_file
         _mesh_file.read_quadrilateral_mesh(args.mesh_file, depth_units=args.mesh_depth_units)
         mesh_name = os.path.basename(args.mesh_file)
+    if args.cell_size == "strasser":
+        if args.mesh_file:
+            raise SystemExit("--cell-size strasser builds the mesh from SLAB; "
+                             "it cannot be combined with --mesh-file")
+        if args.discretizer != "optimal":
+            raise SystemExit("--cell-size strasser needs --discretizer optimal")
+        if not args.cell_k > 0:
+            raise SystemExit("--cell-k must be positive")
     segmented = args.segmented == "true"
     clip = None
     if args.clip:
@@ -723,6 +750,9 @@ def main():
         "mid": "rptha's older, deprecated eq_spacing method",
     }[args.discretizer]
     print(f"  --discretizer={args.discretizer}  ({discretizer_note})")
+    if args.cell_size == "strasser":
+        print(f"  --cell-size=strasser --cell-k={args.cell_k:g}  (no unit source larger "
+              f"than the Mmin rupture / {args.cell_k:g}; not PTHA18's procedure)")
     print(f"  --convergence={args.convergence}  ("
           + ("Bird (2003)'s public catalogue" if args.convergence == "bird" else
              "Bird + Griffin's traces, the table PTHA18 used") + ")")
@@ -765,6 +795,8 @@ def main():
         "USE_PTHA": "True" if use_ptha else "False",
         "DISCRETIZER": repr(args.discretizer),
         "COLUMN_RULE": repr(args.columns),
+        "CELL_SIZE": repr(args.cell_size),
+        "CELL_K": repr(args.cell_k),
         "RUPTURE_SIZE": repr(args.rupture_size),
         "CONVERGENCE": repr(args.convergence),
         # Manual-download fallback links (see step1_fetch_slab2.py.tmpl's

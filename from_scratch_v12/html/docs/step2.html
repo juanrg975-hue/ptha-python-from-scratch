@@ -429,6 +429,11 @@
   <p class="where">Where in the code: <code>contour_discretisation.py</code> <code>discretized_source_from_contours_optimal(column_rule=...)</code>, <code>mesh_shape()</code>, <code>PTHA18_MAX_TAPER</code>; <code>discretized_source_from_contours_orthogonal(n_alongstrike=...)</code>; <code>templates/step2_build_grid.py.tmpl</code> <code>COLUMN_RULE</code>. Test: <code>tests/test_column_rule.py</code>. The review behind it (every option tried, hazard comparison): <code>../html/mesh_50km_review.html</code>.</p>
 </section>
 
+<section id="cell-size-sec">
+  <h2 id="cell-size">Capping every cell: <code>--cell-size strasser</code> (v12)</h2>
+  <p>Neither column rule can make the cells of a fan or of a zone of varying width small enough everywhere, because both aim at a <b>mean</b> of 50 km. <code>--cell-size strasser --cell-k K</code> caps the <b>maximum</b> instead: no cell longer or wider than the smallest rupture the run builds (Strasser at Mw 7.2: 54 x 44 km) divided by K, so 36 x 29 km with K = 1.5 (default) and 27 x 22 km with K = 2. Step 2 starts from rptha's rule with those caps as targets and raises the row count until the widest cell fits and the column count until the longest fits, re-meshing each time (it prints every try). calabria2: 20 x 5 -> 30 x 13 cells. The cells stay unequal, but none is larger than the smallest rupture, so local-size ruptures and HS/VAUS footprints can take Strasser's size and shape everywhere. <code>--columns</code> and the 50 km targets are not used. Details, numbers and costs: <a href="v12.html#cell-size">What is new in v12</a>.</p>
+</section>
+
 
 
 

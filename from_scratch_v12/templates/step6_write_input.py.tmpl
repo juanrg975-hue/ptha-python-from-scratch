@@ -195,6 +195,13 @@ DISCRETIZER = _step2_value("DISCRETIZER", DISCRETIZER)
 # v8.2: the column rule step 2 meshed with (see its COLUMN_RULE comment).
 # A step 2 without the constant (a v8.1 folder) used rptha's own rule.
 COLUMN_RULE = _step2_value("COLUMN_RULE", "trench")
+# v12 (2026-10-07): the cell-size rule step 2 meshed with (see its CELL_SIZE
+# comment). A step 2 without the constant used rptha's "mean" rule.
+CELL_SIZE = _step2_value("CELL_SIZE", "mean")
+CELL_GEOMETRY = {} if CELL_SIZE == "mean" else {
+    "cell_size": CELL_SIZE, "cell_k": _step2_value("CELL_K", 1.5),
+    "cell_cap_mw": _step2_value("CELL_CAP_MW", 7.2),
+    "cell_cap_relation": _step2_value("CELL_CAP_RELATION", "Strasser")}
 
 # --- Declared literature values (see module docstring) -----------------
 # Rupture scaling relation and shear modulus for the event table. --ptha
@@ -593,7 +600,8 @@ def main():
             # --ptha true and the table exists, else N_DOWNDIP_OVERRIDE); v7
             # wrote None here with --ptha true on a zone PTHA18 never meshed,
             # while step 2 had used the override.
-            "n_downdip": (
+            # (--cell-size strasser: none, the cap sets the rows; as step 2)
+            "n_downdip": None if CELL_GEOMETRY else (
                 (n_downdip_rows(PTHA18_ZONE_NAME) if USE_PTHA else None)
                 or N_DOWNDIP_OVERRIDE),
             "min_downdip": MIN_DOWNDIP_ROWS,
@@ -616,6 +624,9 @@ def main():
             # engine would rebuild with rptha's trench rule and mesh the
             # rates on a different grid from step 2's.
             "column_rule": COLUMN_RULE,
+            # v12: --cell-size strasser and its cap (absent with "mean", so
+            # such an input is exactly what it was before the option).
+            **CELL_GEOMETRY,
             # v8: where step 2 saved the mesh, with its fingerprint (contour
             # file hash + the meshing parameters above) alongside. The engine
             # reuses it when the fingerprint still matches the fields above,

@@ -17,8 +17,14 @@ corners the cells share; nothing else is assumed:
 1. depth units and sign: metres if any |depth| > 200, km otherwise (a
    subduction interface never reaches 200 km); negative-down values are
    turned positive-down. Both can be forced with ``depth_units``.
-2. each cell's top edge is the ring edge with the shallowest mean depth, the
-   bottom edge the one opposite, the other two its sides.
+2. every cell's top, bottom and side edges, from its connections: the
+   orientation is carried from cell to cell across shared edges (the edge a
+   cell shares with the one below it is its bottom and that cell's top), so
+   all cells agree; depth decides only once, for the whole mesh, which pair
+   of opposite edges goes down dip (largest depth change summed over the
+   cells) and which side is up. (Until 2026-10-06 each cell's shallowest
+   edge was its top, which failed on fine meshes of flat or skewed slabs,
+   where a few cells deepen more across strike than down dip.)
 3. two cells are down-dip neighbours when one's bottom edge is the other's
    top edge, along-strike neighbours when they share a side edge (corners
    matched to ``tol_deg`` and ``tol_km``).
@@ -39,6 +45,101 @@ import numpy as np
 
 def _key(lon, lat, dep, tol_deg, tol_km):
     return (round(lon / tol_deg), round(lat / tol_deg), round(dep / tol_km))
+
+
+_RING = [(0, 1), (1, 2), (2, 3), (3, 0)]
+_CYCLE = ["tl", "tr", "br", "bl"]  # going round a cell
+# a corner's label in the cell across a shared edge: a top/bottom edge keeps
+# left/right and swaps top/bottom, a side edge the other way round
+_ACROSS_TB = {"tl": "bl", "tr": "br", "bl": "tl", "br": "tr"}
+_ACROSS_LR = {"tl": "tr", "tr": "tl", "bl": "br", "br": "bl"}
+_EDGES = {"top": ("tl", "tr"), "bottom": ("bl", "br"), "left": ("tl", "bl"), "right": ("tr", "br")}
+
+
+def _orient_cells(c, k, edge):
+    """Top, bottom and side edges of every cell, from the cells' connections.
+
+    Each cell's corners are labelled tl, tr, br, bl so that neighbours agree:
+    the edge a cell shares with the one below it is its bottom edge and that
+    cell's top edge, and so on. The labels are carried from cell to cell
+    across shared edges, so the whole mesh gets one orientation; only then
+    is depth used, once for the whole mesh: the pair of opposite edges whose
+    depth differs most, summed over all cells, is top/bottom, the shallower
+    side the top. A per-cell rule (each cell's shallowest edge on top) fails
+    on fine meshes of flat or skewed slabs, where a few cells deepen more
+    across strike than down dip.
+    """
+    n = c.shape[0]
+    by_edge = {}
+    for i in range(n):
+        for p, q in _RING:
+            by_edge.setdefault(edge(i, (p, q)), []).append((i, p, q))
+    if any(len(v) > 2 for v in by_edge.values()):
+        raise ValueError("an edge is shared by more than two cells: not a rows x columns mesh")
+
+    labels = [None] * n  # labels[i][p] = label of corner p of cell i
+
+    def fill(i, a, la, b, lb):
+        """Labels of cell i from two adjacent corners a, b labelled la, lb."""
+        step = 1 if (b - a) % 4 == 1 else -1
+        cyc = 1 if (_CYCLE.index(lb) - _CYCLE.index(la)) % 4 == 1 else -1
+        out = [None] * 4
+        for m in range(4):
+            out[(a + step * m) % 4] = _CYCLE[(_CYCLE.index(la) + cyc * m) % 4]
+        return out
+
+    for seed in range(n):
+        if labels[seed] is not None:
+            continue
+        if seed > 0:
+            raise ValueError("the cells do not form one connected mesh")
+        labels[0] = list(_CYCLE)
+        queue = [0]
+        while queue:
+            i = queue.pop()
+            for p, q in _RING:
+                others = [e for e in by_edge[edge(i, (p, q))] if e[0] != i]
+                if not others:
+                    continue
+                j = others[0][0]
+                lp, lq = labels[i][p], labels[i][q]
+                across = _ACROSS_TB if {lp, lq} in ({"tl", "tr"}, {"bl", "br"}) else _ACROSS_LR
+                kp, kq = k(i, p), k(i, q)
+                pj = [m for m in range(4) if k(j, m) == kp]
+                qj = [m for m in range(4) if k(j, m) == kq]
+                if len(pj) != 1 or len(qj) != 1:
+                    raise ValueError(f"cells {i + 1} and {j + 1} do not share their corners")
+                new = fill(j, pj[0], across[lp], qj[0], across[lq])
+                if labels[j] is None:
+                    labels[j] = new
+                    queue.append(j)
+                elif labels[j] != new:
+                    raise ValueError(f"cell {j + 1}: its neighbours disagree on its "
+                                     f"orientation: not a rows x columns mesh")
+
+    # the whole mesh: which pair of opposite edges goes down dip, and which way
+    def edge_depth(i, name):
+        a, b = _EDGES[name]
+        return c[i, [labels[i].index(a), labels[i].index(b)], 2].mean()
+
+    d_tb = sum(edge_depth(i, "bottom") - edge_depth(i, "top") for i in range(n))
+    d_lr = sum(edge_depth(i, "right") - edge_depth(i, "left") for i in range(n))
+    if max(abs(d_tb), abs(d_lr)) <= 0:
+        raise ValueError("the mesh is flat: cannot tell down dip from along strike")
+    if abs(d_lr) > abs(d_tb):  # turn a quarter: left becomes top, right bottom
+        rot = {"bl": "tl", "tl": "tr", "tr": "br", "br": "bl"}
+        labels = [[rot[x] for x in lab] for lab in labels]
+        d_tb = d_lr
+    if d_tb < 0:  # upside down
+        labels = [[_ACROSS_TB[x] for x in lab] for lab in labels]
+
+    top, bot, sides = [], [], []
+    for lab in labels:
+        ring_edge = {frozenset((lab[p], lab[q])): (p, q) for p, q in _RING}
+        top.append(ring_edge[frozenset(_EDGES["top"])])
+        bot.append(ring_edge[frozenset(_EDGES["bottom"])])
+        sides.append([ring_edge[frozenset(_EDGES["right"])], ring_edge[frozenset(_EDGES["left"])]])
+    return top, bot, sides
 
 
 def read_quadrilateral_mesh(path, depth_units="auto", tol_deg=1e-6, tol_km=1e-3,
@@ -63,22 +164,11 @@ def read_quadrilateral_mesh(path, depth_units="auto", tol_deg=1e-6, tol_km=1e-3,
     if np.any(dep < -1e-6):
         raise ValueError("depths of both signs: cannot tell down from up")
 
-    # 2. top, bottom and sides of every cell, as corner indices of its ring
-    ring = [(0, 1), (1, 2), (2, 3), (3, 0)]
-    top, bot, sides = [], [], []
-    for i in range(n):
-        mean = [c[i, [p, q], 2].mean() for p, q in ring]
-        t = int(np.argmin(mean))
-        b = (t + 2) % 4
-        if not mean[b] > mean[t]:
-            raise ValueError(f"cell {i + 1}: no edge is shallower than its "
-                             f"opposite edge (a vertical or flat cell?)")
-        top.append(ring[t])
-        bot.append(ring[b])
-        sides.append([ring[(t + 1) % 4], ring[(t + 3) % 4]])
-
     k = lambda i, p: _key(*c[i, p], tol_deg, tol_km)  # noqa: E731
     edge = lambda i, e: frozenset((k(i, e[0]), k(i, e[1])))  # noqa: E731
+
+    # 2. top, bottom and sides of every cell, as corner indices of its ring
+    top, bot, sides = _orient_cells(c, k, edge)
 
     # 3. neighbours
     by_top = {}

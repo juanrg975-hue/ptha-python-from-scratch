@@ -25,8 +25,8 @@ figure.fig svg .node{fill:var(--warn)}
 
 <section id="top">
   <div class="crumb">Start</div>
-  <h1>What is new in v12: an external mesh as input</h1>
-  <p class="lead">v12 (2026-10-06) is v11 plus <code>generate.py --mesh-file FILE</code>: the unit sources are the cells of a mesh you already have, a text file with one line per subfault and its four corners as lon, lat, depth, instead of a mesh built from SLAB. Steps 3-9 (convergence, earthquake catalogue, logic tree, ruptures, rates, HS/VAUS, the comparison with PTHA18, the report) run on it unchanged. Without the option v12 is v11.</p>
+  <h1>What is new in v12: an external mesh as input, and capped cells</h1>
+  <p class="lead">v12 (2026-10-06) is v11 plus <code>generate.py --mesh-file FILE</code>: the unit sources are the cells of a mesh you already have, a text file with one line per subfault and its four corners as lon, lat, depth, instead of a mesh built from SLAB. Steps 3-9 (convergence, earthquake catalogue, logic tree, ruptures, rates, HS/VAUS, the comparison with PTHA18, the report) run on it unchanged. Since 2026-10-07 it also has <a href="#cell-size"><code>--cell-size strasser</code></a>: no unit source larger than the smallest rupture divided by k. Without the options (defaults: no mesh file, <code>--cell-size mean</code>) v12 is v11.</p>
   <div class="grid g4">
     <div class="card kpi"><div class="num">312</div><div class="lbl">cells of the colleagues' alaskaaleutians file: 78 along strike x 4 down dip, PTHA18's own mesh</div></div>
     <div class="card kpi"><div class="num">8.5e-12</div><div class="lbl">largest difference to PTHA18's rates when the file's trench is put at PTHA18's 0 km</div></div>
@@ -48,8 +48,8 @@ figure.fig svg .node{fill:var(--warn)}
     <line x1="260" y1="75" x2="310" y2="75" class="ar" marker-end="url(#ah)"/>
     <rect x="310" y="20" width="250" height="110" rx="8" class="b1"/>
     <text x="435" y="44" text-anchor="middle" class="t1">pyptha_v12/mesh_file.py</text>
-    <text x="322" y="66" class="t2">top edge = shallowest edge of each cell</text>
-    <text x="322" y="84" class="t2">neighbours = cells sharing corners</text>
+    <text x="322" y="66" class="t2">neighbours = cells sharing corners</text>
+    <text x="322" y="84" class="t2">top/bottom carried cell to cell; depth: which way is down</text>
     <text x="322" y="102" class="t2">rows x columns, dip to the right of strike</text>
     <text x="322" y="120" class="t2">not structured: refused with a message</text>
     <line x1="560" y1="75" x2="610" y2="75" class="ar" marker-end="url(#ah)"/>
@@ -92,6 +92,51 @@ figure.fig svg .node{fill:var(--warn)}
   <pre class="code">.venv/Scripts/python.exe V9/from_scratch_v12/validation/validate_v12_mesh.py   # from ptha18_logic_tree_test/</pre>
 </section>
 
+<section id="cell-size-sec">
+  <h2 id="cell-size">Capped cells: <code>--cell-size strasser</code> (2026-10-07)</h2>
+  <p>rptha's and PTHA18's rule sizes the unit sources <b>on average</b>: columns from the trench length / 50 km, rows from the mean down-dip length / 50 km. On a fan (calabria2: trench 981 km, 60 km contour 243 km) or a zone whose width changes along strike (antilles2, alaskaaleutians, kermadectonga2) some cells come out much larger: calabria2's trench cells reach 4042 km&sup2;, more than a whole Mw 7.2 rupture (2390 km&sup2;), and some deep cells are 70-100 km wide. A rupture cannot be smaller than one cell, so there the local-size ruptures and the HS/VAUS footprints cannot take the size and shape the scaling relation asks for.</p>
+  <figure class="fig"><svg viewBox="0 0 880 150" role="img" aria-label="How a capped mesh is built">
+    <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah"/></marker></defs>
+    <rect x="10" y="20" width="190" height="80" rx="8" class="b0"/>
+    <text x="105" y="46" text-anchor="middle" class="t1">cap</text>
+    <text x="105" y="68" text-anchor="middle" class="t2">Strasser(Mmin = 7.2) / k</text>
+    <text x="105" y="86" text-anchor="middle" class="t2">k = 1.5: L &#8804; 36, W &#8804; 29 km</text>
+    <line x1="200" y1="60" x2="235" y2="60" class="ar" marker-end="url(#ah2)"/>
+    <rect x="235" y="20" width="190" height="80" rx="8" class="b1"/>
+    <text x="330" y="46" text-anchor="middle" class="t1">optimal mesher</text>
+    <text x="330" y="68" text-anchor="middle" class="t2">rptha's, unchanged</text>
+    <text x="330" y="86" text-anchor="middle" class="t2">rows x columns</text>
+    <line x1="425" y1="60" x2="460" y2="60" class="ar" marker-end="url(#ah2)"/>
+    <rect x="460" y="20" width="190" height="80" rx="8" class="b1"/>
+    <text x="555" y="46" text-anchor="middle" class="t1">longest, widest cell</text>
+    <text x="555" y="68" text-anchor="middle" class="t2">within the cap?</text>
+    <text x="555" y="86" text-anchor="middle" class="t2">no: more columns / rows</text>
+    <path d="M555,100 v26 H330 v-22" fill="none" class="ar" marker-end="url(#ah2)"/>
+    <line x1="650" y1="60" x2="685" y2="60" class="ar" marker-end="url(#ah2)"/>
+    <rect x="685" y="20" width="185" height="80" rx="8" class="b2"/>
+    <text x="777" y="46" text-anchor="middle" class="t1">yes: step 2's mesh</text>
+    <text x="777" y="68" text-anchor="middle" class="t2">fingerprint with k and cap</text>
+    <text x="777" y="86" text-anchor="middle" class="t2">steps 3-9 unchanged</text>
+  </svg><figcaption>The rule caps the maximum, not the mean. The cells stay unequal (on an arc every row has as many columns as the trench), but none is larger than the smallest rupture / k, so ruptures can be assembled from them with the right size and shape.</figcaption></figure>
+<pre class="code">../.venv/Scripts/python.exe from_scratch_v12/generate.py calabria --zone calabria2 --folder calabria2_k15 --ptha false --rupture-size local --cell-size strasser --cell-k 1.5</pre>
+  <div class="tbl"><table>
+    <tr><th></th><th><code>--cell-size mean</code> (default)</th><th><code>--cell-size strasser</code>, k = 1.5</th></tr>
+    <tr><td>target</td><td>~50 x 50 km on average</td><td>every cell &#8804; 36 x 29 km (k = 2: 27 x 22 km)</td></tr>
+    <tr><td>calabria2</td><td>20 x 5 = 100 cells, up to 4042 km&sup2;, 72 km wide</td><td>30 x 13 = 390 cells, &#8804; 925 km&sup2;</td></tr>
+    <tr><td>rates per magnitude</td><td colspan="2">unchanged (new / old 1.00-1.06 at Mw 7.5-9.0, 10 zones)</td></tr>
+    <tr><td>VAUS at Mw 7.2</td><td>kurilsjapan: 70% are one cell, area p05 0.88 x Strasser</td><td>6% one cell, area p05 0.31 (the intended variability)</td></tr>
+    <tr><td>uniform ruptures within 1.5x of Strasser (area and length/width, Mw 7.2-8.4)</td><td>49-68%</td><td>87-99% (areas were already right; the gain is in the shape)</td></tr>
+    <tr><td>cost</td><td>&mdash;</td><td>2.9-7.3 x unit sources (tsunami simulations), 1.8-5.2 x ruptures</td></tr>
+  </table></div>
+  <ul>
+    <li>Use it with <code>--rupture-size local</code>: with rptha's one-block-per-magnitude rule the still-unequal cells give poor ruptures on arcs (calabria2: 31% within 1.5x).</li>
+    <li>Needs <code>--discretizer optimal</code>; cannot be combined with <code>--mesh-file</code>. <code>--columns</code>, the 50 km targets and fixed row counts are not used.</li>
+    <li>Not PTHA18's procedure: the scenarios no longer match PTHA18's one by one (rates per magnitude still compare). The largest gain is on fans and zones of varying width; on regular zones (makran2, kurilsjapan) any finer mesh gives the same.</li>
+    <li>Its effect on the tsunami hazard itself has not been measured.</li>
+  </ul>
+  <p class="where">Where in the code: <code>contour_discretisation.py</code> <code>strasser_cell_cap()</code>, <code>discretized_source_from_contours_bounded()</code>; <code>templates/step2_build_grid.py.tmpl</code> <code>CELL_SIZE</code>, <code>CELL_K</code>, <code>CELL_CAP_MW</code>, <code>CELL_CAP_RELATION</code>; step 6 writes <code>cell_size</code>, <code>cell_k</code>, <code>cell_cap_mw</code>, <code>cell_cap_relation</code> into the geometry block; <code>run_logic_tree.build_grid()</code> and step 7b use them. Test: <code>tests/test_cell_size.py</code>. The 10-zone study: <code>examples_newtest/html/report_strasser_meshes.html</code>.</p>
+</section>
+
 <section id="limits-sec">
   <h2 id="limits">Known limitations</h2>
   <ul>
@@ -102,7 +147,7 @@ figure.fig svg .node{fill:var(--warn)}
 </section>
 
 <nav class="pager" id="pager"></nav>
-<footer>README sections "What v12 changes" and the options table (<code>--mesh-file</code>, <code>--mesh-depth-units</code>).</footer>
+<footer>README sections "What v12 changes" (with "--cell-size strasser") and the options table (<code>--mesh-file</code>, <code>--mesh-depth-units</code>, <code>--cell-size</code>, <code>--cell-k</code>).</footer>
 </main>
 <aside class="toc" id="toc"></aside>
 </div>

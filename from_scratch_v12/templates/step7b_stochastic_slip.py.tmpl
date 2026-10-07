@@ -270,13 +270,22 @@ MIN_HS_EVENTS_PER_MAGNITUDE = 200
 RNG_SEED = 1234
 
 
-def _column_rule_fp(column_rule, discretizer):
+def _column_rule_fp(column_rule, discretizer, cell_size="mean"):
     """Fingerprint field for the v8.2 column rule: none for rptha's own
-    "trench" rule (or a discretiser that ignores the rule), so such a mesh
+    "trench" rule (or a discretiser that ignores the rule, or a
+    --cell-size strasser mesh, whose columns the cap sets), so such a mesh
     keeps exactly the v8 fingerprint. Must match step 2's."""
-    if discretizer != "optimal" or column_rule == "trench":
+    if discretizer != "optimal" or column_rule == "trench" or cell_size == "strasser":
         return {}
     return {"column_rule": column_rule}
+
+
+def _cell_size_fp(geo):
+    """v12: fingerprint fields of --cell-size strasser (none for "mean").
+    Must match step 2's and run_logic_tree.py's."""
+    if geo.get("cell_size", "mean") == "mean":
+        return {}
+    return {k: geo[k] for k in ("cell_size", "cell_k", "cell_cap_mw", "cell_cap_relation")}
 
 
 def build_grid_from_geometry(geo):
@@ -324,6 +333,8 @@ def build_grid_from_geometry(geo):
     # discretized_source_from_contours_optimal). Inputs without the key
     # (v8.1 and older) keep rptha's trench rule.
     column_rule = geo.get("column_rule", "trench")
+    # v12: "mean" (rptha's rule) or "strasser" (see run_logic_tree.build_grid)
+    cell_size = geo.get("cell_size", "mean")
 
     # Reuse the grid step 2 built and checked when it was built with these
     # same settings, exactly as run_logic_tree.build_grid() does.
@@ -336,7 +347,8 @@ def build_grid_from_geometry(geo):
             desired_unit_source_length=kwargs["desired_unit_source_length"],
             desired_unit_source_width=kwargs["desired_unit_source_width"],
             n_downdip=kwargs["n_downdip"], min_downdip=kwargs["min_downdip"],
-            seed=kwargs["seed"], **_column_rule_fp(column_rule, discretizer))
+            seed=kwargs["seed"], **_column_rule_fp(column_rule, discretizer, cell_size),
+            **_cell_size_fp(geo))
         cached = grid_cache.load_if_match(cache_npy, fp)
         if cached is not None:
             print(f"      mesh: reusing step 2's grid "
@@ -345,6 +357,11 @@ def build_grid_from_geometry(geo):
         print("      mesh: step 2's saved grid does not match this input's "
               "meshing fields (or is missing) -- rebuilding")
 
+    if cell_size == "strasser":
+        cap_l, cap_w = cd.strasser_cell_cap(geo["cell_cap_mw"], geo["cell_k"],
+                                            geo["cell_cap_relation"])
+        return cd.discretized_source_from_contours_bounded(
+            contours, cap_l, cap_w, seed=kwargs["seed"], min_downdip=kwargs["min_downdip"])
     if discretizer == "optimal":
         return cd.discretized_source_from_contours_optimal(
             contours, column_rule=column_rule, **kwargs)

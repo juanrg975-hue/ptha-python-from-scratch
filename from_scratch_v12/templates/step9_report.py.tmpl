@@ -1356,6 +1356,19 @@ def mesh_file_card(grid):
 
 def build_html(d):
     cfg = d["cfg"]
+    # v12: how step 2 sized the unit sources (--cell-size, see generate.py)
+    geo_cfg = cfg.get("geometry", {})
+    if MESH_FILE is not None:
+        step2_how = "Took the unit sources from the external mesh, as given,"
+    elif geo_cfg.get("cell_size") == "strasser":
+        from {{PYPKG}} import contour_discretisation as _cd
+        _cl, _cw = _cd.strasser_cell_cap(geo_cfg["cell_cap_mw"], geo_cfg["cell_k"],
+                                         geo_cfg["cell_cap_relation"])
+        step2_how = (f"Discretised the contours with --cell-size strasser: no unit source longer "
+                     f"than {_cl:.0f}&nbsp;km or wider than {_cw:.0f}&nbsp;km ({geo_cfg['cell_cap_relation']} "
+                     f"at Mw {geo_cfg['cell_cap_mw']:g} / k = {geo_cfg['cell_k']:g}; not PTHA18's procedure),")
+    else:
+        step2_how = "Discretised the contours into a grid of ~50&nbsp;km unit sources"
     s = d["summary"]
     rates = d["rates"]
     off = d["official"]
@@ -2892,7 +2905,7 @@ a{{color:var(--accent-2)}}
 
   <div class="stepcard">
     <h3><span class="idx">STEP 2</span> Unit-source grid<span class="pill derived">derived</span></h3>
-    <p>{"Took the unit sources from the external mesh, as given," if MESH_FILE is not None else "Discretised the contours into a grid of ~50&nbsp;km unit sources"} and computed per-unit-source statistics: length, width, dip, strike, depth.</p>
+    <p>{step2_how} and computed per-unit-source statistics: length, width, dip, strike, depth.</p>
     <div class="figure">
       <div class="stat"><span class="k">Unit sources</span><span class="v">{n_unit_sources if n_unit_sources else '&mdash;'}</span></div>
       <div class="stat"><span class="k">Mean dip</span><span class="v">{mean_dip:.2f}<small> deg</small></span></div>

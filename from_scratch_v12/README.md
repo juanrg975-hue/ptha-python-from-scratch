@@ -3,8 +3,10 @@
 > **This is from_scratch_v12 (2026-10-06).** A copy of `from_scratch_v11/`
 > (packages `pyptha_v12`, `python_logic_tree_v12`) that adds
 > **`--mesh-file`: an external quadrilateral mesh as the geometry** instead of
-> SLAB (steps 1-2), see [What v12 changes](#what-v12-changes). Without it v12
-> is v11. v11 = v10_q plus PTHA18's
+> SLAB (steps 1-2), see [What v12 changes](#what-v12-changes), and (2026-10-07)
+> **`--cell-size strasser`: no unit source larger than the smallest rupture /
+> k**, see [`--cell-size strasser`](#--cell-size-strasser-2026-10-07). Without
+> them (defaults: no mesh file, `--cell-size mean`) v12 is v11. v11 = v10_q plus PTHA18's
 > **variable shear modulus** rates (step 7c). Every file steps 1-7b write is
 > the same as v10_q's (checked byte for byte on calabria2); step 7c only adds
 > files. v10_q itself is a copy of v10, itself a copy of `from_scratch_v9/`.
@@ -20,6 +22,8 @@
 > | v10_q | HS and VAUS rates as PTHA18 computes them (peak-slip limit + DART weights), in step 7b | none | on | [step 7b](#step7b_stochastic_slippy-heterogeneous-hs-and-variable-area-uniform-vaus-slip-variants-optional) |
 > | v11 | variable shear modulus: PTHA18's `variable_mu` rates (FAUS, HS, VAUS, curves, percentiles), new step 7c | `--variable-mu on\|off` | `off` (constant 30 GPa) | [What v11 changes](#what-v11-changes) |
 > | v11 | step 8 (official PTHA18 run) works from `V9/`: PTHA18's extracted files are looked for one level up too | none | | [step 8](#step8_officialpy-official-ptha18-run-optional) |
+> | v12 | an external quadrilateral mesh as the geometry instead of SLAB | `--mesh-file FILE` | none (SLAB) | [What v12 changes](#what-v12-changes) |
+> | v12 | unit sources capped by the scaling relation: no cell larger than the Mmin rupture / k | `--cell-size mean\|strasser`, `--cell-k K` | `mean` (= v11), k 1.5 | [`--cell-size strasser`](#--cell-size-strasser-2026-10-07) |
 >
 > Why, with every figure and number: `V9/html/v10q_rationale.html` (the case
 > for v10_q on Calabria, Caribbean and two control zones) and
@@ -85,10 +89,14 @@ the file into the example's `inputs/geometry/` and:
 columns along strike, cells sharing their corners) and finds everything else
 itself: the order of the lines and of the corners in each line does not
 matter; depth units (metres if any |depth| > 200) and sign are detected; each
-cell's top edge is its shallowest; rows and columns come from the corners the
-cells share; the columns are reversed if needed so the fault dips to the right
-of the strike (rptha's convention). Anything else (triangles, holes, ragged
-columns) is refused with a message.
+cell's top, bottom and sides come from the corners it shares with its
+neighbours, and depth decides once, for the whole mesh, which way is down dip
+(2026-10-06: until then each cell's shallowest edge was its top, which broke
+the rows of fine meshes on flat or skewed slabs, e.g. alaskaaleutians,
+hellenic2 and hellenic_west2 at ~36 x 29 km); rows and columns come from the
+corners the cells share; the columns are reversed if needed so the fault dips
+to the right of the strike (rptha's convention). Anything else (triangles,
+holes, ragged columns) is refused with a message.
 
 **Checked** (`validation/validate_v12_mesh.py`, `tests/test_mesh_file.py`):
 - the colleagues' file IS PTHA18's alaskaaleutians mesh: 78 x 4 = 312 cells,
@@ -103,13 +111,99 @@ columns) is refused with a message.
 - 8 tests: the same synthetic mesh written with shuffled lines, rotated or
   reversed corner rings, km or m, either depth sign, or dipping the wrong way,
   always read back as the same node array; bad files refused. 187 passed,
-  15 skipped.
+  15 skipped. A 9th (2026-10-06): cells that deepen more across strike than
+  down dip keep their rows.
 
 **Example:** `alaskaaleutians_v12` (`generate.py alaska --zone alaskaaleutians
 --folder alaskaaleutians_v12 --ptha false --rupture-size local --mesh-file
 inputs_meshes/alaskaaleutians_quadrilateral_coors.dat`): steps 1-9 complete, step 8 against
 PTHA18's official run; report.html has a "STEP 1-2: geometry from an external
 mesh" card.
+
+#### `--cell-size strasser` (2026-10-07)
+
+**Why.** rptha's (and PTHA18's) rule sizes the unit sources ON AVERAGE: the
+columns from the trench length / 50 km, the rows from the MEAN down-dip
+length / 50 km. Where the zone is a fan (the trench much longer than the deep
+edge: calabria2 981 km against 243 km) or its width changes along strike
+(antilles2, alaskaaleutians, kermadectonga2), some cells come out far larger
+than that: calabria2's trench cells reach 4042 km2, more than a whole Mw 7.2
+rupture (Strasser: 2390 km2), its deep cells 72 km wide, alaskaaleutians' and
+antilles2's ~100 km. A rupture cannot be smaller than one cell, so there the
+local-size ruptures and, above all, the HS/VAUS footprints cannot take the
+size and shape the scaling relation asks for.
+
+**The rule.** `generate.py ... --cell-size strasser [--cell-k K]`: NO unit
+source longer or wider than the rupture the scaling relation gives at the
+event table's smallest magnitude, divided by K:
+
+    L <= L_Strasser(Mmin) / K,   W <= W_Strasser(Mmin) / K   (every cell)
+
+With Mmin = 7.2 (step 6) Strasser's rupture is 54.3 x 44.2 km, so K = 1.5
+(default) caps the cells at 36.2 x 29.5 km and K = 2 at 27.2 x 22.1 km.
+K = 1.5 means: no cell larger than an Mw 7.2 rupture one sigma smaller than
+Strasser's mean in length and width (Strasser's log10 sigmas 0.180 and 0.173
+are factors 1.51 and 1.49).
+
+**How.** Same contours, same `optimal` mesher, same rows x columns structure:
+`contour_discretisation.discretized_source_from_contours_bounded` starts from
+rptha's rule with the caps as targets, then raises the row count until the
+widest cell (v12's own unit-source width) meets the W cap and the column
+count until the longest cell meets the L cap (2% tolerance), re-meshing each
+time. `--columns`, the 50 km targets and any fixed row count (`--ptha true`,
+`N_DOWNDIP_OVERRIDE`) are not used. Step 2 holds `CELL_SIZE`, `CELL_K`,
+`CELL_CAP_MW` (7.2) and `CELL_CAP_RELATION` ("Strasser"); step 6 writes
+`cell_size`, `cell_k`, `cell_cap_mw` and `cell_cap_relation` into the
+geometry block, and they enter the mesh fingerprint, so steps 7, 7b and 9
+reuse step 2's mesh (or rebuild the same one). With `mean` (default) none of
+these fields is written and every file is what it was. Needs
+`--discretizer optimal`; cannot be combined with `--mesh-file`. Meant for
+`--rupture-size local`: the cells are still unequal (on an arc they cannot be
+equal), so rptha's one-block-per-magnitude rule does not use them well
+(calabria2 at K = 1.5: 31% of ruptures within a factor 1.5 of Strasser's area
+and shape with `rptha`, 96% with `local`).
+
+**What it changes and costs** (10 zones, `examples_newtest/`, report in
+`examples_newtest/html/report_strasser_meshes.html`):
+- rates per magnitude: unchanged (new / old exceedance rate 1.00-1.06 at
+  Mw 7.5-9.0; total area and dip are kept);
+- HS/VAUS: with ~50 km cells a footprint cannot be smaller than one cell, so
+  at Mw 7.2-7.5 the compact, high-slip realisations the area variability is
+  meant to produce are largely missing (kurilsjapan Mw 7.2: 70% of VAUS are a
+  single cell, VAUS area p05 0.88 x Strasser instead of ~0.35; calabria2
+  Mw 7.2: median VAUS area 1.25 x Strasser). With K = 1.5 the VAUS area
+  distribution is the same at every magnitude (p05 ~0.35, median ~1.0);
+- uniform-slip ruptures within a factor 1.5 of Strasser's area AND
+  length/width (Mw 7.2-8.4): 49-68% -> 87-99%. Their areas were already
+  right; the gain is in the shape, mostly within Strasser's own scatter;
+- cost: 2.9-7.3 times more unit sources (each one a tsunami simulation),
+  1.8-5.2 times more ruptures, pipeline up to ~13 min (K = 1.5) and ~34 min
+  (K = 2) on the longest zones; scenarios no longer match PTHA18's one by one.
+  K = 2 barely improves on K = 1.5 and doubles the cells again.
+
+The gain is largest where the usual mesh fails by structure (fans: calabria2,
+hellenic; zones of varying width: antilles2, alaskaaleutians,
+kermadectonga2) and smaller in regular zones (makran2, kurilsjapan,
+puysegur2), where any finer mesh would give it. Its effect on the tsunami
+hazard itself has not been measured.
+
+**Checked:** `tests/test_cell_size.py` (a synthetic fan: the `mean` mesh
+breaks the cap, the bounded one meets it, no defects, area within 3%); the
+function reproduces the meshes of `examples_newtest/k1_5` and `k2`
+(built before the flag existed) node for node on calabria2, hellenic_west2,
+puysegur2 and makran2; end-to-end on calabria2 (`examples_newtest/flag_check/`,
+steps 1-9 without 8): without the flag every output (mesh, rate curves,
+percentiles, scenario rates, HS and VAUS fields) is identical to
+`examples/calabria2`'s, so `mean` is v11 bit for bit; with
+`--cell-size strasser --cell-k 1.5` steps 7, 7b and 9 reuse step 2's mesh
+(fingerprint matches) and every output equals the `--mesh-file` run of the
+same mesh to 1e-10 (that run's file rounded the nodes to 1e-10 deg). Invalid
+combinations (`--mesh-file`, `--discretizer lm|mid`) are refused before
+anything is written. 184 tests pass (2 new).
+
+**Example:** `generate.py calabria --zone calabria2 --folder calabria2_k15
+--ptha false --rupture-size local --cell-size strasser --cell-k 1.5`:
+30 x 13 = 390 unit sources (100 with `mean`).
 
 ### What v11 changes
 
@@ -919,6 +1013,7 @@ step7 outputs/  --(re-reads the same FAUS event table)-->  step7b (optional)
                                                             [--ptha {true,false}]
                                                             [--discretizer {optimal,lm,mid}]
                                                             [--columns {trench,average}]
+                                                            [--cell-size {mean,strasser}] [--cell-k K]
                                                             [--rupture-size {rptha,local}]
                                                             [--trench-ramp {on,off}]
                                                             [--segmented {true,false}]
@@ -934,6 +1029,8 @@ step7 outputs/  --(re-reads the same FAUS event table)-->  step7b (optional)
 | `--ptha` | `true` | whether steps 1-7 and 9 may read PTHA18's files (width, row count, scaling). See [section 6](#6---ptha-exactly-what-it-changes). |
 | `--discretizer` | `optimal` | how the contours are cut into unit sources. See [section 7](#7---discretizer-exactly-what-it-changes). |
 | `--columns` | `trench` | v8.2: how many unit sources along strike the `optimal` mesh gets. `trench`: rptha's and PTHA18's rule, trench length / 50 km. `average`: the average row length / 50 km, **not PTHA18's procedure**, for a zone whose mesh tapers far more than any PTHA18 mesh (a tight arc: calabria2 20 -> 12 columns, median cell length 26 -> 45 km). Step 2 prints the taper next to PTHA18's maximum and suggests `average` when it is exceeded. See [v8.2](#v82). |
+| `--cell-size` | `mean` | v12: how big the unit sources may be. `mean`: rptha's and PTHA18's rule, ~50 x 50 km on average (some cells much larger on a fan or a zone of varying width). `strasser`: **no** cell longer or wider than the Mmin rupture (Strasser, Mw 7.2: 54 x 44 km) divided by `--cell-k`; same mesher, more rows and columns, **not PTHA18's procedure**, 3-7 times more unit sources. Needs `--discretizer optimal`; use with `--rupture-size local`. See [`--cell-size strasser`](#--cell-size-strasser-2026-10-07). |
+| `--cell-k` | `1.5` | v12, with `--cell-size strasser`: the cap is the Mmin rupture / K. 1.5: cells of at most 36 x 29 km; 2: 27 x 22 km. |
 | `--rupture-size` | `rptha` | v10: how many cells each uniform-slip rupture gets. `rptha`: rptha's and PTHA18's rule, one block per magnitude from the zone's mean cell size. `local`: a block per placement from the real km of the cells there, **not PTHA18's procedure**, for a mesh whose cells differ a lot in size (calabria2: 377 to 4042 km2); v10_q: with `local`, the engine also multiplies each rupture's conditional-probability weight by q (rupture-overlap correction). Written to the input JSON as `events.rupture_size`. See [What v10 changes](#what-v10-changes) and [What v10_q changes](#what-v10_q-changes). |
 | `--mesh-file` | none | v12: an external quadrilateral mesh (one line per unit source, its 4 corners as lon lat depth) used instead of SLAB for steps 1-2; must be structured (rows x columns). See [What v12 changes](#what-v12-changes). |
 | `--mesh-depth-units` | `auto` | v12, with `--mesh-file`: `m` or `km`; `auto` = metres if any \|depth\| > 200. The sign is detected. |
@@ -1185,6 +1282,9 @@ docstring at the top explaining its method and sources in full.
 
 - Cuts the contours into unit sources with the chosen `--discretizer`; the number of columns
   follows `--columns` (`trench` by default, rptha's rule).
+- v12: with `--cell-size strasser` the rows and columns are instead raised until no cell is
+  longer or wider than the Mmin rupture / `--cell-k` (step 2 prints each try: cells, longest,
+  widest, caps). See [`--cell-size strasser`](#--cell-size-strasser-2026-10-07).
 - Prints the **mesh shape** next to PTHA18's 43 published meshes (v8.2): taper (trench-row /
   deepest-row cell length; PTHA18 at most 1.17), width ratio (widest / narrowest column;
   at most 3.26), share of cells with both sides 30-70 km, mean deviation from 50 x 50

@@ -578,13 +578,23 @@ def figure_representation_curves(fig_dir, reps, mw_q, seg_info):
 # ---------------------------------------------------------------------------
 # Geometry
 # ---------------------------------------------------------------------------
-def _column_rule_fp(column_rule, discretizer):
+def _column_rule_fp(column_rule, discretizer, cell_size="mean"):
     """Fingerprint field for the v8.2 column rule: none for rptha's own
-    "trench" rule (or a discretiser that ignores the rule), so such a mesh
+    "trench" rule (or a discretiser that ignores the rule, or a
+    --cell-size strasser mesh, whose columns the cap sets), so such a mesh
     keeps exactly the v8 fingerprint. Must match step 2's."""
-    if discretizer != "optimal" or column_rule == "trench":
+    if discretizer != "optimal" or column_rule == "trench" or cell_size == "strasser":
         return {}
     return {"column_rule": column_rule}
+
+
+def _cell_size_fp(geo):
+    """v12 (2026-10-07): fingerprint fields of --cell-size strasser; none for
+    rptha's "mean" rule, so every earlier mesh keeps its fingerprint. Must
+    match step 2's."""
+    if geo.get("cell_size", "mean") == "mean":
+        return {}
+    return {k: geo[k] for k in ("cell_size", "cell_k", "cell_cap_mw", "cell_cap_relation")}
 
 
 def build_grid(geo):
@@ -628,6 +638,11 @@ def build_grid(geo):
         # discretized_source_from_contours_optimal). Inputs without the key
         # (v8.1 and older) keep rptha's trench rule.
         column_rule = geo.get("column_rule", "trench")
+        # v12: "mean" (rptha's rule, inputs without the key) or "strasser"
+        # (no cell larger than the scaling relation's rupture at
+        # cell_cap_mw / cell_k; see contour_discretisation.
+        # discretized_source_from_contours_bounded).
+        cell_size = geo.get("cell_size", "mean")
 
         # v8: reuse the mesh step 2 built and checked, if it was built from
         # the same contour file with the same parameters (see
@@ -640,7 +655,8 @@ def build_grid(geo):
             desired_unit_source_length=kwargs["desired_unit_source_length"],
             desired_unit_source_width=kwargs["desired_unit_source_width"],
             n_downdip=kwargs["n_downdip"], min_downdip=kwargs["min_downdip"],
-            seed=kwargs["seed"], **_column_rule_fp(column_rule, discretizer))
+            seed=kwargs["seed"], **_column_rule_fp(column_rule, discretizer, cell_size),
+            **_cell_size_fp(geo))
         if cache_npy:
             cached = grid_cache.load_if_match(cache_npy, fp)
             if cached is not None:
@@ -649,6 +665,15 @@ def build_grid(geo):
                 return cached
             print("      mesh: step 2's saved grid does not match this input's "
                   "meshing fields (or is missing) -- rebuilding")
+        if cell_size == "strasser":
+            if discretizer != "optimal":
+                raise ValueError("cell_size 'strasser' needs discretizer 'optimal'")
+            cap_l, cap_w = cd.strasser_cell_cap(geo["cell_cap_mw"], geo["cell_k"],
+                                                geo["cell_cap_relation"])
+            return cd.discretized_source_from_contours_bounded(
+                contours, cap_l, cap_w, seed=kwargs["seed"], min_downdip=kwargs["min_downdip"])
+        if cell_size != "mean":
+            raise ValueError(f"unknown cell_size {cell_size!r} (mean or strasser)")
         if discretizer == "optimal":
             return cd.discretized_source_from_contours_optimal(
                 contours, column_rule=column_rule, **kwargs)
